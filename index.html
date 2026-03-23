@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parcours Pédagogique - Cours Interactifs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- SheetJS pour la lecture des fichiers Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Parcours Pédagogique</h1>
+            <p class="subtitle">Apprenez pas à pas avec des QCM interactifs</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Section d'authentification -->
+        <div id="login-section" class="auth-section">
+            <div class="auth-card">
+                <h2>Accès Élèves</h2>
+                <p>Connectez-vous avec votre jeton pour accéder à votre espace d'apprentissage</p>
+                <a href="login.html" class="btn btn-primary">Se Connecter</a>
+            </div>
+        </div>
+
+        <!-- Informations utilisateur -->
+        <div id="student-info" class="student-info" style="display: none;">
+            <div class="welcome-message">
+                <h2>Bienvenue</h2>
+                <div class="student-details">
+                    <span class="student-name"></span>
+                    <span class="student-class"></span>
+                </div>
+                <button id="logout-btn" class="btn btn-secondary" style="display: none;">Se Déconnecter</button>
+            </div>
+        </div>
+
+        <div class="progress-overview" id="progress-overview" style="display: none;">
+            <h2>Progression Générale</h2>
+            <div id="progress-bar" class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <p id="progress-text" class="progress-text">0% complété</p>
+        </div>
+
+        <section class="course-grid">
+            <h2>Chapitres</h2>
+            <div class="chapters">
+                <div class="chapter-card" data-chapter="1">
+                    <h3>Chapitre 1: Introduction</h3>
+                    <p>Découverte des concepts de base</p>
+                    <div class="chapter-status" id="chapter-1-status">🔒 Verrouillé</div>
+                    <a href="chapitre1.html" class="btn btn-primary">Accéder au chapitre</a>
+                </div>
+
+                <div class="chapter-card" data-chapter="2">
+                    <h3>Chapitre 2: Concepts Avancés</h3>
+                    <p>Approfondissement des notions</p>
+                    <div class="chapter-status" id="chapter-2-status">🔒 Verrouillé</div>
+                    <a href="chapitre2.html" class="btn btn-primary">Accéder au chapitre</a>
+                </div>
+
+                <div class="chapter-card" data-chapter="3">
+                    <h3>Chapitre 3: Exercices Pratiques</h3>
+                    <p>Mise en application</p>
+                    <div class="chapter-status" id="chapter-3-status">🔒 Verrouillé</div>
+                    <a href="chapitre3.html" class="btn btn-primary">Accéder au chapitre</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="quick-actions">
+            <h2>Espace Professeur</h2>
+            <div class="actions">
+                <a href="teacher-login.html" class="btn btn-primary">Accéder à l'espace professeur</a>
+                <button id="logout-btn-home" class="btn btn-secondary" style="display: none;">Se Déconnecter</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 - Site pédagogique interactif</p>
+        </div>
+    </footer>
+
+    <script src="js/localStorageAuth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Initialisation de l'authentification et de la progression
+        document.addEventListener('DOMContentLoaded', () => {
+            const auth = new LocalStorageAuth();
+            const progression = new ProgressionSystem();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Utilisateurs - Cours Interactifs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles spécifiques à la page de gestion des utilisateurs */
+        .user-management-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .user-header {
+            background: #3498db;
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .user-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .user-header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .user-controls {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            color: #333;
+            min-width: 80px;
+        }
+
+        .control-group input, .control-group select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .control-group input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .user-list-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .user-list-header {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            display: grid;
+            grid-template-columns: 150px 200px 100px 100px 150px;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .user-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 150px 200px 100px 100px 150px;
+            gap: 1rem;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .user-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .edit-input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .edit-select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .edit-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .user-list-header, .user-item {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .user-actions {
+                justify-content: flex-end;
+            }
+
+            .control-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .control-group input[type="text"] {
+                width: 100%;
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body class="teacher-page">
+    <div class="user-management-container">
+        <div class="user-header">
+            <h1>🔧 Gestion des Utilisateurs</h1>
+            <p>Gérez facilement les jetons des élèves et du professeur</p>
+        </div>
+
+        <div class="user-controls">
+            <h3>Ajouter un utilisateur</h3>
+            <div class="control-group">
+                <label for="user-type">Type :</label>
+                <select id="user-type">
+                    <option value="student">Élève</option>
+                    <option value="teacher">Professeur</option>
+                </select>
+
+                <label for="user-token">Jeton :</label>
+                <input type="text" id="user-token" placeholder="Entrez le jeton (au moins 5 caractères, lettres et chiffres uniquement)">
+
+                <label for="user-class">Classe :</label>
+                <input type="text" id="user-class" placeholder="Ex: 1NSI, TC, 1MATHS">
+
+                <label for="user-name">Nom :</label>
+                <input type="text" id="user-name" placeholder="Entrez le nom complet">
+
+            </div>
+
+            <div class="control-actions">
+                <button class="btn btn-primary" id="add-user-btn">
+                    ➕ Ajouter l'utilisateur
+                </button>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="reset-users-btn">
+                        🔄 Réinitialiser
+                    </button>
+                    <button class="btn btn-secondary" id="export-users-btn">
+                        📤 Exporter CSV
+                    </button>
+                    <button class="btn btn-secondary" id="import-csv-btn" style="margin: 0;">
+                        📥 Importer CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="user-list-container">
+            <div class="user-list-header">
+                <span>Jeton</span>
+                <span>Nom complet</span>
+                <span>Classe</span>
+                <span>Type</span>
+                <span>Actions</span>
+            </div>
+            <div class="user-list" id="user-list">
+                <!-- Les utilisateurs seront affichés ici -->
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
+            <p><strong>Jeton de récupération universel :</strong> <code>YXORP@97240</code></p>
+            <p>Ce jeton permet de se connecter en tant que professeur dans n'importe quel contexte.</p>
+        </div>
+    </div>
+
+    <script src="js/localStorageAuth.js"></script>
+    <script>
+        // Initialiser le gestionnaire d'utilisateurs
+        let userManager;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifier l'authentification professeur
+            if (!localStorage.getItem('teacher_authenticated')) {
+                window.location.href = 'teacher-login.html';
+                return;
+            }
+
+            // Initialiser le gestionnaire
+            userManager = new UserManager();
+
+            // Ajouter le bouton "Retour au Tableau de Bord" au-dessus du bouton de déconnexion
+            const returnBtn = document.createElement('button');
+            returnBtn.className = 'btn btn-secondary';
+            returnBtn.textContent = '🏠 Retour au Tableau de Bord';
+            returnBtn.style.marginTop = '1rem';
+            returnBtn.style.display = 'block';
+            returnBtn.style.marginLeft = 'auto';
+            returnBtn.style.marginRight = 'auto';
+            
+            returnBtn.addEventListener('click', () => {
+                window.location.href = 'teacher.html';
+            });
+
+            document.querySelector('.user-management-container').appendChild(returnBtn);
+
+            // Gestion du bouton de déconnexion
+            const logoutBtn = document.createElement('button');
+            logoutBtn.className = 'btn btn-danger';
+            logoutBtn.textContent = 'Déconnexion Professeur';
+            logoutBtn.style.marginTop = '0.5rem';
+            logoutBtn.style.display = 'block';
+            logoutBtn.style.marginLeft = 'auto';
+            logoutBtn.style.marginRight = 'auto';
+            
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('teacher_authenticated');
+                window.location.href = 'teacher-login.html';
+            });
+
+            document.querySelector('.user-management-container').appendChild(logoutBtn);
+        });
+    </script>
+</body>
+</html>

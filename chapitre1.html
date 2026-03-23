@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapitre 1: Introduction - Cours Interactifs</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="chapter-page">
+    <header>
+        <div class="container">
+            <h1>Chapitre 1: Introduction</h1>
+            <p class="subtitle">Découverte des concepts de base</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Message de blocage si le chapitre précédent n'est pas validé -->
+        <div id="lock-message" class="lock-message" style="display: none;">
+            <h3>🔒 Accès refusé</h3>
+            <p>Vous devez d'abord valider le chapitre précédent pour accéder à celui-ci.</p>
+            <a href="index.html" class="btn btn-primary">Retour au sommaire</a>
+        </div>
+
+        <!-- Contenu du cours (visible uniquement si débloqué) -->
+        <div id="course-content" style="display: none;">
+            <section class="course-content">
+                <h1>Introduction aux Bases de Données</h1>
+                
+                <p>Bienvenue dans ce premier chapitre consacré aux bases de données ! Les bases de données sont des systèmes essentiels dans le monde de l'informatique. Elles permettent de stocker, organiser et gérer efficacement de grandes quantités d'informations.</p>
+                
+                <div class="example">
+                    <h3>À quoi servent les bases de données ?</h3>
+                    <p>Les bases de données sont utilisées dans de nombreux domaines :</p>
+                    <ul>
+                        <li><strong>Gestion des élèves</strong> : dans un établissement scolaire</li>
+                        <li><strong>E-commerce</strong> : pour gérer les produits, clients et commandes</li>
+                        <li><strong>Réseaux sociaux</strong> : pour stocker les profils et publications</li>
+                        <li><strong>Santé</strong> : pour les dossiers médicaux des patients</li>
+                    </ul>
+                </div>
+
+                <div class="example">
+                    <h3>Exemple concret</h3>
+                    <p>Imaginons une petite bibliothèque qui veut gérer ses livres et ses emprunteurs. Sans base de données, il faudrait :</p>
+                    <ul>
+                        <li>Tenir des fiches papier pour chaque livre</li>
+                        <li>Noter chaque emprunt sur un cahier</li>
+                        <li>Faire des recherches manuelles pour trouver un livre</li>
+                    </ul>
+                    <p>Avec une base de données, tout cela devient numérique et beaucoup plus efficace !</p>
+                </div>
+            </section>
+
+            <!-- QCM interactif -->
+            <section class="qcm-section">
+                <h2>QCM d'Évaluation</h2>
+                <p>Répondez aux questions suivantes pour tester vos connaissances. Vous devez obtenir au moins 80% de bonnes réponses pour valider ce chapitre.</p>
+
+                <!-- Question 1 -->
+                <div class="qcm-question">
+                    <h3>1. Quel est le principal avantage d'une base de données par rapport à un fichier texte ?</h3>
+                    <div class="qcm-options">
+                        <label class="qcm-option">
+                            <input type="radio" name="q1" value="a">
+                            Plus facile à lire pour un humain
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q1" value="b">
+                            Permet de stocker plus d'informations
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q1" value="c">
+                            Organisation et recherche efficaces des données
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q1" value="d">
+                            Moins cher à mettre en place
+                        </label>
+                    </div>
+                    <div id="feedback-1" class="feedback"></div>
+                </div>
+
+                <!-- Question 2 -->
+                <div class="qcm-question">
+                    <h3>2. Quel type d'information pourrait-on stocker dans une base de données d'école ? (plusieurs réponses possibles)</h3>
+                    <div class="qcm-options">
+                        <label class="qcm-option">
+                            <input type="checkbox" name="q2" value="a">
+                            Noms des élèves
+                        </label>
+                        <label class="qcm-option">
+                            <input type="checkbox" name="q2" value="b">
+                            Adresses des professeurs
+                        </label>
+                        <label class="qcm-option">
+                            <input type="checkbox" name="q2" value="c">
+                            Couleurs préférées des élèves
+                        </label>
+                        <label class="qcm-option">
+                            <input type="checkbox" name="q2" value="d">
+                            Notes des élèves
+                        </label>
+                        <label class="qcm-option">
+                            <input type="checkbox" name="q2" value="e">
+                            Menu de la cantine
+                        </label>
+                    </div>
+                    <div id="feedback-2" class="feedback"></div>
+                </div>
+
+                <!-- Question 3 -->
+                <div class="qcm-question">
+                    <h3>3. Quel outil permet de créer et gérer des bases de données relationnelles ?</h3>
+                    <div class="qcm-options">
+                        <label class="qcm-option">
+                            <input type="radio" name="q3" value="a">
+                            Microsoft Word
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q3" value="b">
+                            Python
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q3" value="c">
+                            MySQL
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q3" value="d">
+                            HTML
+                        </label>
+                    </div>
+                    <div id="feedback-3" class="feedback"></div>
+                </div>
+
+                <!-- Question 4 -->
+                <div class="qcm-question">
+                    <h3>4. Qu'est-ce qu'une "clé primaire" dans une base de données ?</h3>
+                    <div class="qcm-options">
+                        <label class="qcm-option">
+                            <input type="radio" name="q4" value="a">
+                            Une clé pour ouvrir la base de données
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q4" value="b">
+                            Un mot de passe pour accéder aux données
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q4" value="c">
+                            Un identifiant unique pour chaque enregistrement
+                        </label>
+                        <label class="qcm-option">
+                            <input type="radio" name="q4" value="d">
+                            La colonne la plus importante de la table
+                        </label>
+                    </div>
+                    <div id="feedback-4" class="feedback"></div>
+                </div>
+
+                <!-- Actions QCM -->
+                <div class="qcm-actions">
+                    <button id="validate-qcm" class="btn btn-primary">Valider mes réponses</button>
+                    <button id="reset-qcm" class="btn btn-secondary">Recommencer</button>
+                </div>
+
+                <!-- Résultat final -->
+                <div id="qcm-result"></div>
+            </section>
+
+            <!-- Exercice Capytale -->
+            <section class="course-content">
+                <h2>Exercice Pratique</h2>
+                <p>Pour approfondir vos connaissances, rendez-vous sur Capytale pour réaliser l'exercice pratique de ce chapitre.</p>
+                
+                <div style="text-align: center; margin: 2rem 0;">
+                    <a href="https://capytale2.ac-paris.fr/web/c/4b82-1234567890abcdef" target="_blank" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                        📚 Accéder à l'exercice Capytale
+                    </a>
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        (Ouvre dans un nouvel onglet)
+                    </p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 - Site pédagogique interactif</p>
+            <a href="index.html" class="btn btn-secondary">Retour au sommaire</a>
+        </div>
+    </footer>
+
+    <script src="js/localStorageAuth.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Configuration spécifique pour ce chapitre
+        document.addEventListener('DOMContentLoaded', () => {
+            // Vérifier si le chapitre est débloqué
+            const progression = new ProgressionSystem();
+            const isUnlocked = progression.isChapterUnlocked(1);
+            
+            const lockMessage = document.getElementById('lock-message');
+            const courseContent = document.getElementById('course-content');
+            
+            if (isUnlocked) {
+                lockMessage.style.display = 'none';
+                courseContent.style.display = 'block';
+            } else {
+                lockMessage.style.display = 'block';
+                courseContent.style.display = 'none';
+            }
+            
+            // Configuration des questions pour ce chapitre
+            window.qcmSystem = new QCMSystem();
+            window.qcmSystem.questions = [
+                {
+                    id: 1,
+                    question: "Quel est le principal avantage d'une base de données par rapport à un fichier texte ?",
+                    type: "single",
+                    options: [
+                        { id: "a", text: "Plus facile à lire pour un humain", correct: false },
+                        { id: "b", text: "Permet de stocker plus d'informations", correct: false },
+                        { id: "c", text: "Organisation et recherche efficaces des données", correct: true },
+                        { id: "d", text: "Moins cher à mettre en place", correct: false }
+                    ],
+                    explanation: "Les bases de données permettent d'organiser les données de manière structurée et de les rechercher efficacement."
+                },
+                {
+                    id: 2,
+                    question: "Quel type d'information pourrait-on stocker dans une base de données d'école ?",
+                    type: "multiple",
+                    options: [
+                        { id: "a", text: "Noms des élèves", correct: true },
+                        { id: "b", text: "Adresses des professeurs", correct: true },
+                        { id: "c", text: "Couleurs préférées des élèves", correct: false },
+                        { id: "d", text: "Notes des élèves", correct: true },
+                        { id: "e", text: "Menu de la cantine", correct: false }
+                    ],
+                    explanation: "Dans une base de données d'école, on stocke généralement les informations essentielles pour la gestion scolaire."
+                },
+                {
+                    id: 3,
+                    question: "Quel outil permet de créer et gérer des bases de données relationnelles ?",
+                    type: "single",
+                    options: [
+                        { id: "a", text: "Microsoft Word", correct: false },
+                        { id: "b", text: "Python", correct: false },
+                        { id: "c", text: "MySQL", correct: true },
+                        { id: "d", text: "HTML", correct: false }
+                    ],
+                    explanation: "MySQL est un système de gestion de base de données relationnelles (SGBDR) très utilisé."
+                },
+                {
+                    id: 4,
+                    question: "Qu'est-ce qu'une 'clé primaire' dans une base de données ?",
+                    type: "single",
+                    options: [
+                        { id: "a", text: "Une clé pour ouvrir la base de données", correct: false },
+                        { id: "b", text: "Un mot de passe pour accéder aux données", correct: false },
+                        { id: "c", text: "Un identifiant unique pour chaque enregistrement", correct: true },
+                        { id: "d", text: "La colonne la plus importante de la table", correct: false }
+                    ],
+                    explanation: "La clé primaire permet d'identifier de manière unique chaque enregistrement dans une table."
+                }
+            ];
+        });
+    </script>
+</body>
+</html>

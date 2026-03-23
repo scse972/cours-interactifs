@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Professeur - Cours Interactifs</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- SheetJS pour la lecture des fichiers Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* Styles spécifiques au tableau de bord professeur */
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .global-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .chapter-stats {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-item span:first-child {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .progress-bar-small {
+            width: 100%;
+            height: 10px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill-small {
+            height: 100%;
+            background: #3498db;
+            transition: width 0.3s ease;
+        }
+
+        .students-list {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .students-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .student-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .student-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .student-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .student-header h4 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .student-class {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .student-stats {
+            margin-bottom: 1rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 0.9rem;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .student-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .close-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .chapter-details {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        .chapter-details h4 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+        }
+
+        .chapter-info {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .question-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .chapter-control-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .control-header h4 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .control-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-available {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-locked {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .status-expired {
+            background: #f39c12;
+            color: white;
+        }
+
+        .date-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .date-controls input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .date-limit-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .date-limit-toggle input {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .control-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .btn-unlock {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-unlock:hover {
+            background: #2ecc71;
+        }
+
+        .btn-lock {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-lock:hover {
+            background: #c0392b;
+        }
+
+        .date-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .date-controls input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .date-limit-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .date-limit-toggle input {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .date-display {
+            font-size: 0.9rem;
+            color: #666;
+            padding: 0.25rem 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        .date-display:hover {
+            background: #e9ecef;
+        }
+
+    </style>
+</head>
+<body class="teacher-page">
+        <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>Tableau de Bord Professeur</h1>
+            <p>Suivi de la progression et des performances de vos élèves</p>
+            
+            <div class="dashboard-actions">
+                <button class="btn btn-primary" onclick="window.location.href='teacher-users.html'">
+                    🔧 Gérer les Utilisateurs
+                </button>
+            </div>
+            
+            <div class="global-stats">
+                <div class="stat-card">
+                    <h3>Taux de réussite global</h3>
+                    <div class="stat-value" id="global-success-rate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Élèves actifs</h3>
+                    <div class="stat-value" id="active-students">0/0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Chapitres complétés</h3>
+                    <div class="stat-value" id="completed-chapters">0/0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chapter-controls">
+            <h2>Gestion des Chapitres</h2>
+            <div class="controls-grid" id="chapter-controls-grid">
+                <!-- Controls will be injected here -->
+            </div>
+        </div>
+
+        <div class="chapter-stats">
+            <h2>Performance par Chapitre</h2>
+            <div class="stats-grid" id="chapter-stats-grid">
+                <!-- Stats will be injected here -->
+            </div>
+        </div>
+
+        <div class="students-list">
+            <h2>Détails par Élève</h2>
+            <button class="refresh-btn" id="refresh-dashboard">🔄 Rafraîchir les données</button>
+            <div class="students-grid" id="students-grid">
+                <!-- Student cards will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/localStorageAuth.js"></script>
+    <script>
+        // Vérification de l'authentification professeur
+        if (localStorage.getItem('teacher_authenticated') !== 'true') {
+            window.location.href = 'teacher-login.html';
+        }
+
+        // Système de tableau de bord pour le professeur
+        class TeacherDashboard {
+            constructor() {
+                this.auth = new LocalStorageAuth();
+                this.chapters = [
+                    { id: 1, title: 'Chapitre 1: Introduction', required: null },
+                    { id: 2, title: 'Chapitre 2: Concepts Avancés', required: 1 },
+                    { id: 3, title: 'Chapitre 3: Exercices Pratiques', required: 2 }
+                ];
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.renderDashboard();
+                this.setupRefreshButton();
+            }
+
+            // Obtenir tous les élèves
+            getStudents() {
+                const users = this.auth.getUsers();
+                return users.filter(u => u.type === 'student');
+            }
+
+            // Obtenir les données de progression d'un élève
+            getStudentProgress(studentId) {
+                const data = localStorage.getItem(`student_${studentId}_progress`);
+                if (!data) {
+                    return {
+                        chapters: {},
+                        scores: {},
+                        totalCompleted: 0,
+                        questionAttempts: {}
+                    };
+                }
+                return JSON.parse(data);
+            }
+
+            // Obtenir la configuration d'un chapitre
+            getChapterConfig(chapterId) {
+                const config = localStorage.getItem('chapter_config');
+
+                if (!config) {
+                    return {            
+                        locked: false,
+                        endDate: null,
+                        dateLimitEnabled: false
+                    };
+                }
+
+                const chapterConfig = JSON.parse(config);
+
+                return chapterConfig[chapterId] || { 
+                    locked: false, 
+                    endDate: null, 
+                    dateLimitEnabled: false 
+                };
+            }
+            // Vérifier si un chapitre est expiré
+            isChapterExpired(chapterId) {
+                const config = this.getChapterConfig(chapterId);
+
+                if (!config.dateLimitEnabled || !config.endDate) return false;
+
+                const now = new Date();
+                const endDate = new Date(config.endDate);
+
+                return now > endDate;
+            }
+
+            // Mettre à jour la configuration d'un chapitre
+            updateChapterConfig(chapterId, config) {
+                const currentConfig = localStorage.getItem('chapter_config');
+                let chapterConfig = currentConfig ? JSON.parse(currentConfig) : {};
+                
+                chapterConfig[chapterId] = config;
+                localStorage.setItem('chapter_config', JSON.stringify(chapterConfig));
+            }
+
+            // Calculer les statistiques globales
+            calculateGlobalStats() {
+                const students = this.getStudents();
+                const totalStudents = students.length;
+                let activeStudents = 0;
+                let totalCompletedChapters = 0;
+                let totalSuccessRate = 0;
+
+                students.forEach(student => {
+                    const progress = this.getStudentProgress(student.id);
+                    const completedChapters = Object.values(progress.chapters).filter(c => c.completed).length;
+                    
+                    if (completedChapters > 0) {
+                        activeStudents++;
+                        totalCompletedChapters += completedChapters;
+                    }
+
+                    // Calculer le taux de réussite moyen
+                    let studentTotalScore = 0;
+                    let studentChapterCount = 0;
+                    
+                    Object.values(progress.chapters).forEach(chapter => {
+                        if (chapter.score !== undefined) {
+                            studentTotalScore += chapter.score;
+                            studentChapterCount++;
+                        }
+                    });
+
+                    if (studentChapterCount > 0) {
+                        totalSuccessRate += (studentTotalScore / studentChapterCount);
+                    }
+                });
+
+                const globalSuccessRate = totalStudents > 0 ? Math.round((totalSuccessRate / totalStudents)) : 0;
+                const completedChaptersRatio = `${totalCompletedChapters}/${totalStudents * this.chapters.length}`;
+
+                return {
+                    globalSuccessRate,
+                    activeStudents: `${activeStudents}/${totalStudents}`,
+                    completedChapters: completedChaptersRatio
+                };
+            }
+
+            // Calculer les statistiques par chapitre
+            calculateChapterStats() {
+                const students = this.getStudents();
+                const chapterStats = {};
+
+                this.chapters.forEach(chapter => {
+                    let totalScore = 0;
+                    let completedCount = 0;
+                    let attemptCount = 0;
+
+                    students.forEach(student => {
+                        const progress = this.getStudentProgress(student.id);
+                        const chapterData = progress.chapters[chapter.id];
+                        
+                        if (chapterData) {
+                            attemptCount++;
+                            if (chapterData.score !== undefined) {
+                                totalScore += chapterData.score;
+                            }
+                            if (chapterData.completed) {
+                                completedCount++;
+                            }
+                        }
+                    });
+
+                    const avgScore = attemptCount > 0 ? Math.round(totalScore / attemptCount) : 0;
+                    const completionRate = students.length > 0 ? Math.round((completedCount / students.length) * 100) : 0;
+
+                    chapterStats[chapter.id] = {
+                        title: chapter.title,
+                        avgScore,
+                        completionRate,
+                        completedCount,
+                        attemptCount
+                    };
+                });
+
+                return chapterStats;
+            }
+
+            // Calculer les statistiques par question pour un chapitre
+            calculateQuestionStats(chapterId) {
+                const students = this.getStudents();
+                const questionStats = {};
+
+                students.forEach(student => {
+                    const progress = this.getStudentProgress(student.id);
+                    const attempts = progress.questionAttempts[chapterId];
+                    
+                    if (attempts) {
+                        Object.keys(attempts).forEach(questionId => {
+                            if (!questionStats[questionId]) {
+                                questionStats[questionId] = {
+                                    attempts: 0,
+                                    correct: 0,
+                                    successRate: 0
+                                };
+                            }
+                            
+                            questionStats[questionId].attempts += attempts[questionId].attempts;
+                            questionStats[questionId].correct += attempts[questionId].correct;
+                        });
+                    }
+                });
+
+                // Calculer les taux de réussite
+                Object.keys(questionStats).forEach(questionId => {
+                    const stats = questionStats[questionId];
+                    stats.successRate = stats.attempts > 0 ? Math.round((stats.correct / stats.attempts) * 100) : 0;
+                });
+
+                return questionStats;
+            }
+
+            // Rendre le tableau de bord
+            renderDashboard() {
+                this.renderGlobalStats();
+                this.renderChapterControls();
+                this.renderChapterStats();
+                this.renderStudentsList();
+            }
+
+            renderGlobalStats() {
+                const stats = this.calculateGlobalStats();
+                
+                document.getElementById('global-success-rate').textContent = stats.globalSuccessRate + '%';
+                document.getElementById('active-students').textContent = stats.activeStudents;
+                document.getElementById('completed-chapters').textContent = stats.completedChapters;
+            }
+
+            renderChapterControls() {
+                const grid = document.getElementById('chapter-controls-grid');
+                let html = '';
+
+                this.chapters.forEach(chapter => {
+                    const config = this.getChapterConfig(chapter.id);
+                    const isLocked = config.locked;
+                    const isDateEnabled = config.dateLimitEnabled === true;
+
+                    // Valeurs date et heure
+                    const dateValue = config.endDate ? config.endDate.split('T')[0] : '';
+                    const hourValue = config.endDate ? config.endDate.split('T')[1].split(':')[0] : '19';
+
+                    const isExpired = this.isChapterExpired(chapter.id);
+
+                    // Statut
+                    let statusClass = 'status-available';
+                    let statusText = 'Disponible';
+                    if (isLocked) {
+                        statusClass = 'status-locked';
+                        statusText = 'Verrouillé';
+                    } else if (isExpired) {
+                        statusClass = 'status-expired';
+                        statusText = 'Expiré';
+                    }
+
+                    html += `
+                        <div class="chapter-control-card">
+                            <div class="control-header">
+                                <h4>${chapter.title}</h4>
+                                <span class="control-status ${statusClass}">${statusText}</span>
+                            </div>
+
+                            <div class="control-actions">
+                                <button class="control-btn btn-unlock" onclick="dashboard.toggleChapterLock(${chapter.id})">
+                                    ${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
+                                </button>
+                            </div>
+
+                            <div class="date-controls" style="flex-direction: column; gap: 0.5rem;">
+                                <!-- Checkbox sur sa propre ligne -->
+                                <label class="date-limit-toggle">
+                                    <input type="checkbox" ${isDateEnabled ? 'checked' : ''} 
+                                        onchange="dashboard.toggleDateLimit(${chapter.id}, this.checked)">
+                                    Limite de date
+                                </label>
+
+                                <!-- Date et heure sur la même ligne -->
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="date"
+                                        id="date-input-${chapter.id}"
+                                        value="${dateValue}"
+                                        ${isDateEnabled ? '' : 'disabled'}
+                                        onchange="dashboard.updateChapterDate(${chapter.id})"
+                                    >
+                                    <select id="hour-select-${chapter.id}" 
+                                        ${isDateEnabled ? '' : 'disabled'}
+                                        onchange="dashboard.updateChapterDate(${chapter.id})"
+                                    >
+                                        ${[...Array(24).keys()].map(h => 
+                                            `<option value="${h}" ${h==hourValue?'selected':''}>${h}h</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML = html;
+            }            
+
+            renderChapterStats() {
+                const stats = this.calculateChapterStats();
+                const grid = document.getElementById('chapter-stats-grid');
+                let html = '';
+
+                this.chapters.forEach(chapter => {
+                    const chapterStats = stats[chapter.id];
+                    
+                    html += `
+                        <div class="stat-item">
+                            <span>${chapter.title}</span>
+                            <div class="progress-bar-small">
+                                <div class="progress-fill-small" style="width: ${chapterStats.completionRate}%"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #666;">
+                                <span>Taux de réussite: ${chapterStats.avgScore}%</span>
+                                <span>Complétions: ${chapterStats.completedCount}/${chapterStats.attemptCount}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML = html;
+            }
+
+            renderStudentsList() {
+                const students = this.getStudents();
+                const grid = document.getElementById('students-grid');
+                let html = '';
+
+                if (students.length === 0) {
+                    html = '<div class="empty-state">Aucun élève enregistré. Veuillez ajouter des élèves dans la section "Gérer les Utilisateurs".</div>';
+                } else {
+                    students.forEach(student => {
+                        const progress = this.getStudentProgress(student.id);
+                        const completedChapters = Object.values(progress.chapters).filter(c => c.completed).length;
+                        const totalChapters = this.chapters.length;
+                        const completionRate = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
+                        let avgScore = 0;
+                        let scoreCount = 0;
+                        Object.values(progress.chapters).forEach(chapter => {
+                            if (chapter.score !== undefined) {
+                                avgScore += chapter.score;
+                                scoreCount++;
+                            }
+                        });
+                        avgScore = scoreCount > 0 ? Math.round(avgScore / scoreCount) : 0;
+
+                        html += `
+                            <div class="student-card">
+                                <div class="student-header">
+                                    <h4>${student.name}</h4>
+                                    <span class="student-class">${student.class}</span>
+                                </div>
+                                
+                                <div class="student-stats">
+                                    <div class="stat-row">
+                                        <span>Progression</span>
+                                        <span>${completionRate}% (${completedChapters}/${totalChapters})</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span>Moyenne générale</span>
+                                        <span>${avgScore}%</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span>Dernière activité</span>
+                                        <span>${this.getLastActivity(progress)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="student-actions">
+                                    <button class="btn btn-primary" onclick="dashboard.showChapterDetails('${student.id}', 1)">
+                                        Chapitre 1
+                                    </button>
+                                    <button class="btn btn-primary" onclick="dashboard.showChapterDetails('${student.id}', 2)">
+                                        Chapitre 2
+                                    </button>
+                                    <button class="btn btn-primary" onclick="dashboard.showChapterDetails('${student.id}', 3)">
+                                        Chapitre 3
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                grid.innerHTML = html;
+            }
+
+            getLastActivity(progress) {
+                let latestDate = null;
+                
+                Object.values(progress.chapters).forEach(chapter => {
+                    if (chapter.timestamp) {
+                        const date = new Date(chapter.timestamp);
+                        if (!latestDate || date > latestDate) {
+                            latestDate = date;
+                        }
+                    }
+                });
+
+                return latestDate ? latestDate.toLocaleDateString('fr-FR') : 'Jamais';
+            }
+
+            // Afficher les détails d'un chapitre pour un élève
+            showChapterDetails(studentId, chapterId) {
+                const student = this.auth.getUsers().find(u => u.id === studentId);
+                const progress = this.getStudentProgress(studentId);
+                const questionStats = this.calculateQuestionStats(chapterId);
+
+                const chapterData = progress.chapters[chapterId] || { score: 0, completed: false, timestamp: null };
+                const chapter = this.chapters.find(c => c.id === chapterId);
+
+                let modalHtml = `
+                    <div class="modal-overlay" id="chapter-modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Détails du Chapitre - ${chapter.title}</h3>
+                                <button class="close-btn" onclick="dashboard.closeModal()">&times;</button>
+                            </div>
+                            
+                            <div class="chapter-details">
+                                <h4>Informations sur l'élève</h4>
+                                <div class="chapter-info">
+                                    <span><strong>Élève:</strong> ${student.name}</span>
+                                    <span><strong>Classe:</strong> ${student.class}</span>
+                                    <span><strong>Score:</strong> ${chapterData.score}/100</span>
+                                    <span><strong>Statut:</strong> ${chapterData.completed ? 'Validé' : 'En cours'}</span>
+                                </div>
+                                <div class="chapter-info">
+                                    <span><strong>Date de dernière tentative:</strong> ${chapterData.timestamp ? new Date(chapterData.timestamp).toLocaleString('fr-FR') : 'Jamais'}</span>
+                                </div>
+                            </div>
+
+                            <div class="chapter-details">
+                                <h4>Statistiques des Questions</h4>
+                                <div id="question-stats-list">
+                                    ${this.renderQuestionStats(questionStats)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+
+            renderQuestionStats(questionStats) {
+                let html = '';
+                
+                Object.keys(questionStats).forEach(questionId => {
+                    const stats = questionStats[questionId];
+                    html += `
+                        <div class="question-detail">
+                            <span>Question ${questionId}</span>
+                            <span>${stats.successRate}% (${stats.correct}/${stats.attempts})</span>
+                        </div>
+                    `;
+                });
+
+                if (!html) {
+                    html = '<div style="text-align: center; color: #666; padding: 1rem;">Aucune donnée de question disponible</div>';
+                }
+
+                return html;
+            }
+
+            closeModal() {
+                const modal = document.getElementById('chapter-modal');
+                if (modal) {
+                    modal.remove();
+                }
+            }
+
+            // Contrôle des chapitres
+            toggleChapterLock(chapterId) {
+                const config = this.getChapterConfig(chapterId);
+                this.updateChapterConfig(chapterId, {
+                    ...config,
+                    locked: !config.locked
+                });
+                this.renderChapterControls();
+            }
+
+            toggleDateLimit(chapterId, enabled) {
+                const config = this.getChapterConfig(chapterId);
+                const dateInput = document.getElementById(`date-input-${chapterId}`);
+
+                if (enabled) {
+                    dateInput.disabled = false;
+
+                    let endDate = config.endDate;
+
+                    if (!endDate) {
+                        const defaultDate = new Date();
+                        defaultDate.setDate(defaultDate.getDate() + 7);
+                        defaultDate.setHours(19, 0, 0, 0);
+
+                        endDate = defaultDate.toISOString();
+                        dateInput.value = endDate.split('T')[0];
+                    }
+
+                    this.updateChapterConfig(chapterId, {
+                        ...config,
+                        endDate: endDate,
+                        dateLimitEnabled: true
+                    });
+
+                } else {
+                    dateInput.disabled = true;
+
+                    this.updateChapterConfig(chapterId, {
+                        ...config,
+                        dateLimitEnabled: false // ✅ on désactive sans supprimer la date
+                    });
+                }
+
+                this.renderChapterControls();
+            }
+            updateChapterDate(chapterId) {
+                const dateInput = document.getElementById(`date-input-${chapterId}`);
+                const hourSelect = document.getElementById(`hour-select-${chapterId}`);
+                const config = this.getChapterConfig(chapterId);
+
+                if (!dateInput.value) return; // rien à faire si pas de date
+
+                // On ajoute l'heure choisie pour fixer le fuseau correctement
+                const selectedDate = dateInput.value; // "2026-03-23"
+                const selectedHour = hourSelect ? hourSelect.value : '19';
+
+                const endDate = `${selectedDate}T${selectedHour.padStart(2,'0')}:00:00`; // "2026-03-23T19:00:00"
+                this.updateChapterConfig(chapterId, {
+                    ...config,
+                    endDate: endDate
+                });
+
+                this.renderChapterControls();
+            }
+            clearChapterDate(chapterId) {
+                const config = this.getChapterConfig(chapterId);
+                this.updateChapterConfig(chapterId, {
+                    ...config,
+                    endDate: null
+                });
+                this.renderChapterControls();
+            }
+
+            setupEventListeners() {
+                // Gestion de la déconnexion
+                const logoutBtn = document.createElement('button');
+                logoutBtn.className = 'btn btn-danger';
+                logoutBtn.textContent = 'Déconnexion Professeur';
+                logoutBtn.style.marginTop = '0.5rem';
+                logoutBtn.style.display = 'block';
+                logoutBtn.style.marginLeft = 'auto';
+                logoutBtn.style.marginRight = 'auto';
+                
+                logoutBtn.addEventListener('click', () => {
+                    localStorage.removeItem('teacher_authenticated');
+                    window.location.href = 'teacher-login.html';
+                });
+
+                document.querySelector('.dashboard-container').appendChild(logoutBtn);
+            }
+
+            setupRefreshButton() {
+                const refreshBtn = document.getElementById('refresh-dashboard');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        this.renderDashboard();
+                    });
+                }
+            }
+        }
+
+        // Initialisation du tableau de bord
+        let dashboard;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            dashboard = new TeacherDashboard();
+        });
+    </script>
+</body>
+</html>
