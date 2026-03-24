@@ -164,6 +164,84 @@
             gap: 1rem;
         }
 
+        .chapter-list {
+            margin-top: 1rem;
+            border-top: 1px solid #eee;
+            padding-top: 1rem;
+        }
+
+        .chapter-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chapter-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+        .chapter-list li:hover {
+            background: #e9ecef;
+        }
+
+        .chapter-link {
+            text-decoration: none;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .chapter-link:hover {
+            color: #3498db;
+            text-decoration: underline;
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .status-completed {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-in-progress {
+            background: #f39c12;
+            color: white;
+        }
+
+        .status-locked {
+            background: #34495e;
+            color: white;
+        }
+
+        .status-expired {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .status-not-started {
+            background: #95a5a6;
+            color: white;
+        }
+
         /* Modal styles */
         .modal-overlay {
             position: fixed;
@@ -311,12 +389,12 @@
         }
 
         .status-locked {
-            background: #e74c3c;
+            background: #34495e;
             color: white;
         }
 
         .status-expired {
-            background: #f39c12;
+            background: #9b59b6;
             color: white;
         }
 
@@ -837,16 +915,41 @@
                                     </div>
                                 </div>
 
-                                <div class="student-actions">
-                                    <button class="btn btn-primary" onclick="dashboard.showChapterDetails('${student.id}', 1)">
-                                        Chapitre 1
-                                    </button>
-                                    <button class="btn btn-primary" onclick="dashboard.showChapterDetails('${student.id}', 2)">
-                                        Chapitre 2
-                                    </button>
-                                    <button class="btn btn-primary" onclick="dashboard.showChapterDetails('${student.id}', 3)">
-                                        Chapitre 3
-                                    </button>
+                                <div class="chapter-list">
+                                    <ul>
+                                        ${this.chapters.map(chapter => {
+                                            const chapterData = progress.chapters[chapter.id] || { completed: false, score: 0 };
+                                            const config = this.getChapterConfig(chapter.id);
+                                            const isLocked = config.locked;
+                                            const isExpired = this.isChapterExpired(chapter.id);
+                                            
+                                            let statusClass = 'status-not-started';
+                                            let statusText = 'Non commencé';
+                                            
+                                            if (chapterData.completed) {
+                                                statusClass = 'status-completed';
+                                                statusText = 'Validé';
+                                            } else if (chapterData.score > 0) {
+                                                statusClass = 'status-in-progress';
+                                                statusText = 'En cours';
+                                            } else if (isExpired) {
+                                                statusClass = 'status-expired';
+                                                statusText = 'Expiré';
+                                            } else if (isLocked) {
+                                                statusClass = 'status-locked';
+                                                statusText = '🔒';
+                                            }
+
+                                            return `
+                                                <li>
+                                                    <a class="chapter-link" onclick="dashboard.showChapterDetails('${student.id}', ${chapter.id})">
+                                                        ${chapter.title}
+                                                    </a>
+                                                    <span class="status-badge ${statusClass}">${statusText}</span>
+                                                </li>
+                                            `;
+                                        }).join('')}
+                                    </ul>
                                 </div>
                             </div>
                         `;
