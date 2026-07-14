@@ -1,0 +1,224 @@
+<!-- src/html/teacher.html -->
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Formateur - Cours Interactifs</title>
+    <script>window._ELECTRON_DEPTH = 2;</script>
+    <script src="../../src/js/config.js"></script>
+    <link rel="stylesheet" href="../../src/assets/css/style.css">
+    <link rel="stylesheet" href="../../src/assets/css/teacher.css">
+    <script src="../../src/js/parcours.js"></script>
+    <script src="../../src/js/core/getExamContext.js"></script>
+    <script src="../../src/js/getChapterBadgeState.js"></script>
+    <!-- SheetJS pour la lecture des fichiers Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="teacher-page" style="opacity:0; transition: opacity 0.2s ease;">
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <button class="logout-btn-header" id="logout-btn-header" title="Se déconnecter">
+                Déconnexion
+            </button>
+            <h1>Tableau de Bord Formateur</h1>
+            <!-- Sélecteur de parcours -->
+            <div id="parcours-switcher" style="margin: 0.75rem 0;">
+                <label for="parcours-select" style="font-weight:600; margin-right:0.5rem;">Parcours :</label>
+                <select id="parcours-select" style="padding:0.4rem 0.75rem; border-radius:6px; border:1px solid #ccc; font-size:1rem; cursor:pointer;">
+                    <option value="">— Chargement… —</option>
+                </select>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:left; gap:1rem; flex-wrap:wrap; margin-bottom:0.25rem;">
+                <p id="teacher-name-display" style="margin:0;">Connecté en tant que : <strong>Chargement...</strong></p>
+                <button class="btn btn-secondary" id="change-password-btn" style="font-size:0.85rem; padding:0.25rem 0.75rem; width:auto; white-space:nowrap;" title="Changer le mot de passe formateur">
+                    🔑 Changer mot de passe
+                </button>
+                <!-- Indicateur de connexion au storage -->
+                <div id="storage-indicator" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.8rem; color:#555; margin-left:auto; white-space:nowrap; padding:0.2rem 0.6rem; border-radius:6px; border:1px solid #ddd; background:#fafafa;">
+                    <span id="storage-status-dot" style="width:8px;height:8px;border-radius:50%;background:#aaa;display:inline-block;"></span>
+                    <span id="storage-provider-name">…</span>
+                    <span id="storage-status-text" style="font-weight:500;margin-left:0.2rem;"></span>
+                </div>
+            </div>
+            <p>Suivi de la progression et des performances de vos apprenants</p>
+        </div>
+
+        <!-- Navigation par onglets -->
+        <div class="tabs-navigation">
+            <button class="tab-btn active" data-tab="chapters">
+                📚 Gestion des chapitres
+            </button>
+            <button class="tab-btn" data-tab="users">
+                👥 Gérer les utilisateurs
+            </button>
+            <button class="tab-btn" data-tab="submissions">
+                📬 Rendus à corriger
+                <span class="badge" id="submissions-badge" style="display: none;">0</span>
+            </button>
+            <button class="tab-btn" data-tab="students">
+                👥 Suivi apprenants
+            </button>
+            <button class="tab-btn" data-tab="stats">
+                📊 Statistiques
+            </button>
+        </div>
+
+        <!-- Contenu des onglets -->
+        <div class="tabs-content">
+            <!-- Onglet Gestion des chapitres -->
+            <div id="tab-chapters" class="tab-panel active">
+                <div id="chapters-content">
+                    <!-- Contenu chargé dynamiquement par teacherChapters.js -->
+                </div>
+                
+                <!-- Zone de danger (masquée au départ pour éviter le flash) -->
+                <div class="danger-zone" id="danger-zone-container" style="margin-top: 2rem; display: none;">
+                    <h3>⚠️ Zone de Danger</h3>
+                    <p id="danger-zone-subtitle">Réinitialiser toutes les réponses et métadonnées de tous les chapitres pour tous les apprenants. Cette action est irréversible.</p>
+
+                    <!-- Section réinitialisation (visible quand un parcours est sélectionné) -->
+                    <div id="reset-section" style="display:none; margin-top: 1rem;">
+                        <h3>🗑️ Réinitialiser les progressions</h3>
+                        <p style="color:#666; font-size:0.9rem;">Sélectionnez les étudiants dont vous voulez réinitialiser la progression.</p>
+                        <div id="reset-students-list" style="margin: 1rem 0;"></div>
+                        <button class="btn btn-danger" id="reset-selected-btn" style="display:none;">
+                            🗑️ Réinitialiser les progressions sélectionnées
+                        </button>
+                    </div>
+
+                    <!-- Parcours orphelins (visible quand aucun parcours sélectionné) -->
+                    <div id="orphan-section" style="display:none; margin-top: 2rem; border-top: 2px solid #e74c3c; padding-top: 1.5rem;">
+                        <h3>🗑️ Parcours orphelins</h3>
+                        <p>Parcours qui ne sont plus dans <code>cours.json</code> mais qui ont encore des données stockées.</p>
+                        <div id="orphan-list" style="margin: 1rem 0;"></div>
+                        <button class="btn btn-danger" id="purge-orphans-btn" style="display:none;">
+                            🧹 Purger les données orphelines sélectionnées
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Gérer les utilisateurs -->
+            <div id="tab-users" class="tab-panel">
+                <div id="users-content">
+                    <!-- Contenu chargé dynamiquement par teacherUsers.js -->
+                </div>
+            </div>
+
+            <!-- Onglet Rendus à corriger -->
+            <div id="tab-submissions" class="tab-panel">
+                <div id="submissions-content">
+                    <!-- Contenu chargé dynamiquement par teacherSubmissions.js -->
+                </div>
+            </div>
+
+            <!-- Onglet Apprenants -->
+            <div id="tab-students" class="tab-panel">
+                <div id="students-content">
+                    <!-- Contenu chargé dynamiquement par teacherSubmissions.js -->
+                </div>
+            </div>
+
+            <!-- Onglet Statistiques -->
+            <div id="tab-stats" class="tab-panel">
+                <div id="stats-content">
+                    <!-- Contenu chargé dynamiquement par teacherStats.js -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de changement de mot de passe -->
+    <div id="change-password-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:12px; padding:2rem; max-width:400px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 0.5rem 0;">🔑 Changer le mot de passe formateur</h3>
+            <p style="color:#888; font-size:0.85rem; margin-bottom:1.5rem;">
+                Modifie uniquement le mot de passe du formateur (celui du super admin est inaliénable).<br>
+                Mot de passe par défaut : <code>formateur2026</code>
+            </p>
+            <div style="margin-bottom:1rem;">
+                <label style="display:block; font-weight:600; margin-bottom:0.4rem;">Nouveau mot de passe :</label>
+                <input type="password" id="new-password-input" style="width:100%; padding:0.6rem; border:2px solid #ddd; border-radius:6px; font-size:1rem;" placeholder="Entrez le nouveau mot de passe">
+            </div>
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block; font-weight:600; margin-bottom:0.4rem;">Confirmer le mot de passe :</label>
+                <input type="password" id="confirm-password-input" style="width:100%; padding:0.6rem; border:2px solid #ddd; border-radius:6px; font-size:1rem;" placeholder="Confirmez le nouveau mot de passe">
+            </div>
+            <div style="text-align:center; display:flex; gap:0.75rem;">
+                <button class="btn btn-secondary" id="cancel-password-btn" style="flex:1;">Annuler</button>
+                <button class="btn btn-primary" id="save-password-btn" style="flex:1;">💾 Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../src/js/storage.js"></script>
+    <script src="../../src/js/dataStorage.js"></script>
+    <script>
+    // ❌ SUPPRIMÉ : Activation globale du mode examen
+    // Le mode examen est maintenant contrôlé chapitre par chapitre via getChapterConfig()
+    window.globalContext = window.globalContext || {};
+    
+    </script>
+    <script src="../../src/js/main.js"></script>
+    <script src="../../src/js/progressManager.js"></script>
+    
+    <!-- Utilitaires communs -->
+    <script src="../../src/js/core/utils.js"></script>
+    
+    <!-- Modules du tableau de bord -->
+    <script src="../../src/js/correctionModal.js"></script>
+    <script src="../../src/js/teacherChapters.js"></script>
+    <script src="../../src/js/teacherUsers.js"></script>
+    <script src="../../src/js/teacherSubmissions.js"></script>
+    <script src="../../src/js/teacherStudents.js"></script>
+    <script src="../../src/js/teacherStats.js"></script>
+    <script src="../../src/js/teacherDashboard.js"></script>
+    
+    <!-- Script d'initialisation du sélecteur de parcours -->
+    <script>
+    // ── Rendre slug accessible globalement pour tous les modules ──
+    window.currentParcoursSlug = new URLSearchParams(window.location.search).get('parcours') || '';
+
+    (async function initParcoursSwitcher() {
+        const select = document.getElementById('parcours-select');
+        const current = window.currentParcoursSlug;
+
+        const data = await staticJson.get('/parcours/cours.json');
+        if (!data) {
+            select.innerHTML = '<option value="">Erreur chargement parcours</option>';
+            console.error('[Switcher] Impossible de charger les parcours');
+            return;
+        }
+
+        const list = data.parcours || [];
+        select.innerHTML = '';
+        if (!current) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '— Choisir un parcours —';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            select.appendChild(placeholder);
+        }
+
+        list.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.slug;
+            opt.textContent = p.label || p.slug;
+            if (p.slug === current) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        select.addEventListener('change', () => {
+            if (select.value) {
+                window.location.href = window.location.pathname + '?parcours=' + select.value;
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

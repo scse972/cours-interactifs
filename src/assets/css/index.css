@@ -1,0 +1,449 @@
+/* Styles spécifiques à la page index.html */
+
+/* Footer fixe en bas de l'écran pour la page d'accueil uniquement */
+footer {
+    background: #34495e;
+    color: white;
+    text-align: center;
+    padding: 1rem 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+/* Ajouter un padding en bas du body pour compenser le footer fixe */
+body {
+    padding-bottom: 60px;
+}
+
+/* Section d'authentification */
+.auth-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.auth-card h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+/* Informations utilisateur */
+.student-info {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.welcome-message {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.student-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.student-info-left {
+    display: flex;
+    align-items: center;
+}
+
+.student-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.student-class {
+    background: #3498db;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.student-details .btn-secondary {
+    width: auto;
+    padding: 0.5rem 1rem;
+}
+
+/* Grille des chapitres - disposition en grille comme teacher.html */
+.course-grid .chapters {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.course-grid .chapter-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 
+        0 4px 6px rgba(0,0,0,0.07),
+        0 1px 3px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.course-grid .chapter-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.course-grid .chapter-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+        0 8px 15px rgba(0,0,0,0.1),
+        0 3px 5px rgba(0,0,0,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.9);
+    border-color: #d0d0d0;
+}
+
+.course-grid .chapter-card:hover::before {
+    opacity: 1;
+}
+
+.course-grid .chapter-card h3 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+
+
+/* Pour les éléments générés automatiquement */
+.course-grid .chapter-card .chapter-status {
+    margin-top: auto;
+}
+
+/* Nouveaux éléments de stats pour les cartes chapitres */
+.course-grid .chapter-card .chapter-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.course-grid .chapter-card .progress-ring {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.course-grid .chapter-card .progress-ring svg {
+    width: 40px;
+    height: 40px;
+    transform: rotate(-90deg);
+}
+
+.course-grid .chapter-card .progress-ring .progress-value {
+    position: absolute;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.course-grid .chapter-card .chapter-grade {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #666;
+    margin: 0 1rem;
+}
+
+.course-grid .chapter-card .chapter-grade.completed {
+    color: #27ae60;
+}
+
+.course-grid .chapter-card .btn-info {
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.course-grid .chapter-card .btn-info:hover {
+    background: #2980b9;
+    transform: scale(1.1);
+}
+
+.course-grid .chapter-card a.btn {
+    margin-top: 0;
+    align-self: flex-end;
+}
+
+/* Modal pour le détail des chapitres */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.section-title {
+    font-weight: bold;
+    margin: 1.5rem 0 0.75rem;
+    font-size: 1rem;
+    color: #333;
+}
+
+.section-title:first-child {
+    margin-top: 0;
+}
+
+.note-range {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.note-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.note-item:last-child {
+    border-bottom: none;
+}
+
+.note-label {
+    color: #666;
+}
+
+.note-value {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.note-value.current {
+    color: #2c3e50;
+}
+
+.note-value.min {
+    color: #e74c3c;
+}
+
+.note-value.max {
+    color: #27ae60;
+}
+
+.questions-list {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: 95px 70px 1fr 130px 50px;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    font-size: 0.8rem;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-qid {
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+.detail-type {
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    background: #f0f0f0;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    text-align: center;
+}
+
+.detail-status {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.detail-status.correct {
+    color: #27ae60;
+}
+
+.detail-status.incorrect {
+    color: #e74c3c;
+}
+
+.detail-status.unanswered {
+    color: #95a5a6;
+}
+
+.detail-status.pending {
+    color: #f39c12;
+}
+
+.detail-attempts {
+    color: #888;
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.detail-points {
+    text-align: right;
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+/* ============================================================================
+   NOUVEAUX ÉTATS DES CHAPITRES (Version 2.0)
+   Styles pour les différents statuts de chapitres
+   ============================================================================ */
+
+.chapter-status {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Verrouillé - chapitre non accessible */
+.status-locked {
+    color: #95a5a6;
+}
+
+/* Disponible - chapitre accessible mais pas commencé */
+.status-available {
+    color: #27ae60;
+}
+
+/* En cours - chapitre commencé mais pas terminé */
+.status-in-progress {
+    color: #f39c12;
+}
+
+/* Rendu - chapitre soumis par l'apprenant */
+.status-submitted {
+    color: #3498db;
+}
+
+/* À reprendre - chapitre retourné pour révision */
+.status-revision {
+    color: #e67e22;
+}
+
+/* Corrigé - chapitre validé par le formateur */
+.status-corrected {
+    color: #27ae60;
+    font-weight: 700;
+}

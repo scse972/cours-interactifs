@@ -1,0 +1,240 @@
+<!-- teacher-login.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion Formateur - Cours Interactifs</title>
+    <script>window._ELECTRON_DEPTH = 2;</script>
+    <script src="../../src/js/config.js"></script>
+    <link rel="stylesheet" href="../../src/assets/css/style.css">
+    <script src="../../src/js/parcours.js"></script>
+    <script src="../../src/js/storage.js"></script>
+    <script src="../../src/js/main.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+    // Verification IMMEDIATE avant rendu
+    (function() {
+        if (sessionStorage.getItem('teacher_authenticated') === 'true') {
+            window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+            throw new Error('Redirection vers tableau de bord formateur');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.style.opacity = '1';
+        });
+    })();
+    </script>
+    <style>
+        .teacher-login-container { max-width: 500px; margin: 4rem auto; padding: 2rem; }
+        .teacher-login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .teacher-form { margin-top: 2rem; }
+        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: #333; }
+        .form-group input { width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 4px; font-size: 1.1rem; box-sizing: border-box; }
+        .form-group input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+        .help-text { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+        .back-link { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; }
+        .back-link a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .back-link a:hover { text-decoration: underline; }
+        .teacher-link { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; }
+        .teacher-link a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .teacher-link a:hover { text-decoration: underline; }
+        .teacher-info { background: #f8f9fa; padding: 1rem; border-radius: 4px; margin-top: 1rem; font-size: 0.9rem; text-align: left; }
+        .error-message {
+            display: none;
+            background: #fff0f0;
+            color: #c0392b;
+            border-left: 4px solid #e74c3c;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            white-space: pre-line;
+            text-align: left;
+            animation: shake 0.3s ease;
+        }
+        .error-message.network-error {
+            background: #fff8e1;
+            color: #7b5800;
+            border-left-color: #f59e0b;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25%       { transform: translateX(-6px); }
+            75%       { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body class="teacher-login-page" style="opacity: 0; transition: opacity 0.2s ease;">
+    <div class="teacher-login-container">
+        <div class="teacher-login-card">
+            <h1>Connexion Formateur</h1>
+            <p>Accedez a votre tableau de bord pour suivre la progression de vos apprenants</p>
+
+            <div class="error-message" id="error-message"></div>
+
+            <form id="teacher-login-form" class="teacher-form">
+                <input type="hidden" name="username" value="teacher" autocomplete="username">
+                <div class="form-group">
+                    <label for="teacher-password">Mot de passe formateur :</label>
+                    <input type="password" id="teacher-password" name="password" placeholder="Entrez le mot de passe" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.2rem; padding: 1rem;">
+                    Acceder au Tableau de Bord
+                </button>
+            </form>
+
+            <div class="teacher-info">
+                <h4 style="margin: 0.5rem 0 0.5rem 0; color: #333;">A propos du tableau de bord</h4>
+                <ul style="margin: 0; padding-left: 1.5rem;">
+                    <li>Visualisation de la progression de tous les apprenants</li>
+                    <li>Taux de reussite par chapitre et par question</li>
+                    <li>Details des tentatives et performances individuelles</li>
+                    <li>Suivi de l'activite et de la derniere connexion</li>
+                </ul>
+            </div>
+            <div class="teacher-link">
+                <p>Vous etes apprenant ?</p>
+                <a href="login.html">Acceder aux parcours</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_PASSWORD = "formateur2026";
+        const RECOVERY_TOKEN = "YXORP@97240";
+
+        const errorBox = document.getElementById('error-message');
+
+        function showError(msg, isNetwork) {
+            errorBox.textContent = msg;
+            errorBox.className = 'error-message' + (isNetwork ? ' network-error' : '');
+            errorBox.style.display = 'flex';
+            // Reset animation
+            errorBox.style.animation = 'none';
+            errorBox.offsetHeight;
+            errorBox.style.animation = '';
+        }
+
+        function hideError() {
+            errorBox.style.display = 'none';
+        }
+
+        /**
+         * Attend que storage.js ait fini d'initialiser le provider,
+         * puis interroge ce provider directement (bypasse le fallback cache).
+         * Retourne { value, fromNetwork: bool }
+         *
+         * Optimisation : si storage.js a deja constate que le backend est
+         * injoignable (window._storageOnline === false), on court-circuite
+         * immediatement sans faire de requete HTTP — ce qui evite l'erreur
+         * rouge ERR_NAME_NOT_RESOLVED dans la console.
+         */
+        async function getFromNetwork(key) {
+            // 1. Attendre l'init de storage.js (no-op si deja pret)
+            try { await storage.init(); } catch (_) {}
+
+            const provider = window._storageProvider;
+            if (!provider) return { value: null, fromNetwork: false };
+
+            // 2. Court-circuit si on sait deja que le backend est injoignable
+            //    (flag mis a jour par storage.get/set au fil des appels)
+            if (window._storageOnline === false) {
+                return { value: null, fromNetwork: false };
+            }
+
+            // 3. Tentative reelle — peut echouer si c'est le premier appel
+            try {
+                const value = await provider.get(key);
+                return { value, fromNetwork: true };
+            } catch (e) {
+                return { value: null, fromNetwork: false };
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const form          = document.getElementById('teacher-login-form');
+            const passwordInput = document.getElementById('teacher-password');
+
+            if (sessionStorage.getItem('teacher_authenticated') === 'true') {
+                window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+            }
+
+            passwordInput.addEventListener('input', hideError);
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const password = passwordInput.value.trim();
+
+                // ── 1. RECOVERY_TOKEN : bypass total, meme hors-ligne ──────────
+                if (password === RECOVERY_TOKEN) {
+                    sessionStorage.setItem('teacher_authenticated', 'true');
+                    sessionStorage.setItem('teacher_role', 'admin');
+                    // Pas de storage.set ici : on est peut-etre hors-ligne
+                    try {
+                        const cachedUsers = JSON.parse(localStorage.getItem('_cache_users_list')) || [];
+                        const teacher = cachedUsers.find(u => u.type === 'teacher');
+                        if (teacher) sessionStorage.setItem('teacher_name', teacher.name || 'Admin');
+                    } catch (_) {}
+                    window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+                    return;
+                }
+
+                // ── 2. Verifier la disponibilite du backend ────────────────────
+                const { value: storedPassword, fromNetwork } = await getFromNetwork('teacher_password');
+                if (!fromNetwork) {
+                    showError(
+                        "⚠️ Serveur de données inaccessible.\n\n" +
+                        "Vérifiez le réseau ou les paramètres de Supabase.\n" +
+                        "Hors‑ligne : seul le jeton superadmin fonctionne.",
+                        true
+                    );
+                    passwordInput.value = "";
+                    passwordInput.focus();
+                    return;
+                }
+
+                // ── 3. Mot de passe personnalise stocke ───────────────────────
+                if (storedPassword && password === storedPassword) {
+                    sessionStorage.setItem('teacher_authenticated', 'true');
+                    sessionStorage.setItem('teacher_role', 'formateur');
+                    const users = await storage.get('users_list') || [];
+                    const teacher = users.find(u => u.type === 'teacher');
+                    await storage.set('teacher_name', teacher ? teacher.name : 'Formateur');
+                    window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+                    return;
+                }
+
+                // ── 4. Mot de passe par defaut (seulement si aucun perso defini) ──
+                if (password === DEFAULT_PASSWORD) {
+                    if (storedPassword) {
+                        showError(
+                            '❌ Mot de passe par défaut désactivé.\n' +
+                            'Un mot de passe personnalisé a été défini.\n\n' +
+                            'Utilisez votre mot de passe personnalisé ou le jeton de récupération.'
+                        );
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                        return;
+                    }
+                    sessionStorage.setItem('teacher_authenticated', 'true');
+                    sessionStorage.setItem('teacher_role', 'formateur');
+                    const users = await storage.get('users_list') || [];
+                    const teacher = users.find(u => u.type === 'teacher');
+                    await storage.set('teacher_name', teacher ? teacher.name : 'Formateur');
+                    window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+                    return;
+                }
+
+                // ── 5. Echec ──────────────────────────────────────────────────
+                const hint = storedPassword
+                    ? 'Utilisez votre mot de passe personnalisé.'
+                    : 'Mot de passe par défaut : ' + DEFAULT_PASSWORD;
+                showError('❌ Mot de passe incorrect.\n' + hint);
+                passwordInput.value = '';
+                passwordInput.focus();
+            });
+        });
+    </script>
+</body>
+</html>

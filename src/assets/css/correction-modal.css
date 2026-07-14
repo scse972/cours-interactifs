@@ -1,0 +1,358 @@
+/**
+ * correction-modal.css - Feuille de style dédiée exclusivement au modal de correction
+ * 
+ * Tous les styles relatifs au modal de correction se trouvent ici.
+ * Aucun style global ou autre composant ne doit être ajouté dans ce fichier.
+ */
+
+/* ==========================================================================
+   MODAL PRINCIPAL
+   ========================================================================== */
+
+.correction-modal {
+    max-width: 1100px !important;
+    width: 95% !important;
+    max-height: 90vh !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.correction-modal .modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+
+.correction-modal-body {
+    overflow-y: auto;
+    padding: 1.5rem;
+    flex: 1;
+}
+
+/* ==========================================================================
+   EN-TETE
+   ========================================================================== */
+
+.correction-header-info {
+    display: flex;
+    gap: 2rem;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: #666;
+}
+
+.correction-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.correction-header-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.correction-header-btn.btn-primary {
+    background: #0d6efd;
+    color: white;
+}
+
+.correction-header-btn.btn-success {
+    background: #198754;
+    color: white;
+}
+
+.correction-header-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   FILTRES
+   ========================================================================== */
+
+.correction-filters {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+
+.correction-filters .filter-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.correction-filters .filter-btn.active {
+    background: #2c3e50;
+    color: white;
+    border-color: #2c3e50;
+}
+
+.correction-filters .filter-btn:hover {
+    border-color: #3498db;
+    background: #e8f4fd;
+}
+
+.correction-filters .filter-btn.active:hover {
+    background: #2c3e50;
+}
+
+/* ==========================================================================
+   QUESTIONS
+   ========================================================================== */
+
+.question-correction {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s ease;
+}
+
+.question-correction:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.question-correction-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #d0dce8;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #e8f4fd;
+}
+
+.question-correction-header .status-badge {
+    margin-left: auto;
+}
+
+.question-correction-header h6 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.correction-row {
+    display: flex;
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.correction-row:last-of-type {
+    border-bottom: none;
+}
+
+.correction-label {
+    min-width: 140px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.correction-value {
+    flex: 1;
+}
+
+.correction-value.correct {
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+.correction-value.incorrect {
+    color: #c62828;
+    font-weight: 600;
+}
+
+.correction-note {
+    margin: 0.5rem 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    border-left: 3px solid #95a5a6;
+}
+
+.auto-correction-note {
+    margin: 0 1rem;
+    padding: 0.5rem;
+    background: #e8f5e9;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #2e7d32;
+    border-left: 3px solid #4caf50;
+}
+
+.correction-inputs {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.correction-inputs .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.correction-inputs .form-group:first-child {
+    grid-column: 1;
+}
+
+.correction-inputs .form-group:last-child {
+    grid-column: 2;
+}
+
+.correction-inputs label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.correction-inputs input,
+.correction-inputs textarea {
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.correction-inputs input:focus,
+.correction-inputs textarea:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52,152,219,0.15);
+}
+
+.correction-inputs textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+/* ==========================================================================
+   ETATS DES QUESTIONS - Style chapitre (fonds colorés)
+   ========================================================================== */
+
+.question-pending {
+    border-left: 4px solid #f39c12;
+    background: #fffef5;
+}
+
+.question-corrected {
+    border-left: 4px solid #27ae60;
+    background: #f6fef9;
+}
+
+.question-auto {
+    border-left: 4px solid #3498db;
+    background: #f5faff;
+}
+
+.question-returned {
+    border-left: 4px solid #e74c3c;
+    background: #fef5f5;
+}
+
+/* ==========================================================================
+   BADGES DE STATUT - Style chapitre (couleurs vives)
+   ========================================================================== */
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-corrected {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-auto {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-modified {
+    background: #ffe0b2;
+    color: #e65100;
+}
+
+/* ==========================================================================
+   SECTION PENALITE
+   ========================================================================== */
+
+.question-penalty {
+    border: 2px dashed #f39c12 !important;
+    background: #fffef5 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+/* ==========================================================================
+   TOGGLE "TRAITÉ" - Animation
+   ========================================================================== */
+
+.treated-toggle {
+    cursor: pointer;
+}
+
+/* Non coché : bordure orangée qui clignote */
+.treated-toggle:has(input:not(:checked)) {
+    animation: treatedBorderPulse 1.5s ease-in-out infinite;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background: rgba(255, 152, 0, 0.05);
+    transition: background 0.3s;
+}
+
+@keyframes treatedBorderPulse {
+    0%, 100% { border-color: rgba(255, 152, 0, 0.1); background: rgba(255, 152, 0, 0.05); }
+    50% { border-color: rgba(255, 152, 0, 0.7); background: rgba(255, 152, 0, 0.12); }
+}
+
+/* Au survol de la question, l'animation s'intensifie */
+.question-correction:hover .treated-toggle:has(input:not(:checked)) {
+    animation: treatedBorderPulseHover 1.2s ease-in-out infinite;
+}
+
+@keyframes treatedBorderPulseHover {
+    0%, 100% { border-color: rgba(255, 152, 0, 0.2); background: rgba(255, 152, 0, 0.08); }
+    50% { border-color: rgba(255, 87, 34, 0.9); background: rgba(255, 152, 0, 0.2); }
+}
+
+/* Quand coché : bordure et fond verts, plus d'animation */
+.treated-toggle:has(input:checked) {
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 2px solid rgba(76, 175, 80, 0.3);
+    background: rgba(76, 175, 80, 0.1);
+}
