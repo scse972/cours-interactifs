@@ -120,6 +120,7 @@ L’application repose sur une architecture hybride :
 
 Le projet cherche à combiner :
 
+
 * simplicité de déploiement,
 * faible dépendance serveur,
 * fonctionnement hors-ligne,
