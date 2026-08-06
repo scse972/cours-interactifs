@@ -19,29 +19,66 @@ function getExamContext(chapter, chapterConfig = null, globalContext = {}) {
     const isSubmitted = submissionStatus === 'submitted' || submissionStatus === 'late_submitted';
     const isCorrected = submissionStatus === 'validated';
 
-    // 1. source UNIQUE de vérité pour le mode examen du chapitre
-    const chapterExamMode = Boolean(config?.examMode);
+    // 1. Déterminer le mode + la date limite EFFECTIFS.
+    //    Une fois qu'un élève a démarré un chapitre (frozenAt posé par initChapter()),
+    //    son contexte est figé : il ne suit plus les changements globaux faits après coup
+    //    (utile avec plusieurs classes démarrant à des moments différents). Tant qu'il n'a
+    //    pas démarré, on affiche la config globale actuelle (page d'accueil).
+    const started = chapter?.frozenAt != null;
+
+    const effectiveChapterMode = started
+        ? chapter.frozenChapterMode
+        : (config?.chapterMode || (config?.examMode ? 'exam' : 'normal'));
+
+    const effectiveDateLimitEnabled = started
+        ? chapter.frozenDateLimitEnabled === true
+        : config?.dateLimitEnabled === true;
+
+    const effectiveEndDate = started
+        ? chapter.frozenEndDate
+        : (config?.endDate || null);
 
     // 2. override global (ex: mode examen externe, test, admin)
     const globalExamMode = Boolean(globalContext?.examMode);
 
+    const mode = globalExamMode ? 'exam' : effectiveChapterMode;
+
+    // 3. Verrouillage formateur : SEUL le verrou manuel ("🔒 Verrouiller", toujours en direct,
+    //    jamais figé, global — pas d'exception individuelle) bloque le chapitre. La date limite
+    //    figée pour cet élève ne bloque rien : elle sert uniquement à marquer son rendu comme
+    //    "en retard" au moment où il rend sa copie (voir chapterSubmission.js / submitChapter()).
+    const isManuallyLocked = config?.locked === true;
+    const isDeadlinePassed = Boolean(
+        effectiveDateLimitEnabled && effectiveEndDate && new Date() > new Date(effectiveEndDate)
+    );
+    const isTeacherLocked = isManuallyLocked;
 
     return {
-        // vrai mode examen = OR contrôlé (mais explicite)
-        isExamMode: chapterExamMode || globalExamMode,
+        // vrais booléens pour chaque mode
+        isExamMode:        mode === 'exam',
+        isBlindMode:       mode === 'blind',
+        isMillionnaireMode: mode === 'millionnaire',
+        isNormalMode:      mode === 'normal',
 
         // état progression
         isSubmitted,
         isCorrected,
 
-        // verrouillage strict
-        isChapterLocked: isSubmitted || isCorrected,
+        // verrouillage formateur (manuel uniquement) ; isDeadlinePassed est informatif
+        // (utilisé pour le marquage "en retard" à la soumission, pas pour verrouiller)
+        isManuallyLocked,
+        isDeadlinePassed,
+        isTeacherLocked,
+        isChapterLocked: isSubmitted || isCorrected || isTeacherLocked,
 
         // debug utile
         _debug: {
-            chapterExamMode,
+            chapterMode: mode,
             globalExamMode,
-            submissionStatus
+            submissionStatus,
+            started,
+            isManuallyLocked,
+            isDeadlinePassed
         }
     };
 }

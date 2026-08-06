@@ -8,7 +8,28 @@
 
 const ChapterBilan = {
 
+    // ── Gestion du focus : sauver/restaurer autour des modals ──────
+    // Corrige le bug où les modals (confirm, alert, HTML) volent le focus
+    // et empêchent la saisie dans les champs après fermeture.
+    _previousFocus: null,
+
+    _saveFocus() {
+        this._previousFocus = document.activeElement;
+    },
+
+    _restoreFocus() {
+        const el = this._previousFocus;
+        // Petit délai pour laisser le navigateur finir le cleanup du modal
+        setTimeout(() => {
+            if (el && typeof el.focus === 'function') {
+                el.focus();
+            }
+            this._previousFocus = null;
+        }, 100);
+    },
+
     async showDetailsBilanChapter(chapterIdParam = null, progressDataParam = null) {
+        this._saveFocus();
         let chapterId = chapterIdParam || ChapterSession.chapterId;
         let progress = progressDataParam || ChapterSession.progress;
 
@@ -200,7 +221,7 @@ const ChapterBilan = {
 
         const modalContent = `
             <div class="modal-overlay" onclick="ChapterBilan.closeAutoCorrectDetails(event)">
-                <div class="modal-content">
+                <div class="modal-content bilan-complet">
                     <div class="modal-header">
                         <h3>📊 Bilan du chapitre</h3>
                         <button class="modal-close" onclick="ChapterBilan.closeAutoCorrectDetails(event)">×</button>
@@ -270,11 +291,146 @@ const ChapterBilan = {
         modalDiv.id = 'auto-correct-details-modal';
         modalDiv.innerHTML = modalContent;
         document.body.appendChild(modalDiv);
+
+        // Focus sur le bouton de fermeture pour accessibilité
+        const closeBtn = modalDiv.querySelector('.modal-close');
+        if (closeBtn) closeBtn.focus();
+    },
+
+    // ------------------------------------------------------------------------
+    // BILAN SIMPLIFIÉ POUR LE MODE BLIND (modale avec 2 choix)
+    // ------------------------------------------------------------------------
+
+    showBlindBilan(earnedPoints, totalPoints, chapterConfig, chapter) {
+        this._saveFocus();
+        // Supprimer toute modale existante
+        document.getElementById('auto-correct-details-modal')?.remove();
+
+        // --- Calcul des notes min/max en mode "rendu définitif" ---
+        // Principe : auto non répondu ou erroné = 0 pt (définitif).
+        // Seules les questions manuelles/semi vraiment incertaines
+        // (réponse présente ET seuil de caractères atteint si applicable)
+        // contribuent à la note maximale.
+        const noteMax = APP_CONFIG.MAX_NOTE;
+        const allQuestions = chapterConfig.questions;
+        const chapterQuestions = (chapter && chapter.questions) ? chapter.questions : {};
+
+        let blindMinScore = 0;
+        let blindMaxScore = 0;
+
+        allQuestions.forEach(q => {
+            const qData = chapterQuestions[q.id];
+            const answerText = (qData && typeof qData.answer === 'string') ? qData.answer : '';
+            const answerLength = answerText.trim().length;
+
+            if (q.correctionType === 'auto') {
+                // Auto : on ne compte que ce qui est déjà acquis (isCorrect === true)
+                if (qData && qData.isCorrect === true) {
+                    const penalty = (qData.attempts - 1) * q.points;
+                    const pts = Math.max(-q.points * 2, q.points - penalty);
+                    blindMinScore += Math.max(0, pts);
+                    blindMaxScore += Math.max(0, pts);
+                }
+                // Non répondu ou incorrect → 0 dans les deux cas (définitif)
+
+            } else {
+                // Questions manuelles ou semi-auto
+                const hasMinLength = q.minLength && q.minLength > 0;
+                const answered = qData && (
+                    qData.answered === true ||
+                    (typeof qData.answer === 'string' && qData.answer.trim() !== '') ||
+                    (Array.isArray(qData.answer) && qData.answer.length > 0)
+                );
+
+                if (q.correctionType === 'semi' && hasMinLength) {
+                    // Semi avec seuil : incertain seulement si le seuil est atteint
+                    if (answered && answerLength >= q.minLength) {
+                        // Incertain → contribue à la note max uniquement
+                        blindMaxScore += q.points;
+                    }
+                    // Sous le seuil ou non répondu → faux à coup sûr → 0 partout
+
+                } else {
+                    // Manuel (toutes règles) ou semi sans seuil : incertain si répondu
+                    if (answered) {
+                        blindMaxScore += q.points;
+                    }
+                    // Non répondu → 0 partout (pas d'espoir si rien n'a été envoyé)
+                }
+            }
+        });
+
+        const blindMinNote = totalPoints > 0 ? (blindMinScore / totalPoints) * noteMax : 0;
+        const blindMaxNote = totalPoints > 0 ? (blindMaxScore / totalPoints) * noteMax : 0;
+
+        const modalContent = `
+            <div class="modal-overlay" style="cursor: default;">
+                <div class="modal-content bilan-reduit">
+                    <div class="modal-header">
+                        <h3>📋 Bilan — Mode Blind</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="section-title">📊 Résumé</div>
+                        <div class="note-range">
+                            <div class="note-item">
+                                <span class="note-label">Note minimale</span>
+                                <span class="note-value min">${blindMinNote.toFixed(1)} / ${noteMax} (${blindMinScore} pt${blindMinScore > 1 ? 's' : ''})</span>
+                            </div>
+                            <div class="note-item">
+                                <span class="note-label">Note maximale</span>
+                                <span class="note-value max">${blindMaxNote.toFixed(1)} / ${noteMax} (${blindMaxScore} pt${blindMaxScore > 1 ? 's' : ''})</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                            <button class="btn btn-success" id="blind-validate-btn" style="padding: 0.75rem 1.5rem; font-size: 1.1rem;">
+                                ✅ Valider définitivement
+                            </button>
+                            <button class="btn btn-warning" id="blind-retry-btn" style="padding: 0.75rem 1.5rem; font-size: 1.1rem;">
+                                🔄 Recommencer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'auto-correct-details-modal';
+        modalDiv.innerHTML = modalContent;
+        document.body.appendChild(modalDiv);
+
+        // Cacher le bouton de rendu initial
+        const submitBtn = document.getElementById('submit-chapter-btn');
+        if (submitBtn) submitBtn.style.display = 'none';
+
+        // Événement "Valider définitivement"
+        document.getElementById('blind-validate-btn').addEventListener('click', async () => {
+            if (!await ChapterSubmission._confirmModal('✅ Êtes-vous sûr de vouloir VALIDER DÉFINITIVEMENT ce chapitre ?\n\nCette action est irréversible.')) return;
+            await ChapterSubmission._finalizeBlindSubmission(chapterConfig);
+            // Réafficher le bouton de rendu (mis à jour par updateSubmitButton)
+            const submitBtn = document.getElementById('submit-chapter-btn');
+            if (submitBtn) submitBtn.style.display = 'block';
+            document.getElementById('auto-correct-details-modal')?.remove();
+            ChapterBilan._restoreFocus();
+        });
+
+        // Événement "Recommencer"
+        document.getElementById('blind-retry-btn').addEventListener('click', async () => {
+            if (!await ChapterSubmission._confirmModal('🔄 Êtes-vous sûr de vouloir RECOMMENCER ?\n\nToutes les questions auto-corrigées seront remises à zéro.\nLes questions à correction manuelle seront conservées.')) return;
+            await ChapterSubmission._resetBlindAttempt();
+            document.getElementById('auto-correct-details-modal')?.remove();
+            ChapterBilan._restoreFocus();
+        });
     },
 
     closeAutoCorrectDetails(event) {
         if (event) event.stopPropagation();
         document.getElementById('auto-correct-details-modal')?.remove();
+        // Remettre le bouton de rendu si la modale est fermée sans valider (mode blind)
+        const submitBtn = document.getElementById('submit-chapter-btn');
+        if (submitBtn) submitBtn.style.display = 'block';
+        // Restaurer le focus sur l'élément actif avant l'ouverture du modal
+        this._restoreFocus();
     }
 };
 

@@ -108,8 +108,11 @@ function initCallbacks() {
             answer === '' ||
             (Array.isArray(answer) && answer.length === 0);
 
-        // 🔥 IMPORTANT : en mode examen on NE bloque PAS
-        if (isEmpty && !window.currentChapterConfig?.examMode) return;
+        // 🔥 IMPORTANT : en mode examen/blind on NE bloque PAS
+        const isBlindOrExam = window.currentChapterConfig?.chapterMode === 'exam' ||
+                              window.currentChapterConfig?.chapterMode === 'blind' ||
+                              window.currentChapterConfig?.examMode === true;
+        if (isEmpty && !isBlindOrExam) return;
 
         syncAnswerToProgress(questionId, answer, isCorrect, isCorrect ? points : 0);
         ChapterUI.updateAllProgressIndicators();
@@ -123,34 +126,46 @@ function initCallbacks() {
 // ============================================================================
 
 async function initChapterPage() {
-    const isChapterPage = window.location.pathname.includes('chapitre') || 
+    const isChapterPage = window.location.pathname.includes('chapitre') ||
                         window.location.pathname.includes('chapter_template');
     if (!isChapterPage) return;
 
-    // Ne pas altérer l'interface en mode formateur (lecture seule déjà gérée par _lockInterfaceForTeacher)
     const urlParams = new URLSearchParams(window.location.search);
     const isTeacherView = urlParams.get('teacher_view') === 'true';
-    if (isTeacherView) {
-        console.log('👨‍🏫 Mode formateur — initChapterPage ne modifie pas l\'interface');
-        return;
-    }
 
     await loadChapterConfig();
     await initProgression();
 
-    // ✅ Vérifier et verrouiller si chapitre déjà rendu
+    // Mode formateur : lecture seule (verrouillage déjà géré par _lockInterfaceForTeacher).
+    // On charge quand même la progression pour afficher les réponses de l'apprenant.
+    if (isTeacherView) {
+        console.log('👨‍🏫 Mode formateur — affichage de la progression en lecture seule');
+        ChapterUI.initializeStats();
+        ChapterUI.applyChapterMode();
+
+        setTimeout(() => {
+            ChapterUI.restoreAllAnswers();
+            ChapterUI.updateAllProgressIndicators();
+        }, 500);
+        return;
+    }
+
+    // ✅ Vérifier et verrouiller si chapitre déjà rendu, ou verrouillé par le formateur
+    //    (verrou manuel global — la date limite ne verrouille pas, elle marque juste le
+    //    rendu comme "en retard" au moment où l'élève rend sa copie, voir submitChapter())
     const chapter = ChapterSession.progress?.chapters?.[ChapterSession.chapterId];
-    const isSubmitted = chapter?.submissionStatus === 'submitted' || 
+    const isSubmitted = chapter?.submissionStatus === 'submitted' ||
                         chapter?.submissionStatus === 'late_submitted';
     const isValidated = chapter?.submissionStatus === 'validated';
-    
-    if (isSubmitted || isValidated) {
-        console.log('🔒 Chapitre déjà rendu/validé, verrouillage immédiat');
-        
+    const isTeacherLocked = window.currentExamContext?.isTeacherLocked === true;
+
+    if (isSubmitted || isValidated || isTeacherLocked) {
+        console.log('🔒 Chapitre verrouillé (rendu/validé/formateur), verrouillage immédiat');
+
         // Désactiver tous les boutons et inputs (sauf navigation)
         document.querySelectorAll('input, select, textarea, button').forEach(el => {
             // Ne pas désactiver les boutons de navigation (Retour au menu)
-            const isNavButton = el.closest('.chapter-nav') || 
+            const isNavButton = el.closest('.chapter-nav') ||
                                el.closest('.progress-actions') ||
                                el.classList.contains('btn-secondary');
             if (!isNavButton) {
@@ -159,18 +174,20 @@ async function initChapterPage() {
                 el.style.cursor = 'not-allowed';
             }
         });
-        
+
         // Modifier le bouton de soumission
         const submitBtn = document.getElementById('submit-chapter-btn');
         if (submitBtn) {
             if (isValidated) {
                 submitBtn.textContent = '✅ Validé par votre évaluateur';
-            } else {
+            } else if (isSubmitted) {
                 submitBtn.textContent = '📝 Rendu - En attente de correction';
+            } else {
+                submitBtn.textContent = '🔒 Chapitre verrouillé';
             }
             submitBtn.disabled = true;
         }
-        
+
         // Ajouter le message de confirmation
         let msgDiv = document.getElementById('submission-confirmation-msg');
         if (!msgDiv) {
@@ -183,6 +200,8 @@ async function initChapterPage() {
             msgDiv.innerHTML = '✅ <strong>Chapitre validé</strong> - Félicitations !';
         } else if (isSubmitted) {
             msgDiv.innerHTML = '📝 <strong>Copie rendue</strong> - Plus de modifications possibles.<br>Votre évaluateur la corrigera prochainement.';
+        } else {
+            msgDiv.innerHTML = '🔒 <strong>Chapitre verrouillé</strong> par votre formateur.';
         }
         msgDiv.style.cssText = 'background: #e8f5e9; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;';
     }

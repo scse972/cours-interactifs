@@ -29,10 +29,17 @@ class TeacherUsers {
             return;
         }
         const usersKey = `${slug}:teacher:users_list`;
-        const users = await storage.get(usersKey) || [];
+
+        // ── LOGS DIAGNOSTIC ──────────────────────────────────────────────────
+        console.log('[TeacherUsers] slug courant :', slug);
+        console.log('[TeacherUsers] clé cherchée :', usersKey);
+        console.log('[TeacherUsers] storage object :', storage);
+        const rawUsers = await storage.get(usersKey);
+        console.log('[TeacherUsers] valeur brute retournée par storage.get :', JSON.stringify(rawUsers));
+        // ─────────────────────────────────────────────────────────────────────
+
+        const users = rawUsers || [];
         this.students = users.filter(u => u.type === 'student');
-        
-        // Tri par ordre alphabétique
         this.students.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
     }
     

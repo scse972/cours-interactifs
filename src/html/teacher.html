@@ -25,11 +25,27 @@
             </button>
             <h1>Tableau de Bord Formateur</h1>
             <!-- Sélecteur de parcours -->
-            <div id="parcours-switcher" style="margin: 0.75rem 0;">
-                <label for="parcours-select" style="font-weight:600; margin-right:0.5rem;">Parcours :</label>
-                <select id="parcours-select" style="padding:0.4rem 0.75rem; border-radius:6px; border:1px solid #ccc; font-size:1rem; cursor:pointer;">
-                    <option value="">— Chargement… —</option>
-                </select>
+            <div id="parcours-switcher" style="margin: 0.75rem 0; display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <label for="parcours-select" style="font-weight:600;">Parcours :</label>
+                    <select id="parcours-select" style="padding:0.4rem 0.75rem; border-radius:6px; border:1px solid #ccc; font-size:1rem; cursor:pointer;">
+                        <option value="">— Chargement… —</option>
+                    </select>
+                </div>
+                <!-- Sélecteur de source des parcours (admin uniquement modifiable) -->
+                <div style="display:flex; align-items:center; gap:0.4rem;">
+                    <label for="source-select" style="font-weight:600; font-size:0.9rem;">Source :</label>
+                    <select id="source-select" style="padding:0.3rem 0.5rem; border-radius:6px; border:1px solid #ccc; font-size:0.85rem; cursor:pointer;">
+                        <option value="auto">Auto</option>
+                        <option value="provider">Provider</option>
+                        <option value="static">Fichier</option>
+                    </select>
+                    <span id="source-indicator" style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.8rem; padding:0.2rem 0.5rem; border-radius:4px; border:1px solid #ddd; background:#fafafa;">
+                        <span id="source-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                        <span id="source-label">—</span>
+                    </span>
+                    <button id="source-reload-btn" style="padding:0.2rem 0.5rem; border-radius:4px; border:1px solid #ccc; background:white; cursor:pointer; font-size:0.8rem;" title="Recharger le fichier cours.json depuis la source sélectionnée">🔄</button>
+                </div>
             </div>
             <div style="display:flex; align-items:center; justify-content:left; gap:1rem; flex-wrap:wrap; margin-bottom:0.25rem;">
                 <p id="teacher-name-display" style="margin:0;">Connecté en tant que : <strong>Chargement...</strong></p>
@@ -118,7 +134,7 @@
             <!-- Onglet Apprenants -->
             <div id="tab-students" class="tab-panel">
                 <div id="students-content">
-                    <!-- Contenu chargé dynamiquement par teacherSubmissions.js -->
+                    <!-- Contenu chargé dynamiquement par teacherStudents.js -->
                 </div>
             </div>
 
@@ -178,19 +194,33 @@
     <script src="../../src/js/teacherStats.js"></script>
     <script src="../../src/js/teacherDashboard.js"></script>
     
-    <!-- Script d'initialisation du sélecteur de parcours -->
+    <!-- Script d'initialisation du sélecteur de parcours et de source -->
     <script>
     // ── Rendre slug accessible globalement pour tous les modules ──
     window.currentParcoursSlug = new URLSearchParams(window.location.search).get('parcours') || '';
 
     (async function initParcoursSwitcher() {
         const select = document.getElementById('parcours-select');
+        const sourceSelect = document.getElementById('source-select');
+        const reloadBtn = document.getElementById('source-reload-btn');
+        const sourceDot = document.getElementById('source-dot');
+        const sourceLabel = document.getElementById('source-label');
         const current = window.currentParcoursSlug;
 
-        const data = await staticJson.get('/parcours/cours.json');
+        // ── Restaurer la préférence de source depuis sessionStorage ──
+        const savedPref = sessionStorage.getItem('teacher_source_preference') || 'auto';
+        sourceSelect.value = savedPref;
+        staticJson.setSourcePreference('/parcours/cours.json', savedPref);
+
+        // ── Chargement initial ──
+        const info = await staticJson.getWithInfo('/parcours/cours.json');
+        const data = info.data;
+
         if (!data) {
             select.innerHTML = '<option value="">Erreur chargement parcours</option>';
             console.error('[Switcher] Impossible de charger les parcours');
+            if (sourceDot) sourceDot.style.background = '#aaa';
+            if (sourceLabel) sourceLabel.textContent = '—';
             return;
         }
 
@@ -213,11 +243,58 @@
             select.appendChild(opt);
         });
 
+        // ── Afficher la source détectée ──
+        if (sourceDot && sourceLabel) {
+            if (info.cached) {
+                sourceDot.style.background = '#f39c12';
+                sourceLabel.textContent = 'Cache (' + (info.source || '?') + ')';
+                sourceLabel.style.color = '#c0392b';
+            } else if (info.source === 'provider') {
+                sourceDot.style.background = '#3498db';
+                sourceLabel.textContent = 'Provider (BDD)';
+                sourceLabel.style.color = '#2980b9';
+            } else if (info.source === 'static') {
+                sourceDot.style.background = '#2ecc71';
+                sourceLabel.textContent = 'Fichier statique';
+                sourceLabel.style.color = '#27ae60';
+            } else {
+                sourceDot.style.background = '#aaa';
+                sourceLabel.textContent = info.source || '—';
+                sourceLabel.style.color = '#888';
+            }
+        }
+
+        // ── Navigation ──
         select.addEventListener('change', () => {
             if (select.value) {
                 window.location.href = window.location.pathname + '?parcours=' + select.value;
             }
         });
+
+        // ── Restreindre la modification aux super admins ──
+        const role = sessionStorage.getItem('teacher_role') || 'formateur';
+        const isAdmin = role === 'admin';
+        if (!isAdmin) {
+            sourceSelect.disabled = true;
+            reloadBtn.disabled = true;
+            sourceSelect.title = 'Seul le super admin peut changer la source';
+            reloadBtn.title = 'Seul le super admin peut recharger';
+            reloadBtn.style.opacity = '0.5';
+            sourceSelect.style.cursor = 'not-allowed';
+            sourceSelect.style.opacity = '0.7';
+        } else {
+            // ── Sélecteur de source → sauvegarde + rechargement complet pour cohérence ──
+            sourceSelect.addEventListener('change', () => {
+                sessionStorage.setItem('teacher_source_preference', sourceSelect.value);
+                window.location.reload();
+            });
+
+            // ── Bouton recharger → force la source actuelle + reload ──
+            reloadBtn.addEventListener('click', () => {
+                sessionStorage.setItem('teacher_source_preference', sourceSelect.value);
+                window.location.reload();
+            });
+        }
     })();
     </script>
 </body>

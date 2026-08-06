@@ -334,8 +334,16 @@ async function loadProvider() {
                     Object.assign({}, config.electron || {}, { table: 'parcours_data', dbName: 'parcours_data.db' })
                 );
                 console.log('[storage] _parcoursProvider (Electron) → table: parcours_data, dbName: parcours_data.db');
+            } else if (window.parent && window.parent !== window && window.parent._storageProvider) {
+                // Contexte iframe (ex: vue formateur) : pas de require, mais le parent Electron
+                // a déjà son provider initialisé — on le réutilise directement.
+                console.log('[storage] Electron: iframe détectée → délégation au provider du parent');
+                provider = window.parent._storageProvider;
+                window._parcoursProvider = window.parent._parcoursProvider || null;
+                console.log('[storage] _parcoursProvider délégué au parent:', window._parcoursProvider ? '✅' : '⚠️ absent');
             } else {
-                console.log('[storage] Electron: pas de nodeIntegration → délégation IPC via window.parent');
+                // Fallback : tenter window.parent.require (peut échouer si parent sans nodeIntegration)
+                console.log('[storage] Electron: pas de nodeIntegration → tentative IPC via window.parent.require');
                 var ipc = window.parent.require('electron').ipcRenderer;
                 provider = {
                     get:    async function (key) { return ipc.invoke('storage:get', key); },
@@ -387,7 +395,25 @@ const storage = {
         if (this._provider) return;
         if (this._initPromise) return this._initPromise;
         this._initPromise = loadProvider()
-            .then(p => { this._provider = p; this._initPromise = null; })
+            .then(p => {
+                this._provider = p;
+                this._initPromise = null;
+                // ── Désactiver le cache localStorage pour les providers locaux ──
+                // En mode Electron ou SQLite, le provider est toujours disponible
+                // et fiable — le cache localStorage ne fait que créer des données
+                // fantômes qui survivent aux reinit.
+                const providerName = (p && p.constructor && p.constructor.name) || '';
+                this._noCache = (
+                    window.IS_ELECTRON === true        ||  // flag global posé par le shell Electron
+                    typeof require !== 'undefined'     ||  // nodeIntegration active
+                    providerName === 'ElectronProvider'||
+                    providerName === 'SQLiteProvider'
+                );
+                if (this._noCache) {
+                    Cache.keys().forEach(k => Cache.remove(k));
+                    console.log('[storage] Mode local détecté (' + (providerName || 'inconnu') + ') — cache localStorage désactivé et vidé.');
+                }
+            })
             .catch(e => { this._initPromise = null; throw e; });
         return this._initPromise;
     },
@@ -398,21 +424,29 @@ const storage = {
      */
     async get(key) {
         if (!this._provider) await this.init();
+
+        // 1. Retourner le cache local IMMÉDIATEMENT s'il existe (optimistic read)
+        //    Cela évite qu'une lecture trop rapide après un set() ne récupère
+        //    une donnée périmée du provider (bug "mode examen qui se décoche").
+        //    Le cache est considéré comme source de vérité immédiate : il a été
+        //    mis à jour par storage.set() juste avant.
+        //    ⚠️ Désactivé en mode local (Electron/SQLite) : le provider est la
+        //    source de vérité unique — le cache crée des données fantômes.
+        if (!this._noCache) {
+            const localCached = Cache.get(key);
+            if (localCached !== null) {
+                return localCached;
+            }
+        }
+
+        // 2. Pas de cache : interroger le provider
         try {
             const value = await this._provider.get(key);
-            // Mettre à jour le cache avec la valeur fraîche (ou le vider si inexistante)
             if (value !== null) {
                 Cache.set(key, value);
-            } else {
-                Cache.remove(key);
             }
             return value;
         } catch (e) {
-            const cached = Cache.get(key);
-            if (cached !== null) {
-                console.info('[storage] get("' + key + '") → cache (hors-ligne)');
-                return cached;
-            }
             console.warn('[storage] get("' + key + '") → null (hors-ligne, pas de cache)');
             return null;
         }
@@ -426,7 +460,8 @@ const storage = {
         if (!this._provider) await this.init();
 
         // Écriture cache immédiate dans tous les cas (optimistic update)
-        Cache.set(key, value);
+        // Sauf en mode local (Electron/SQLite) où le cache est désactivé.
+        if (!this._noCache) Cache.set(key, value);
 
         try {
             await this._provider.set(key, value);
@@ -456,8 +491,8 @@ const storage = {
     async remove(key) {
         if (!this._provider) await this.init();
 
-        // Suppression cache immédiate
-        Cache.remove(key);
+        // Suppression cache immédiate (désactivée en mode local)
+        if (!this._noCache) Cache.remove(key);
 
         try {
             await this._provider.remove(key);
@@ -613,6 +648,12 @@ const staticJson = (function () {
     // Promesses en cours : évite les doubles fetch simultanés pour le même chemin
     const _pending = new Map();
 
+    // Source d'origine de chaque chemin (provider | static | null)
+    const _source = new Map();
+
+    // Préférence de source par chemin : 'auto' (défaut), 'provider', 'static'
+    const _sourcePreference = new Map();
+
     /**
      * Construit l'URL statique complète pour un chemin relatif.
      */
@@ -679,8 +720,8 @@ const staticJson = (function () {
     }
 
     /**
-     * Résolution complète avec mise en cache.
-     * Garantit qu'un seul fetch est en vol pour un chemin donné.
+     * Résolution complète avec mise en cache et suivi de la source.
+     * Respecte la préférence de source si définie.
      */
     async function _resolve(path) {
         // 1. Cache mémoire
@@ -690,18 +731,45 @@ const staticJson = (function () {
         if (_pending.has(path)) return _pending.get(path);
 
         const promise = (async () => {
-            // 3. Tentative provider en premier (SQLite local, Supabase)
-            // Mode Electron : le fichier statique peut être absent (renommé cours_local.json),
-            // on évite l'ERR_FILE_NOT_FOUND inutile en interrogeant le provider d'abord.
-            let value = await _fetchFromProvider(path);
+            const pref = _sourcePreference.get(path) || 'auto';
+            let value = null;
+            let source = null;
 
-            // 4. Fallback fichier statique (mode standalone, ou provider sans données)
-            if (value === null) {
+            if (pref === 'static') {
+                // Forcer le fichier statique d'abord
                 value = await _fetchStatic(path);
+                if (value !== null) {
+                    source = 'static';
+                } else {
+                    // Fallback provider
+                    value = await _fetchFromProvider(path);
+                    if (value !== null) source = 'provider';
+                }
+            } else if (pref === 'provider') {
+                // Forcer le provider d'abord
+                value = await _fetchFromProvider(path);
+                if (value !== null) {
+                    source = 'provider';
+                } else {
+                    // Fallback fichier statique
+                    value = await _fetchStatic(path);
+                    if (value !== null) source = 'static';
+                }
+            } else {
+                // Mode 'auto' : comportement d'origine (provider puis statique)
+                value = await _fetchFromProvider(path);
+                if (value !== null) {
+                    source = 'provider';
+                } else {
+                    value = await _fetchStatic(path);
+                    if (value !== null) source = 'static';
+                }
             }
 
             if (value === null) {
                 console.warn('[staticJson] "' + path + '" introuvable (provider + statique).');
+            } else {
+                _source.set(path, source);
             }
 
             _cache.set(path, value);
@@ -726,6 +794,38 @@ const staticJson = (function () {
         },
 
         /**
+         * Charge le JSON et retourne des métadonnées sur la provenance.
+         *
+         * @param   {string} path Chemin absolu
+         * @returns {Promise<{data: any|null, source: string|null, cached: boolean}>}
+         */
+        async getWithInfo(path) {
+            const inCache = _cache.has(path);
+            const data = await _resolve(path);
+            const source = _source.get(path) || null;
+            return { data, source, cached: inCache };
+        },
+
+        /**
+         * Définit la préférence de source pour un chemin.
+         * Invalide le cache pour forcer un rechargement avec la nouvelle préférence.
+         *
+         * @param {string} path       Chemin absolu
+         * @param {string} preference 'auto' | 'provider' | 'static'
+         */
+        setSourcePreference(path, preference) {
+            const valid = ['auto', 'provider', 'static'];
+            if (!valid.includes(preference)) {
+                console.warn('[staticJson] Preference invalide:', preference, '→ utilise auto');
+                preference = 'auto';
+            }
+            _sourcePreference.set(path, preference);
+            // Invalider le cache pour que le prochain get() applique la nouvelle préférence
+            _cache.delete(path);
+            _source.delete(path);
+        },
+
+        /**
          * Déclenche la résolution en arrière-plan sans attendre.
          * Appeler en début de page pour préchauffer le cache.
          *
@@ -745,9 +845,22 @@ const staticJson = (function () {
         invalidate(path) {
             if (path) {
                 _cache.delete(path);
+                _source.delete(path);
             } else {
                 _cache.clear();
+                _source.clear();
             }
+        },
+
+        /**
+         * Retourne la source connue pour un chemin (sans recharger).
+         * Utile pour l'affichage après un get() / getWithInfo().
+         *
+         * @param {string} path
+         * @returns {string|null} 'provider' | 'static' | null
+         */
+        getKnownSource(path) {
+            return _source.get(path) || null;
         }
     };
 

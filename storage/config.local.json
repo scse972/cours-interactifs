@@ -1,5 +1,5 @@
 {
-  "storage": "supabase",
+  "storage": "sqlite",
 
   "supabase": {
     "url": "https://rdvxgcwpennhbatkvats.supabase.co",

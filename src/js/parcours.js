@@ -84,6 +84,13 @@
   function readToken(slug) {
     if (!slug) return null;
     var params  = new URLSearchParams(window.location.search);
+
+    // Mode vue formateur : le student_id de l'URL désigne l'apprenant prévisualisé,
+    // indépendamment de toute session élève active dans cet onglet.
+    if (params.get('teacher_view') === 'true' && params.has('student_id')) {
+      return params.get('student_id');
+    }
+
     var fromUrl = params.get('token');
     var ssKey   = 'parcours:' + slug + ':token';
 
@@ -198,9 +205,11 @@
   // ── 7. ASSEMBLAGE ────────────────────────────────────────────
   var slug  = detectSlug();
   var token = readToken(slug);
+  var isTeacherPreview = new URLSearchParams(window.location.search).get('teacher_view') === 'true';
 
   // Compatibilité avec le code existant qui lit sessionStorage directement
-  if (token) {
+  // (ne pas polluer la session élève réelle de l'onglet avec l'ID prévisualisé par le formateur)
+  if (token && !isTeacherPreview) {
     sessionStorage.setItem('current_student_token', token);
   }
 

@@ -43,24 +43,31 @@ function getCurrentChapterId() {
  * @returns {string|null} L'ID de l'apprenant ou null
  */
 function getCurrentStudentId() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Mode vue formateur : le student_id de l'URL doit primer sur toute session
+    // élève restée active dans cet onglet (sinon on affiche le mauvais apprenant)
+    if (urlParams.get('teacher_view') === 'true' && urlParams.has('student_id')) {
+        return urlParams.get('student_id');
+    }
+
     // Récupérer le token depuis sessionStorage (utilisé par dataStorage.js)
     const SESSION_KEY = 'current_student_token';
     const token = sessionStorage.getItem(SESSION_KEY);
     if (token) {
         return token;
     }
-    
+
     // Mode vue formateur : vérifier le paramètre student_id dans l'URL
-    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('student_id')) {
         return urlParams.get('student_id');
     }
-    
+
     // Fallback: vérifier dans l'URL ou un paramètre studentId
     if (urlParams.has('studentId')) {
         return urlParams.get('studentId');
     }
-    
+
     // Dernier fallback: utiliser un ID par défaut
     return 'anonymous';
 }
@@ -228,7 +235,15 @@ function initChapter(chapterConfig) {
       flags: [],
       notes: ""
     },
-    
+
+    // Contexte figé au premier démarrage (mode + date limite) — voir getExamContext.js.
+    // Une fois posé, ne change plus pour cet élève même si la config globale du chapitre
+    // change ensuite (utile avec plusieurs classes démarrant à des moments différents).
+    frozenChapterMode: chapterConfig.chapterMode || (chapterConfig.examMode ? 'exam' : 'normal'),
+    frozenDateLimitEnabled: chapterConfig.dateLimitEnabled === true,
+    frozenEndDate: chapterConfig.endDate || null,
+    frozenAt: now,
+
     questions
   };
 }
@@ -538,15 +553,16 @@ function unlockNextChapter(progress, currentChapterId, chaptersConfig) {
         return; // Chapitre non terminé
     }
     
-    // Trouver le chapitre suivant
-    const currentId = parseInt(currentChapterId);
-    const nextId = currentId + 1;
+    // Trouver le chapitre suivant par position dans le tableau
+    const currentIndex = chaptersConfig.chapters.findIndex(ch => String(ch.id) === String(currentChapterId));
+    if (currentIndex === -1) return; // Chapitre introuvable
     
-    // Vérifier si le chapitre suivant existe
-    const nextChapterConfig = chaptersConfig.chapters.find(ch => ch.id === nextId);
+    const nextChapterConfig = chaptersConfig.chapters[currentIndex + 1];
     if (!nextChapterConfig) {
         return; // Pas de chapitre suivant
     }
+    
+    const nextId = nextChapterConfig.id;
     
     // Déverrouiller le chapitre suivant
     if (!progress.chapters[nextId]) {
@@ -570,11 +586,20 @@ function ensureChapterInitialized(progress, chaptersConfig) {
         progress.chapters = {};
     }
     
-    const chapterConfig = chaptersConfig.chapters.find(ch => ch.id === parseInt(chapterId));
+    const chapterConfig = chaptersConfig.chapters.find(ch => String(ch.id) === String(chapterId));
     if (!chapterConfig) return;
-    
+
     if (!progress.chapters[chapterId]) {
-        progress.chapters[chapterId] = initChapter(chapterConfig);
+        // ⚠️ chapterConfig ici vient de chaptersIndex (cours.json STATIQUE) : il ne contient pas
+        // les overrides formateur (mode/verrou/date limite) qui ne vivent que dans chapter_config
+        // (storage). window.currentChapterConfig est déjà la fusion statique+storage pour le
+        // chapitre courant (voir loadChapterConfig() dans chapitre.js) — on la préfère si dispo,
+        // pour que initChapter() fige le bon mode/date limite au premier démarrage.
+        const liveConfig = window.currentChapterConfig;
+        const effectiveConfig = (liveConfig && String(liveConfig.id) === String(chapterId))
+            ? { ...chapterConfig, ...liveConfig }
+            : chapterConfig;
+        progress.chapters[chapterId] = initChapter(effectiveConfig);
     }
     
     // S'assurer que toutes les questions sont initialisées
@@ -694,6 +719,12 @@ function submitChapter(progress, chapterId, submissionDeadline) {
     
     chapter.submissionStatus = isLate ? "late_submitted" : "submitted";
     chapter.submittedAt = now;
+    
+    // ✅ Effacer le flag revisionRequestedAt car l'étudiant a re-rendu son travail.
+    // Ce flag est utilisé par recomputeSubmissionStatus() pour déterminer le statut.
+    // S'il reste présent après le rendu, recomputeSubmissionStatus() réécrira
+    // submissionStatus = "returned_for_revision" et le bouton restera en "Re-rendre".
+    delete chapter.revisionRequestedAt;
     
     // Mettre à jour manualCorrectionStatus pour questions nécessitant correction
     Object.values(chapter.questions).forEach(q => {

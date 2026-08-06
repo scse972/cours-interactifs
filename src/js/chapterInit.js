@@ -158,18 +158,83 @@ function _lockInterfaceForTeacher() {
     }, 800);
 }
 
-/**
- * Applique la protection anti copier-coller sur les zones de contenu.
- * Bloque le menu contextuel uniquement sur les éléments marqués .prevent-copy.
- */
 function _applyAntiCopyProtection() {
-    document.querySelectorAll('.question-text, .content-box, .hint-content').forEach(el => {
-        el.classList.add('prevent-copy');
+    console.log('[AntiCopy] Protection activée');
+
+    const ANTI_COPY_MSG =
+        '═══════════════════════════════════════════════════\n' +
+        '       ⚠️  TENTATIVE DE TRICHE DÉTECTÉE  ⚠️\n' +
+        '═══════════════════════════════════════════════════\n\n' +
+        'Le dispositif anti-triche s\'est enclenché et sera\n' +
+        'signalé à votre formateur.\n\n' +
+        '→ Cette tentative a été enregistrée.\n' +
+        '→ Toute récidive pourra entraîner des sanctions.\n' +
+        '→ Le contenu de ce chapitre est protégé.\n\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+
+    /**
+     * Vérifie si l'événement se produit dans un champ de saisie
+     * (textarea ou input) → exempté de la protection.
+     */
+    function _isInInputField(target) {
+        const el = target.closest('textarea, input');
+        return !!el;
+    }
+
+    // ── Intercepte les copier → message d'avertissement (sauf dans les champs) ──
+    document.addEventListener('copy', (e) => {
+        if (_isInInputField(e.target)) {
+            console.log('[AntiCopy] copy ignoré (champ de saisie)');
+            return;
+        }
+        console.log('[AntiCopy] copy event déclenché, target:', e.target);
+        e.clipboardData.setData('text/plain', ANTI_COPY_MSG);
+        e.preventDefault();
+        console.log('[AntiCopy] presse-papier remplacé par message avertissement');
     });
 
+    // ── Bloque le menu contextuel (sauf dans les champs) ──
     document.addEventListener('contextmenu', (e) => {
-        if (e.target.closest('.prevent-copy')) {
-            e.preventDefault();
+        if (_isInInputField(e.target)) {
+            console.log('[AntiCopy] contextmenu ignoré (champ de saisie)');
+            return;
+        }
+        console.log('[AntiCopy] contextmenu bloqué');
+        e.preventDefault();
+    });
+
+    // ── Bloque le couper (sauf dans les champs) ──
+    document.addEventListener('cut', (e) => {
+        if (_isInInputField(e.target)) {
+            console.log('[AntiCopy] cut ignoré (champ de saisie)');
+            return;
+        }
+        console.log('[AntiCopy] cut bloqué');
+        e.preventDefault();
+    });
+
+    // ── Bloque le coller (sauf dans les champs) ──
+    document.addEventListener('paste', (e) => {
+        if (_isInInputField(e.target)) {
+            console.log('[AntiCopy] paste ignoré (champ de saisie)');
+            return;
+        }
+        console.log('[AntiCopy] paste bloqué');
+        e.preventDefault();
+    });
+
+    // ── Bloque les raccourcis claviers en amont (sauf dans les champs) ──
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            const key = e.key.toLowerCase();
+            if (['x', 'v'].includes(key)) {
+                if (_isInInputField(e.target)) {
+                    console.log('[AntiCopy] keydown Ctrl+' + key + ' ignoré (champ de saisie)');
+                    return;
+                }
+                console.log('[AntiCopy] keydown Ctrl+' + key + ' bloqué');
+                e.preventDefault();
+            }
         }
     });
 }

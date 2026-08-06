@@ -352,8 +352,10 @@ class CorrectionModal {
         const html = `
             <div class="modal-overlay" id="correction-modal">
                 <div class="modal-content correction-modal">
-                    ${this.renderHeader()}
-                    ${this.renderFilters()}
+                    <div class="correction-sticky-header">
+                        ${this.renderHeader()}
+                        ${this.renderFilters()}
+                    </div>
                     <div class="modal-body correction-modal-body">
                         ${this.renderQuestionList()}
                     </div>
@@ -362,6 +364,19 @@ class CorrectionModal {
         `;
 
         document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    /**
+     * Échappe le HTML d'une valeur dynamique avant insertion dans un template — indispensable
+     * pour tout texte qui peut venir de l'élève (réponse, etc.) : sans ça, une réponse contenant
+     * un simple "<" peut casser la structure DOM de tout ce qui suit dans le modal (cases à
+     * cocher, onglets, cours... qui deviennent invisibles car imbriqués dans un parent masqué).
+     */
+    escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
     }
 
     /**
@@ -382,9 +397,9 @@ class CorrectionModal {
         return `
             <div class="modal-header">
                 <div>
-                    <h3>Correction - ${chapterConfig.title}</h3>
+                    <h3>Correction - ${this.escapeHtml(chapterConfig.title)}</h3>
                     <div class="correction-header-info">
-                        <span>👤 ${student.name} (${student.class || 'Non spécifié'}) | 📝 Note: ${Math.round(noteSur20*10)/10}/20</span>
+                        <span>👤 ${this.escapeHtml(student.name)} (${this.escapeHtml(student.class || 'Non spécifié')}) | 📝 Note: ${Math.round(noteSur20*10)/10}/20</span>
                     </div>
                 </div>
 
@@ -416,6 +431,7 @@ class CorrectionModal {
                 <button class="filter-btn active" data-filter="auto">⚙️ Auto-corrigé</button>
                 <button class="filter-btn" data-filter="manual">✏️ À corriger</button>
                 <button class="filter-btn" data-filter="course">📚 Cours</button>
+                <button class="filter-btn" data-filter="appreciations">🗒️ Appréciations</button>
                 <button class="filter-btn" data-filter="all">📋 Tous</button>
             </div>
         `;
@@ -462,7 +478,7 @@ class CorrectionModal {
             <span id="summary-manual-treated" style="font-size:1.1em;">${manualFilterTreated} / ${manualFilterTotal}</span>
         </div>
         <div style="padding: 0.75rem 1rem; border-right: 1px solid #c8e6c9;">
-            <strong>📌 Pénalité sur 20</strong><br>
+            <strong>🎯 Bonus / Pénalité</strong><br>
             <span id="summary-penalty" style="font-size:1.1em;">${coursePenalty} pts</span>
         </div>
         <div style="padding: 0.75rem 1rem; font-weight: bold;">
@@ -476,8 +492,6 @@ class CorrectionModal {
         const questionsHtml = this.viewModel.questions.map(q => this.renderQuestionItem(q)).join('');
         
         // Vérifier si il y a des cours obligatoires
-        const hasRequiredCourses = this.viewModel.questions.some(q => q.isCourse && q.isRequired);
-
         // Compter combien de cours obligatoires sont non lus
         const unreadRequiredCount = this.viewModel.questions.filter(q => q.isCourse && q.isRequired && !q.isCorrect).length;
         const hasUnreadRequired = unreadRequiredCount > 0;
@@ -485,10 +499,13 @@ class CorrectionModal {
         // Lire la pénalité existante sauvegardée ou prendre défaut
         const existingPenalty = this.context.chapter.coursePenalty !== undefined ? this.context.chapter.coursePenalty : (hasUnreadRequired ? -2 : 0);
 
-        const penaltyHtml = `
-            <div class="question-correction question-penalty" style="border: 2px dashed #ff9800; background: #fff8e1; margin-top: 2rem;">
+        // Appréciations : pénalité/bonus (valeur + statut cours) ET commentaires, regroupés
+        // ensemble comme un seul bloc (pas de séparation) — visible sous l'onglet "Appréciations"
+        // et sous "Tous". L'onglet "Cours" ne montre plus que les cours eux-mêmes (lu/non lu).
+        const appreciationsHtml = `
+            <div class="question-correction question-appreciations" data-category="appreciations" style="border: 2px dashed #ff9800; background: #fff8e1; margin-top: 2rem;">
                 <div class="question-correction-header">
-                    <h6>📌 Pénalité (validation cours,...) sur 20</h6>
+                    <h6>🎯 Bonus / Pénalité (validation cours, ...)</h6>
                 </div>
                 <div class="correction-row">
                     <div class="correction-label">⚖️ Statut:</div>
@@ -498,20 +515,20 @@ class CorrectionModal {
                 </div>
                 <div class="correction-inputs" style="margin-top: 1rem;">
                     <div class="form-group">
-                        <label>Valeur de la pénalité sur la note finale</label>
-                        <input type="number" class="question-score" 
-                               id="course-penalty" min="-10" max="0"
+                        <label>Valeur du bonus (+) ou pénalité (-) sur la note finale</label>
+                        <input type="number" class="question-score"
+                               id="course-penalty" min="-10" max="10"
                                value="${existingPenalty}" step="0.5">
                     </div>
                     <div class="form-group">
                         <label>Appréciation / Commentaire</label>
                         <textarea class="question-comment" id="course-penalty-comment"
-                                  placeholder="Ajouter une appréciation concernant cette pénalité...">${this.context.chapter.coursePenaltyComment || ''}</textarea>
+                                  placeholder="Ajouter une appréciation concernant cette pénalité...">${this.escapeHtml(this.context.chapter.coursePenaltyComment || '')}</textarea>
                     </div>
                     <div class="form-group">
                         <label>💬 Commentaire GÉNÉRAL sur la prestation</label>
                         <textarea class="question-comment" id="chapter-global-comment"
-                                  placeholder="Ajouter un commentaire global sur l'ensemble du travail...">${this.context.chapter.globalComment || ''}</textarea>
+                                  placeholder="Ajouter un commentaire global sur l'ensemble du travail...">${this.escapeHtml(this.context.chapter.globalComment || '')}</textarea>
                     </div>
                 </div>
                 <div class="correction-note">
@@ -520,7 +537,7 @@ class CorrectionModal {
             </div>
         `;
 
-        return globalSummary + questionsHtml + (hasRequiredCourses ? penaltyHtml : '');
+        return globalSummary + questionsHtml + appreciationsHtml;
     }
 
     /**
@@ -541,7 +558,7 @@ class CorrectionModal {
                 return `
                     <div class="question-correction question-info" data-question-id="${question.id}" data-is-course="true">
                         <div class="question-correction-header">
-                            <h6>📚 ${question.title || question.id}</h6>
+                            <h6>📚 ${this.escapeHtml(question.title || question.id)}</h6>
                             <span class="status-badge status-info">INFORMATIF</span>
                         </div>
                         <div class="correction-note">
@@ -557,7 +574,7 @@ class CorrectionModal {
             return `
                 <div class="question-correction ${isRead ? 'question-corrected' : 'question-pending'}" data-question-id="${question.id}" data-status="${question.status}" data-is-course="${question.isCourse}">
                     <div class="question-correction-header">
-                        <h6>📚 ${question.title || question.id}</h6>
+                        <h6>📚 ${this.escapeHtml(question.title || question.id)}</h6>
                         <span class="status-badge status-pending" style="font-size: 0.7em;">OBLIGATOIRE</span>
                         <span class="status-badge ${isRead ? 'status-corrected' : 'status-pending'}">${isRead ? '✅ Lu' : '❌ Non lu'}</span>
                     </div>
@@ -654,27 +671,27 @@ class CorrectionModal {
                  data-is-course="${question.isCourse}"
                  data-category="${tabCategory}">
                 <div class="question-correction-header">
-                    <h6>${question.title || `Question ${question.id}`}</h6>
+                    <h6>${this.escapeHtml(question.title || `Question ${question.id}`)}</h6>
                     ${treatedToggleHtml}
                     <span class="status-badge ${badgeCssClass}">${displayStatus.label}</span>
                 </div>
-                
+
                 ${question.questionText ? `
                 <div class="correction-row">
                     <div class="correction-label">📝 Consigne:</div>
-                    <div class="correction-value">${question.questionText}</div>
+                    <div class="correction-value">${this.escapeHtml(question.questionText)}</div>
                 </div>
                 ` : ''}
-                
+
                 <div class="correction-row">
                     <div class="correction-label">👤 Réponse de l'apprenant:</div>
-                    <div class="correction-value">${studentAnswer}</div>
+                    <div class="correction-value">${this.escapeHtml(studentAnswer)}</div>
                 </div>
-                
+
                 ${correctAnswer ? `
                 <div class="correction-row">
                     <div class="correction-label">✅ Réponse attendue:</div>
-                    <div class="correction-value correct">${correctAnswer}</div>
+                    <div class="correction-value correct">${this.escapeHtml(correctAnswer)}</div>
                 </div>
                 ` : ''}
 
@@ -741,7 +758,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
                     <div class="form-group">
                         <label>Appréciation / Commentaire</label>
                         <textarea class="question-comment" id="comment-${question.id}"
-                                  placeholder="Ajouter une appréciation pour cette question...">${question.teacherComment || ''}</textarea>
+                                  placeholder="Ajouter une appréciation pour cette question...">${this.escapeHtml(question.teacherComment || '')}</textarea>
                     </div>
                 </div>
             </div>
@@ -832,7 +849,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         const coursePenalty = parseFloat(document.getElementById('course-penalty')?.value) || 0;
         const maxTotal = this.viewModel.scoring.auto.max + this.viewModel.scoring.manual.max;
         let noteSur20 = maxTotal > 0 ? Math.round(((autoScore + manualScore) / maxTotal) * 20 * 10) / 10 : 0;
-        noteSur20 = Math.max(0, noteSur20 + coursePenalty);
+        noteSur20 = Math.min(20, Math.max(0, noteSur20 + coursePenalty));
 
         // ✅ Mettre à jour uniquement les spans dynamiques
         const treated = document.querySelectorAll('.treated-checkbox:checked').length;
@@ -854,30 +871,30 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
             btn.classList.toggle('active', btn.dataset.filter === filter);
         });
 
-        const showCourses = filter === 'course';
-
-        document.querySelectorAll('.question-correction:not(.question-penalty):not(#global-summary)').forEach(el => {
+        document.querySelectorAll('.question-correction:not(.question-appreciations):not(#global-summary)').forEach(el => {
             const isCourse = el.dataset.isCourse === 'true';
             const category = el.dataset.category;
 
             let visible = false;
 
             if (filter === 'course') {
-                visible = isCourse;
+                visible = isCourse; // Uniquement les cours (lu/non lu), jamais le panneau appréciations
             } else if (filter === 'auto') {
                 visible = !isCourse && category === 'auto';
             } else if (filter === 'manual') {
                 visible = !isCourse && category === 'manual';
+            } else if (filter === 'appreciations') {
+                visible = false; // Seul le panneau appréciations est visible dans cet onglet
             } else if (filter === 'all') {
-                visible = !isCourse; // Toutes les questions (hors cours), dans l'ordre naturel
+                visible = true; // Tout : cours + questions, dans l'ordre naturel
             }
 
             el.style.display = visible ? 'block' : 'none';
         });
 
-        const penaltyEl = document.querySelector('.question-penalty');
-        if (penaltyEl) {
-            penaltyEl.style.display = (showCourses || filter === 'all') ? 'block' : 'none';
+        const appreciationsEl = document.querySelector('.question-appreciations');
+        if (appreciationsEl) {
+            appreciationsEl.style.display = (filter === 'appreciations' || filter === 'all') ? 'block' : 'none';
         }
 
         this.updateGlobalSummary();
@@ -902,8 +919,28 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         const raw = (autoScore + manualScore) / maxTotalScore * 20;
         const rounded = Math.round(raw * 10) / 10;
 
-        return Math.max(0, rounded + coursePenalty);
+        return Math.min(20, Math.max(0, rounded + coursePenalty));
     }
+
+    /**
+     * ✅ Met à jour le libellé dynamique "Bonus" ou "Pénalité" selon le signe
+     */
+    updateBonusPenaltyLabel(value) {
+        const penaltyLabel = document.getElementById('summary-penalty');
+        if (!penaltyLabel) return;
+        
+        if (value > 0) {
+            penaltyLabel.innerHTML = `+${value} pts 🎁 Bonus`;
+            penaltyLabel.style.color = '#2e7d32';
+        } else if (value < 0) {
+            penaltyLabel.innerHTML = `${value} pts 📌 Pénalité`;
+            penaltyLabel.style.color = '#c62828';
+        } else {
+            penaltyLabel.innerHTML = `0 pts`;
+            penaltyLabel.style.color = '';
+        }
+    }
+
     /**
      * Met à jour la note dans l'entête du modal
      */
@@ -967,6 +1004,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
 
         this.updateHeaderNote(noteSur20);
         this.updateGlobalSummary();
+        this.updateBonusPenaltyLabel(coursePenalty);
     }
 
     /**
@@ -1114,7 +1152,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
      * Construit un tableau de questions compatible avec calculateDetailedScore depuis le DOM
      */
     buildQuestionsFromDOM(chapter, chapterConfig) {
-        return chapterConfig.questions.map(qConfig => {
+        const questions = chapterConfig.questions.map(qConfig => {
             const q = chapter.questions[qConfig.id];
             const scoreInput = document.getElementById(`score-${qConfig.id}`);
 
@@ -1128,6 +1166,27 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
                 theoreticalScore: q?.theoreticalScore ?? q?.score
             };
         });
+
+        // ✅ Inclure les cours pour que calculateDetailedScore puisse détecter les cours obligatoires non lus
+        const totalCourseCount = chapterConfig.courseCount || 0;
+        for (let i = 0; i < totalCourseCount; i++) {
+            const courseId = `course_${i}`;
+            const courseData = chapter.questions?.[courseId] || {};
+            const courseConfig = chapterConfig.courses?.find(c => c.index === i);
+
+            questions.push({
+                ...courseData,
+                id: courseId,
+                correctionType: 'manuel',
+                isCourse: true,
+                isRequired: courseConfig ? courseConfig.requiresValidation : false,
+                points: 0,
+                teacherScore: undefined,
+                theoreticalScore: undefined
+            });
+        }
+
+        return questions;
     }
 
     /**
@@ -1189,6 +1248,9 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
                 alert('Erreur lors de la sauvegarde');
                 return;
             }
+
+            // ✅ SYNC : la référence rechargée remplace l'ancienne dans le contexte
+            this.context.chapter = chapter;
 
             // 1. Synchroniser DOM → données
             this.applyTeacherInputsToChapter(chapter, chapterConfig);

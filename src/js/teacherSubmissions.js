@@ -116,6 +116,7 @@ class TeacherSubmissions {
         }
     }
 
+
     async render() {
         let html = `
             <div class="section-header">
@@ -206,7 +207,7 @@ class TeacherSubmissions {
                         <div class="submission-actions">
 
                             ${!isReturned ? `
-                            <button class="btn-correct" onclick="dashboard.modules.submissions.openCorrectionModal('${sub.studentId}', ${sub.chapterId})">
+                            <button class="btn-correct" onclick="dashboard.modules.submissions.openCorrectionModal('${sub.studentId}', '${sub.chapterId}')">
                                 ✏️ Corriger
                             </button>
                             ` : `
@@ -216,7 +217,7 @@ class TeacherSubmissions {
                             `}
 
                             ${!isReturned ? `
-                            <button class="btn-return" onclick="dashboard.modules.submissions.returnForRevision('${sub.studentId}', ${sub.chapterId})">
+                            <button class="btn-return" onclick="dashboard.modules.submissions.returnForRevision('${sub.studentId}', '${sub.chapterId}')">
                                 🔄 Renvoyer
                             </button>
                             ` : `
@@ -225,7 +226,7 @@ class TeacherSubmissions {
                             </button>
                             `}
 
-                            <button class="btn-view-student" onclick="dashboard.showStudentChapterView('${sub.studentId}', ${sub.chapterId})" title="Voir les réponses de l'apprenant">
+                            <button class="btn-view-student" onclick="dashboard.showStudentChapterView('${sub.studentId}', '${sub.chapterId}')" title="Voir les réponses de l'apprenant">
                                 👁️
                             </button>
                         </div>
@@ -243,145 +244,6 @@ class TeacherSubmissions {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-
-    async renderStudentDetailsSection() {
-        const students = await this.dashboard.getStudents();
-        
-        let html = `
-            <div class="students-list" style="margin-top: 2rem;">
-                <h2>Détails par Apprenant</h2>
-                <button class="refresh-btn" id="refresh-dashboard" onclick="dashboard.modules.submissions.refresh()">🔄 Rafraîchir les données</button>
-                <div class="students-grid" id="students-grid">
-        `;
-
-        if (students.length === 0) {
-            html += '<div class="empty-state">Aucun apprenant enregistré.</div>';
-        } else {
-            // ✅ 1. Charger TOUTES les progressions en parallèle
-            const progressesMap = new Map();
-            const progressPromises = students.map(async (student) => {
-                const progress = await this.dashboard.getStudentProgress(student.id);
-                progressesMap.set(student.id, progress);
-            });
-            await Promise.all(progressPromises);
-            
-            // ✅ 2. Construire le HTML sans nouveaux appels réseau
-            for (const student of students) {
-                const progress = progressesMap.get(student.id) || { chapters: {} };
-                const completedChapters = Object.values(progress.chapters).filter(c => c.completed).length;
-                const totalChapters = this.dashboard.chapters.length;
-                const completionRate = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
-
-                let avgScore = 0;
-                let scoreCount = 0;
-                Object.values(progress.chapters).forEach(chapter => {
-                    if (chapter.score !== undefined) {
-                        avgScore += chapter.score;
-                        scoreCount++;
-                    }
-                });
-                avgScore = scoreCount > 0 ? Math.round(avgScore / scoreCount) : 0;
-
-                html += `
-                    <div class="student-card">
-                        <div class="student-header">
-                            <h4>${this.escapeHtml(student.name)}</h4>
-                            <span class="student-class">${this.escapeHtml(student.class || 'Non spécifié')}</span>
-                        </div>
-                        
-                        <div class="student-stats">
-                            <div class="stat-row">
-                                <span>Dernière activité</span>
-                                <span>${this.getLastActivity(progress)}</span>
-                            </div>
-                        </div>
-
-                        <div class="chapter-list">
-                            <ul>
-                `;
-                
-                for (const chapter of this.dashboard.chapters) {
-                    const chapterData = progress.chapters[chapter.id] || { completed: false, score: 0 };
-                    
-                    let statusClass = 'status-not-started';
-                    let statusText = 'Non commencé';
-                    
-                    // PRIORITE ABSOLUE: Si c'est validated = VALIDE DEFINITIVEMENT
-                    if (chapterData.correctionStatus === 'validated') {
-                        statusClass = 'status-completed';
-                        statusText = '✅ Validé';
-                    } 
-                    else if (chapterData.completed) {
-                        statusClass = 'status-completed';
-                        statusText = 'Validé';
-                    } 
-                    else if (chapterData.score > 0) {
-                        statusClass = 'status-in-progress';
-                        statusText = '🟡 En cours';
-                    } 
-                    else if (chapterData.submissionStatus === 'submitted') {
-                        statusClass = 'status-pending-review';
-                        statusText = 'Rendu';
-                    }
-                    
-                    const hasStarted = chapterData.questions && Object.keys(chapterData.questions).length > 0;
-
-                    html += `
-                        <li style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <a class="chapter-link" onclick="dashboard.modules.submissions.showStudentChapterDetails('${student.id}', ${chapter.id})">
-                                    ${this.escapeHtml(chapter.title)}
-                                </a>
-                                <span class="status-badge ${statusClass}">${statusText}</span>
-                            </div>
-                            <span style="font-weight: 600; color: #34495e; min-width: 45px; text-align: right;">
-                                ${hasStarted && chapterData ? `${chapterData.completionPercent || 0}%` : ''}
-                            </span>
-                            ${hasStarted ? `
-                            <button class="btn-view-student" onclick="dashboard.showStudentChapterView('${student.id}', ${chapter.id})" title="Voir les réponses de l'apprenant">
-                                👁️
-                            </button>
-                            ` : ''}
-                        </li>
-                    `;
-                }
-                
-                html += `
-                            </ul>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        html += `
-                </div>
-            </div>
-        `;
-        
-        return html;
-    }
-
-
-    getLastActivity(progress) {
-        let latestDate = null;
-        
-        Object.values(progress.chapters).forEach(chapter => {
-            if (chapter.timestamp) {
-                const date = new Date(chapter.timestamp);
-                if (!latestDate || date > latestDate) {
-                    latestDate = date;
-                }
-            }
-        });
-
-        return latestDate ? latestDate.toLocaleDateString('fr-FR') : 'Jamais';
-    }
-
-    showStudentChapterDetails(studentId, chapterId) {
-        // Open a modal with detailed chapter info for the student
-        alert(`Détails du chapitre ${chapterId} pour l'apprenant ${studentId} - Fonctionnalité à implémenter`);
     }
 
     filterSubmissions() {
@@ -471,7 +333,7 @@ class TeacherSubmissions {
                     </div>
                     <div class="submission-actions">
                         ${!isReturned ? `
-                        <button class="btn-correct" onclick="dashboard.modules.submissions.openCorrectionModal('${sub.studentId}', ${sub.chapterId})">
+                        <button class="btn-correct" onclick="dashboard.modules.submissions.openCorrectionModal('${sub.studentId}', '${sub.chapterId}')">
                             ✏️ Corriger
                         </button>
                         ` : `
@@ -481,7 +343,7 @@ class TeacherSubmissions {
                         `}
                         
                         ${!isReturned ? `
-                        <button class="btn-return" onclick="dashboard.modules.submissions.returnForRevision('${sub.studentId}', ${sub.chapterId})">
+                        <button class="btn-return" onclick="dashboard.modules.submissions.returnForRevision('${sub.studentId}', '${sub.chapterId}')">
                             🔄 Renvoyer
                         </button>
                         ` : `
@@ -490,7 +352,7 @@ class TeacherSubmissions {
                         </button>
                         `}
                         
-                        <button class="btn-view" onclick="dashboard.showStudentChapterView('${sub.studentId}', ${sub.chapterId})" title="Voir la copie">
+                        <button class="btn-view" onclick="dashboard.showStudentChapterView('${sub.studentId}', '${sub.chapterId}')" title="Voir la copie">
                             👁️
                         </button>
                     </div>
@@ -507,17 +369,24 @@ class TeacherSubmissions {
     }
 
     async returnForRevision(studentId, chapterId) {
-        const comment = prompt('💬 Commentaire pour l\'apprenant (optionnel) :');
+        console.log(`[returnForRevision] 🔄 Appelé pour studentId="${studentId}", chapterId="${chapterId}"`);
         
-        // Si l'utilisateur clique sur Annuler → on arrête tout, aucune action
+        const slug = window.currentParcoursSlug;
+        if (!slug) {
+            console.error(`[returnForRevision] ❌ Aucun slug sélectionné`);
+            return;
+        }
+        
+        // prompt() est maintenant remplacé par une modale DOM dans config.js
+        // (fonctionne sans perte de focus dans les iframes Electron)
+        const comment = await window.prompt('💬 Commentaire pour l\'apprenant (optionnel) :');
+        
         if (comment === null) {
+            console.log(`[returnForRevision] ⏹️ Annulé par l'utilisateur`);
             return;
         }
 
         try {
-            const slug = window.currentParcoursSlug;
-            if (!slug) return;
-            
             const progress = await this.dashboard.getStudentProgress(studentId);
             const chapter = progress.chapters[chapterId];
             
@@ -531,10 +400,13 @@ class TeacherSubmissions {
                 
                 alert('🔄 Chapitre renvoyé pour révision !');
                 this.refresh();
+            } else {
+                console.error(`[returnForRevision] ❌ chapter non trouvé dans progress.chapters`);
+                alert(`❌ Chapitre "${chapterId}" introuvable dans la progression de l'étudiant.`);
             }
         } catch (error) {
             console.error('❌ Erreur renvoi chapitre:', error);
-            alert('❌ Une erreur est survenue.');
+            alert('❌ Une erreur est survenue lors du renvoi.');
         }
     }
 
@@ -556,21 +428,20 @@ class TeacherSubmissions {
 
         const modalHtml = `
             <div class="modal-overlay" id="student-chapter-view-modal">
-                <div class="modal-content" style="max-width: 95%; width: 95%; max-height: 90vh; padding: 0; overflow: hidden;">
-                    <div class="modal-header" style="background: #2c3e50; color: white; margin: 0; padding: 1rem 2rem; border-radius: 0;">
-                        <h3 style="margin: 0; color: white;">👁️ Vue Apprenant - ${chapterConfig.title} (${student.name})</h3>
-                        <button class="close-btn" onclick="dashboard.modules.submissions.closeStudentChapterView()" style="color: white;">&times;</button>
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>👁️ Vue Apprenant - ${chapterConfig.title} (${student.name})</h3>
+                        <button class="close-btn" onclick="dashboard.modules.submissions.closeStudentChapterView()">&times;</button>
                     </div>
                     
-                    <div class="teacher-view-banner" style="background: #fff3cd; color: #856404; padding: 0.75rem 1rem; text-align: center; font-weight: bold; border-bottom: 1px solid #ffc107;">
-                        👨‍🏫 Mode Formateur - Lecture seule - Vous voyez ce que l'apprenant voit
+                    <div class="teacher-view-banner">
+                        👨🏫 Mode Formateur - Lecture seule - Vous voyez ce que l'apprenant voit
                     </div>
                     
-                    <div style="height: calc(90vh - 120px);">
+                    <div class="iframe-container">
                         <iframe 
                             id="student-chapter-iframe"
                             src="${chapterUrl}" 
-                            style="width: 100%; height: 100%; border: none;"
                             title="Vue apprenant du chapitre"
                         ></iframe>
                     </div>

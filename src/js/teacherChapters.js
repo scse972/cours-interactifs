@@ -32,11 +32,17 @@ class TeacherChapters {
             const config = await this.dashboard.getChapterConfig(chapter.id);
             const isLocked = config.locked;
             const isDateEnabled = config.dateLimitEnabled === true;
-            const isExamMode = config.examMode === true;
+            // Déterminer le mode : rétrocompatibilité examMode
+            const chapterMode = config.chapterMode || chapter.chapterMode || (config.examMode ? 'exam' : 'normal');
 
-            // Valeurs date et heure
-            const dateValue = config.endDate ? config.endDate.split('T')[0] : '';
-            const hourValue = config.endDate ? config.endDate.split('T')[1]?.split(':')[0] || '19' : '19';
+            // Valeurs date et heure — toujours interprétées/affichées en heure locale du navigateur,
+            // quel que soit le format de stockage (UTC ISO ou local naïf), pour éviter tout décalage
+            // de fuseau au ré-affichage (endDate est toujours une vraie Date valide, peu importe le format).
+            const endDateObj = config.endDate ? new Date(config.endDate) : null;
+            const dateValue = endDateObj
+                ? `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, '0')}-${String(endDateObj.getDate()).padStart(2, '0')}`
+                : '';
+            const hourValue = endDateObj ? String(endDateObj.getHours()) : '19';
 
             const isExpired = await this.isChapterExpired(chapter.id);
 
@@ -51,32 +57,53 @@ class TeacherChapters {
                 statusText = 'Expiré';
             }
 
+            // Cohérence du chapitre : questions invalides (ex: QCM sans options) ou chapitre
+            // vide → alerte ; chapitre composé uniquement de cours (pas de question) → info.
+            const analysis = window.analyzeChapterQuestions(chapter.questions, chapter.courseCount);
+            let consistencyBadge = '';
+            if (analysis.hasIssues || analysis.isEmpty) {
+                const issues = analysis.invalidQuestions.map(q => `${q.title || q.id} (${q.type})`).join(', ');
+                const tooltip = analysis.isEmpty
+                    ? 'Ce chapitre ne contient aucune question ni cours exploitable.'
+                    : `Question(s) invalide(s) exclue(s) de l'affichage élève : ${issues}`;
+                consistencyBadge = `<span class="control-status status-inconsistent" title="${this.escapeHtml(tooltip)}">⚠️ Incohérence</span>`;
+            } else if (analysis.isCourseOnly) {
+                consistencyBadge = `<span class="control-status status-course-only" title="Chapitre composé uniquement de cours : pas de note, pas de bilan.">ℹ️ Cours uniquement</span>`;
+            }
+
             html += `
                 <div class="chapter-control-card">
                     <div class="control-header">
-                        <h4>${chapter.title}</h4>
-                        <span class="control-status ${statusClass}">${statusText}</span>
+                        <div class="control-header-badges">
+                            <span class="control-status ${statusClass}">${statusText}</span>
+                            ${consistencyBadge}
+                        </div>
+                        <h4 style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${this.escapeHtml(chapter.title)}">${this.escapeHtml(chapter.title)}</h4>
                     </div>
 
                     <div class="control-actions">
-                        <button class="control-btn btn-unlock" onclick="dashboard.modules.chapters.toggleChapterLock(${chapter.id})">
+                        <button class="control-btn btn-unlock" onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">
                             ${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
                         </button>
                     </div>
 
                     <div class="control-actions" style="margin-top: 1rem;">
-                        <label class="date-limit-toggle">
-                            <input type="checkbox" 
-                                ${isExamMode ? 'checked' : ''}
-                                onchange="dashboard.modules.chapters.toggleChapterMode(${chapter.id}, this.checked)">
-                            <span>📝 Mode examen</span>
+                        <label class="date-limit-toggle" style="flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+                            <span>🎯 Mode du chapitre</span>
+                            <select onchange="dashboard.modules.chapters.toggleChapterMode('${chapter.id}', this.value)" 
+                                    style="padding:0.3rem 0.5rem; border-radius:6px; border:1px solid #ccc; font-size:0.9rem; cursor:pointer;">
+                                <option value="normal" ${chapterMode === 'normal' ? 'selected' : ''}>Découverte</option>
+                                <option value="exam" ${chapterMode === 'exam' ? 'selected' : ''}>Examen</option>
+                                <option value="blind" ${chapterMode === 'blind' ? 'selected' : ''}>Blind</option>
+                                <option value="millionnaire" ${chapterMode === 'millionnaire' ? 'selected' : ''}>Millionnaire</option>
+                            </select>
                         </label>
                     </div>
 
                     <div class="control-actions" style="flex-direction: column; gap: 0.5rem;">
                         <label class="date-limit-toggle">
                             <input type="checkbox" ${isDateEnabled ? 'checked' : ''} 
-                                onchange="dashboard.modules.chapters.toggleDateLimit(${chapter.id}, this.checked)">
+                                onchange="dashboard.modules.chapters.toggleDateLimit('${chapter.id}', this.checked)">
                             Limite de date
                         </label>
 
@@ -85,11 +112,11 @@ class TeacherChapters {
                                 id="date-input-${chapter.id}"
                                 value="${dateValue}"
                                 ${isDateEnabled ? '' : 'disabled'}
-                                onchange="dashboard.modules.chapters.updateChapterDate(${chapter.id})"
+                                onchange="dashboard.modules.chapters.updateChapterDate('${chapter.id}')"
                             >
                             <select id="hour-select-${chapter.id}" 
                                 ${isDateEnabled ? '' : 'disabled'}
-                                onchange="dashboard.modules.chapters.updateChapterDate(${chapter.id})"
+                                onchange="dashboard.modules.chapters.updateChapterDate('${chapter.id}')"
                             >
                                 ${[...Array(24).keys()].map(h => 
                                     `<option value="${h}" ${h == hourValue ? 'selected' : ''}>${h}h</option>`
@@ -103,6 +130,13 @@ class TeacherChapters {
 
         html += '</div>';
         this.container.innerHTML = html;
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     async isChapterExpired(chapterId) {
@@ -121,16 +155,12 @@ class TeacherChapters {
         this.render();
     }
 
-    async toggleChapterMode(chapterId, isExamMode) {        
-        // Valeur avant mise à jour
-        const configBefore = await this.dashboard.getChapterConfig(chapterId);
-        
+    async toggleChapterMode(chapterId, mode) {        
         await this.dashboard.updateChapterConfig(chapterId, {
-            examMode: isExamMode
+            chapterMode: mode,
+            examMode: mode === 'exam' // rétrocompatibilité pour le code qui lit encore examMode
         });
                 
-        // Valeur après mise à jour
-        const configAfter = await this.dashboard.getChapterConfig(chapterId);
         this.render();
     }
 
@@ -173,13 +203,16 @@ class TeacherChapters {
 
         if (!dateInput.value) return;
 
-        const selectedDate = dateInput.value;
-        const selectedHour = hourSelect ? hourSelect.value : '19';
+        const selectedHour = parseInt(hourSelect ? hourSelect.value : '19', 10);
+        const [year, month, day] = dateInput.value.split('-').map(Number);
 
-        const endDate = `${selectedDate}T${selectedHour.padStart(2, '0')}:00:00`;
+        // Construit la date en heure LOCALE (celle choisie par le formateur) puis convertit
+        // en ISO UTC pour le stockage — même format que toggleDateLimit(), pour que le
+        // ré-affichage (via new Date()) retombe toujours sur l'heure locale voulue.
+        const endDate = new Date(year, month - 1, day, selectedHour, 0, 0, 0);
         await this.dashboard.updateChapterConfig(chapterId, {
             ...config,
-            endDate: endDate
+            endDate: endDate.toISOString()
         });
 
         this.render();

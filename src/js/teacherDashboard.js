@@ -47,6 +47,29 @@ class TeacherDashboard {
             // Masquer le bouton "Réinitialiser tout"
             const resetBtn = document.getElementById('reset-all-progress-btn');
             if (resetBtn) resetBtn.style.display = 'none';
+
+            // ── Faire briller la liste de choix parcours à chaque clic ──
+            const parcoursSelect = document.getElementById('parcours-select');
+            const glowParcoursSelect = () => {
+                if (parcoursSelect) {
+                    parcoursSelect.classList.remove('parcours-glow');
+                    // Forcer le reflow pour relancer l'animation
+                    void parcoursSelect.offsetWidth;
+                    parcoursSelect.classList.add('parcours-glow');
+                    // Nettoyer après la fin de l'animation (0.6s × 3 = 1.8s)
+                    setTimeout(() => {
+                        parcoursSelect.classList.remove('parcours-glow');
+                    }, 1900);
+                }
+            };
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', glowParcoursSelect);
+            });
+            // Également sur le contenu principal pour couvrir les clics dans la zone vide
+            if (contentDiv) {
+                contentDiv.addEventListener('click', glowParcoursSelect);
+            }
+
             // Scanner les parcours orphelins (attendre le résultat avant d'afficher)
             await this.scanOrphans();
             document.body.style.opacity = '1';
@@ -172,6 +195,20 @@ class TeacherDashboard {
         }
         const parcours = data.parcours.find(p => p.slug === slug);
         this.chapters = parcours ? parcours.chapitres : [];
+
+        // ✅ Fusionner les overrides live (mode, verrou, date limite) stockés dans chapter_config —
+        // sans ça, les onglets Suivi apprenants/Statistiques/Rendus à corriger n'affichent que la
+        // config statique de cours.json et ne voient jamais les changements faits dans Gestion des
+        // chapitres (même fusion que côté élève, voir index.js).
+        if (slug && this.chapters.length > 0) {
+            const configKey = `${slug}:config:chapter_config`;
+            const storageConfig = await storage.get(configKey) || {};
+            this.chapters.forEach(chapter => {
+                if (storageConfig[chapter.id]) {
+                    Object.assign(chapter, storageConfig[chapter.id]);
+                }
+            });
+        }
     }
     
     initModules() {
@@ -216,7 +253,12 @@ class TeacherDashboard {
         if (activePanel) activePanel.classList.add('active');
         
         this.currentTab = tabId;
-        
+
+        // Recharger la config des chapitres (mode/verrou/date limite) à chaque changement
+        // d'onglet, pour que les autres vues reflètent toujours les derniers réglages faits
+        // dans Gestion des chapitres, sans avoir à recharger la page.
+        await this.loadChapters();
+
         if (this.modules[tabId] && typeof this.modules[tabId].refresh === 'function') {
             await this.modules[tabId].refresh();
         }
@@ -436,14 +478,29 @@ class TeacherDashboard {
             users.forEach(u => { userMap[u.id] = u; });
 
             const prefix = slug + ':';
+
+            // 🔍 LOG : compter les clés du cache localStorage avant d'interroger le provider
+            let cacheKeysForSlug = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('_cache_') && k.includes(slug)) {
+                    cacheKeysForSlug.push(k.replace('_cache_', ''));
+                }
+            }
+            console.log(`[scanResetStudents] 🔍 Cache localStorage : ${cacheKeysForSlug.length} clé(s) pour "${slug}" :`, cacheKeysForSlug);
+
             const allKeys = await storage.keys();
+            console.log(`[scanResetStudents] 🔍 storage.keys() retourne ${allKeys.length} clé(s) au total`);
 
             // Filtrer les clés de progression (exclure _guest)
             const progressKeys = allKeys.filter(k =>
                 k.startsWith(prefix) && k.includes(':student_') && k.endsWith('_progress') && !k.includes(':_guest:')
             );
 
+            console.log(`[scanResetStudents] 🔍 progressKeys filtrées : ${progressKeys.length} clé(s) :`, progressKeys);
+
             if (progressKeys.length === 0) {
+                console.log(`[scanResetStudents] ✅ Aucune progression trouvée → affichage "aucune"`);
                 subtitle.textContent = 'Gestion des progressions du parcours — aucune progression enregistrée.';
                 resetList.innerHTML = '<p style="color:#27ae60; font-weight:600;">✅ Aucune progression enregistrée pour ce parcours.</p>';
                 resetBtn.style.display = 'none';
@@ -522,8 +579,8 @@ class TeacherDashboard {
             slugsToPurge.map(s => `• ${s}`).join('\n') + `\n\n` +
             `Cela supprimera TOUTES les progressions, utilisateurs et configurations associés.`;
 
-        if (!confirm(msg)) return;
-        if (!confirm('⚠️ DEUXIÈME CONFIRMATION\n\nVoulez-vous VRAIMENT purger ces données ? Cette action est irréversible.')) return;
+        if (!await confirm(msg)) return;
+        if (!await confirm('⚠️ DEUXIÈME CONFIRMATION\n\nVoulez-vous VRAIMENT purger ces données ? Cette action est irréversible.')) return;
 
         try {
             const allKeys = await storage.keys();
@@ -576,8 +633,8 @@ class TeacherDashboard {
             studentLines.join('\n') + `\n\n` +
             `Cela effacera toutes leurs réponses, scores et historiques de tentatives.`;
 
-        if (!confirm(msg)) return;
-        if (!confirm('⚠️ DEUXIÈME CONFIRMATION\n\nVoulez-vous VRAIMENT réinitialiser ces progressions ? Cette action est irréversible.')) return;
+        if (!await confirm(msg)) return;
+        if (!await confirm('⚠️ DEUXIÈME CONFIRMATION\n\nVoulez-vous VRAIMENT réinitialiser ces progressions ? Cette action est irréversible.')) return;
 
         try {
             const prefix = slug + ':';
@@ -600,10 +657,58 @@ class TeacherDashboard {
                 }
             }
 
+            console.log(`[resetSelectedProgress] ✅ ${totalDeleted} clé(s) supprimée(s) pour ${tokens.length} étudiant(s).`);
+            console.log(`[resetSelectedProgress] Tokens réinitialisés :`, tokens);
+
             alert(`✅ Réinitialisation terminée !\n\n${totalDeleted} clé(s) supprimée(s) pour ${tokens.length} étudiant(s).`);
 
-            // Rescanner
-            this.scanResetStudents();
+            // ── VIDER LE CACHE LOCALSTORAGE de TOUT ce qui touche aux progressions ──
+            // storage.keys() combine backend + cache localStorage. Même si storage.remove()
+            // a bien supprimé la donnée du backend SQLite, le cache localStorage peut encore
+            // contenir des entrées périmées. On les vide donc complètement.
+            console.log(`[resetSelectedProgress] 🔄 Vidage du cache localStorage pour "${slug}" et tokens...`);
+            let cacheCleared = 0;
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('_cache_')) {
+                    const isForSlug = k.includes(slug);
+                    const isForToken = tokens.some(t => k.includes(t));
+                    if (isForSlug || isForToken) {
+                        localStorage.removeItem(k);
+                        cacheCleared++;
+                    }
+                }
+            }
+            console.log(`[resetSelectedProgress] ✅ Cache vidé : ${cacheCleared} entrée(s) localStorage supprimée(s)`);
+
+            // ── DÉLAI pour laisser SQLite finaliser l'écriture (mode WAL) ──
+            // SQLite en mode WAL peut avoir un léger délai avant que les données
+            // supprimées soient visibles par une nouvelle requête. 300ms suffisent.
+            console.log(`[resetSelectedProgress] ⏳ Pause 300ms pour laisser SQLite se stabiliser...`);
+            await new Promise(r => setTimeout(r, 300));
+
+            // Attendre le rescanner de la zone de danger
+            console.log(`[resetSelectedProgress] 🔄 Début scanResetStudents()`);
+            await this.scanResetStudents();
+            console.log(`[resetSelectedProgress] ✅ Fin scanResetStudents()`);
+
+            // Rafraîchir tous les modules (y compris les onglets actuellement non visibles)
+            // pour que la mise à jour soit visible immédiatement sans devoir changer d'onglet
+            console.log(`[resetSelectedProgress] 🔄 Rafraîchissement de ${Object.keys(this.modules).length} module(s) :`, Object.keys(this.modules));
+            const moduleNames = Object.keys(this.modules);
+            const results = await Promise.all(moduleNames.map(async (name) => {
+                const module = this.modules[name];
+                if (typeof module.refresh === 'function') {
+                    console.log(`[resetSelectedProgress]   ↳ ${name}.refresh() début`);
+                    await module.refresh();
+                    console.log(`[resetSelectedProgress]   ✅ ${name}.refresh() terminé`);
+                    return { name, refreshed: true };
+                } else {
+                    console.log(`[resetSelectedProgress]   ⏭️ ${name} : pas de méthode refresh()`);
+                    return { name, refreshed: false };
+                }
+            }));
+            console.log(`[resetSelectedProgress] ✅ Tous les rafraîchissements terminés :`, results);
 
         } catch (error) {
             console.error('❌ Erreur réinitialisation:', error);
@@ -612,7 +717,7 @@ class TeacherDashboard {
     }
 
     async resetAllProgress() {
-        const confirmed = confirm(
+        if (!await confirm(
             '⚠️ ATTENTION - Action Irréversible\n\n' +
             'Êtes-vous sûr de vouloir réinitialiser TOUTES les progressions de TOUS les apprenants ?\n\n' +
             'Cela effacera :\n' +
@@ -621,17 +726,13 @@ class TeacherDashboard {
             '• Tous les chapitres complétés\n' +
             '• Tout l\'historique des tentatives\n\n' +
             'Cette action ne peut pas être annulée.'
-        );
+        )) return;
         
-        if (!confirmed) return;
-        
-        const doubleConfirmed = confirm(
+        if (!await confirm(
             '⚠️ DEUXIÈME CONFIRMATION\n\n' +
             'Voulez-vous VRAIMENT tout effacer ?\n' +
             'Cliquez sur OK pour confirmer la réinitialisation complète.'
-        );
-        
-        if (!doubleConfirmed) return;
+        )) return;
         
         try {
             const slug = window.currentParcoursSlug;
@@ -700,17 +801,36 @@ class TeacherDashboard {
     }
     async getStudents() {
         const slug = window.currentParcoursSlug;
-        if (!slug) return [];
+        if (!slug) {
+            console.log('[teacherDashboard.getStudents] aucun slug de parcours courant');
+            return [];
+        }
         const usersKey = `${slug}:teacher:users_list`;
         const users = await storage.get(usersKey) || [];
+        console.log('[teacherDashboard.getStudents] users_list chargée', {
+            slug,
+            key: usersKey,
+            total: Array.isArray(users) ? users.length : -1,
+            students: Array.isArray(users) ? users.filter(u => u.type === 'student').length : -1,
+        });
         return users.filter(u => u.type === 'student');
     }
 
     async getStudentProgress(studentId) {
         const slug = window.currentParcoursSlug;
-        if (!slug) return {};
+        if (!slug) {
+            console.log('[teacherDashboard.getStudentProgress] aucun slug de parcours courant', { studentId });
+            return {};
+        }
         const key = `${slug}:${studentId}:student_${studentId}_progress`;
         const data = await storage.get(key);
+        console.log('[teacherDashboard.getStudentProgress] progression lue', {
+            slug,
+            studentId,
+            key,
+            hasData: !!data,
+            chapterCount: data?.chapters ? Object.keys(data.chapters).length : 0,
+        });
         return data || {
             chapters: {},
             scores: {},

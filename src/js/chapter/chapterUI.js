@@ -99,6 +99,9 @@ const ChapterUI = {
             const questionEl = document.querySelector(`.question-section[data-question-id="${questionId}"]`);
             if (!questionEl) return;
 
+            // En mode blind : ne pas afficher de feedback
+            if (context.isBlindMode) return;
+
             if (context.isExamMode && context.isChapterLocked) {
                 this.lockQuestion(questionEl);
                 return;
@@ -293,9 +296,14 @@ const ChapterUI = {
         if (statsDiv) {
             const examContext = getExamContext(chapter, chapterConfig, window.globalContext);
             const submissionStatus = chapter.submissionStatus || 'not_submitted';
-            const isDisabled = examContext.isExamMode && submissionStatus === 'not_submitted';
+            const isDisabled = (examContext.isExamMode || examContext.isBlindMode) && submissionStatus === 'not_submitted';
 
-            if (isDisabled) {
+            // Chapitre sans question notable (uniquement du cours, ou vide) : rien à noter,
+            // pas de bilan à afficher.
+            const analysis = window.analyzeChapterQuestions(chapterConfig.questions, chapterConfig.courseCount);
+            const noBilan = analysis.isEmpty || analysis.isCourseOnly;
+
+            if (isDisabled || noBilan) {
                 statsDiv.innerHTML = '';
             } else {
                 // ── Logique conditionnelle du bouton bilan / corrigé ──────────
@@ -395,7 +403,9 @@ const ChapterUI = {
         const chapterConfig = window.currentChapterConfig;
         const allButtons = document.querySelectorAll('.question-actions .btn-check-answer');
 
-        if (chapterConfig?.examMode === true) {
+        // Cacher les boutons "Vérifier" en mode examen ET en mode blind
+        const context = window.currentExamContext;
+        if (context?.isExamMode || context?.isBlindMode) {
             allButtons.forEach(btn => { btn.style.display = 'none'; });
         } else {
             allButtons.forEach(btn => { btn.style.display = 'block'; });
@@ -422,6 +432,20 @@ const ChapterUI = {
         if (!chapter) return;
 
         const submissionStatus = chapter.submissionStatus || 'not_submitted';
+
+        // 🔒 Verrouillé par le formateur (verrou manuel ou date limite figée pour cet élève) :
+        // prime sur "not_submitted"/"returned_for_revision", mais pas sur un statut de soumission
+        // déjà finalisé (géré par le switch ci-dessous, qui garde la priorité dans ce cas).
+        if (window.currentExamContext?.isTeacherLocked &&
+            submissionStatus !== 'submitted' &&
+            submissionStatus !== 'late_submitted' &&
+            submissionStatus !== 'validated') {
+            btn.innerHTML = '🔒 Chapitre verrouillé';
+            btn.className = 'btn btn-secondary';
+            btn.disabled = true;
+            btn.onclick = null;
+            return;
+        }
 
         switch (submissionStatus) {
             case 'not_submitted':
