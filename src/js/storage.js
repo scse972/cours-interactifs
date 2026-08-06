@@ -307,6 +307,21 @@ async function loadProvider() {
             );
             console.log('[storage] _parcoursProvider (Supabase) → table: parcours_data');
 
+        } else if (providerName === 'appwrite') {
+            if (typeof AppwriteProvider === 'undefined') {
+                console.log('[storage] Injection script: provider.appwrite.js');
+                await injectScript(storagePath('provider.appwrite.js'));
+            }
+            provider = new AppwriteProvider(
+                Object.assign({}, config.appwrite || {}, { collectionId: 'app_data' })
+            );
+            console.log('[storage] AppwriteProvider instancié → endpoint:', (config.appwrite || {}).endpoint || '(manquant)');
+
+            window._parcoursProvider = new AppwriteProvider(
+                Object.assign({}, config.appwrite || {}, { collectionId: 'parcours_data' })
+            );
+            console.log('[storage] _parcoursProvider (Appwrite) → collectionId: parcours_data');
+
         } else if (providerName === 'sqlite') {
             if (typeof SQLiteProvider === 'undefined') {
                 console.log('[storage] Injection script: provider.sqlite.js');
@@ -361,7 +376,7 @@ async function loadProvider() {
             }
 
         } else {
-            throw new Error('Provider inconnu: "' + providerName + '". Valeurs supportées: supabase, sqlite, electron.');
+            throw new Error('Provider inconnu: "' + providerName + '". Valeurs supportées: supabase, appwrite, sqlite, electron.');
         }
 
         window._storageProvider = provider;

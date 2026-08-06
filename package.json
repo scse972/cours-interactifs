@@ -10,6 +10,7 @@
     "dev": "npm run config:local && concurrently \"npm run frontend\" \"npm run backend\"",
     "config:local": "shx cp storage/config.local.json storage/config.json",
     "config:supabase": "shx cp storage/config.supabase.json storage/config.json",
+    "config:appwrite": "shx cp storage/config.appwrite.json storage/config.json",
     "test": "node -e \"fetch('http://localhost:3000/api/health').then(r=>r.json()).then(console.log).catch(console.error)\""
   },
   "devDependencies": {

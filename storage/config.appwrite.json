@@ -1,0 +1,9 @@
+{
+  "storage": "appwrite",
+
+  "appwrite": {
+    "endpoint": "https://fra.cloud.appwrite.io/v1",
+    "projectId": "<votre-project-id>",
+    "databaseId": "<votre-database-id>"
+  }
+}
