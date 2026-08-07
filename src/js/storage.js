@@ -262,7 +262,10 @@ async function loadConfig() {
 
     // ── Fallback config.json (standalone, ou si Electron sans parametresCoursServer.json) ──
     if (!config) {
-        var configFile = window.IS_GITHUB_PAGES ? 'config.supabase.json' : 'config.json';
+        // config.json est la seule source de vérité, y compris sur GitHub Pages :
+        // deploySite() (XSpro) le maintient à jour avec le mode réellement configuré
+        // (supabase ou appwrite), et le workflow deploy.yml ne l'écrase plus.
+        var configFile = 'config.json';
         //console.log('[storage] Chargement config: ' + configFile);
         var resp = await fetch(storagePath(configFile));
         if (!resp.ok) throw new Error(configFile + ': HTTP ' + resp.status);
@@ -355,6 +358,7 @@ async function loadProvider() {
                 console.log('[storage] Electron: iframe détectée → délégation au provider du parent');
                 provider = window.parent._storageProvider;
                 window._parcoursProvider = window.parent._parcoursProvider || null;
+                window._storageBackend = window.parent._storageBackend || providerName;
                 console.log('[storage] _parcoursProvider délégué au parent:', window._parcoursProvider ? '✅' : '⚠️ absent');
             } else {
                 // Fallback : tenter window.parent.require (peut échouer si parent sans nodeIntegration)
@@ -380,6 +384,7 @@ async function loadProvider() {
         }
 
         window._storageProvider = provider;
+        if (!window._storageBackend) window._storageBackend = providerName;
         console.log('[storage] window._storageProvider prêt:', providerName);
         return provider;
 

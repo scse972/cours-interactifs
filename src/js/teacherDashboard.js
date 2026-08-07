@@ -121,16 +121,22 @@ class TeacherDashboard {
         let providerName = 'Inconnu';
         let isFallback   = false;
 
+        const BACKEND_LABELS = {
+            supabase: 'Supabase',
+            appwrite: 'Appwrite',
+            sqlite:   'SQLite',
+            electron: 'Electron (local)',
+        };
+
         if (provider) {
-            const ctorName = provider.constructor?.name;
-            if (ctorName === 'SupabaseProvider') {
-                providerName = 'Supabase';
-            } else if (ctorName === 'SQLiteProvider') {
-                providerName = 'SQLite';
-            } else if (ctorName === 'ElectronProvider') {
-                providerName = 'Electron (local)';
+            if (window._storageBackend && BACKEND_LABELS[window._storageBackend]) {
+                // Backend réel exposé par storage.js — reflète fidèlement le choix fait dans XSpro.
+                providerName = BACKEND_LABELS[window._storageBackend];
+                if (window.IS_ELECTRON && window._storageBackend !== 'electron') {
+                    providerName += ' (via Electron)';
+                }
             } else if (window.IS_ELECTRON) {
-                // Objet IPC anonyme (pas de nodeIntegration) — on sait qu'on est Electron
+                // Objet IPC anonyme (pas de nodeIntegration) et backend inconnu — on sait qu'on est Electron
                 providerName = 'Electron (IPC)';
             } else {
                 isFallback   = true;
@@ -163,6 +169,7 @@ class TeacherDashboard {
             if (resp.ok) {
                 const config = await resp.json();
                 if (config.storage === 'supabase')  return 'Supabase';
+                if (config.storage === 'appwrite')  return 'Appwrite';
                 if (config.storage === 'sqlite')    return 'SQLite';
                 if (config.storage === 'electron')  return 'Electron (local)';
                 return config.storage || 'localStorage';

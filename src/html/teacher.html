@@ -250,8 +250,10 @@
                 sourceLabel.textContent = 'Cache (' + (info.source || '?') + ')';
                 sourceLabel.style.color = '#c0392b';
             } else if (info.source === 'provider') {
+                const BACKEND_LABELS = { supabase: 'Supabase', appwrite: 'Appwrite', sqlite: 'SQLite', electron: 'Electron' };
+                const backendName = BACKEND_LABELS[window._storageBackend] || 'BDD';
                 sourceDot.style.background = '#3498db';
-                sourceLabel.textContent = 'Provider (BDD)';
+                sourceLabel.textContent = 'Provider (' + backendName + ')';
                 sourceLabel.style.color = '#2980b9';
             } else if (info.source === 'static') {
                 sourceDot.style.background = '#2ecc71';
