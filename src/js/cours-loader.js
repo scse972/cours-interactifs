@@ -5,7 +5,7 @@ async function loadCours(forceRefresh = false) {
     if (cachedCours && !forceRefresh) return cachedCours;
     
     const data = await staticJson.get('/parcours/cours.json');
-    if (data) return data;
+    if (data && Array.isArray(data.parcours)) return data;
     console.error('Erreur chargement cours.json');
     return { parcours: [] };}
 

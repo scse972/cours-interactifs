@@ -269,7 +269,7 @@
                 // Afficher le sélecteur pour permettre de changer de parcours
                 if (selector) selector.style.display = 'block';
 
-                if (data) {
+                if (data && Array.isArray(data.parcours)) {
                     // Garder l'option vide
                     selectEl2.innerHTML = '<option value="">— Changer de parcours —</option>';
                     data.parcours.forEach(p => {
@@ -297,7 +297,7 @@
             if (selector) selector.style.display = 'block';
             if (nameEl) nameEl.textContent = '';
 
-            if (data) {
+            if (data && Array.isArray(data.parcours)) {
                 data.parcours.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.slug;

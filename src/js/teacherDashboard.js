@@ -195,7 +195,7 @@ class TeacherDashboard {
     async loadChapters() {
         const slug = window.currentParcoursSlug;
         const data = await staticJson.get('/parcours/cours.json');
-        if (!data) {
+        if (!data || !Array.isArray(data.parcours)) {
             console.error(`❌ Erreur de chargement chapitres pour le parcours "${slug}"`);
             this.chapters = [];
             return;
@@ -377,7 +377,7 @@ class TeacherDashboard {
         try {
             // Charger les slugs valides depuis cours.json
             const data = await staticJson.get('/parcours/cours.json');
-            const validSlugs = data ? data.parcours.map(p => p.slug) : [];
+            const validSlugs = (data && Array.isArray(data.parcours)) ? data.parcours.map(p => p.slug) : [];
 
             // Scanner toutes les clés du storage
             const allKeys = await storage.keys();

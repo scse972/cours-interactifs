@@ -27,8 +27,8 @@ async function loadChapterConfig() {
             // Charger cours.json si pas déjà fait
             if (!window.chaptersIndex) {
                 const data = await staticJson.get('/parcours/cours.json');
-                
-                if (data) {
+
+                if (data && Array.isArray(data.parcours)) {
                     const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
                     const parcours = data.parcours.find(p => p.slug === slug);
                     if (parcours) {
