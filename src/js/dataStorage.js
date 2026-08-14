@@ -303,14 +303,14 @@ class UserManager {
     }
 
     async removeUser(userId) {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur de ce parcours ?')) {
+        if (await confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur de ce parcours ?')) {
             await this.auth.removeUser(userId);
             this.renderUserList();
         }
     }
 
     async resetUsers() {
-        if (confirm('Réinitialiser la liste ? Cette action est irréversible.')) {
+        if (await confirm('Réinitialiser la liste ? Cette action est irréversible.')) {
             await this.auth.saveUsers([]);
             this.renderUserList();
         }
@@ -343,7 +343,7 @@ class UserManager {
                     : null;
             }).filter(Boolean);
             if (users.length > 0) {
-                if (confirm(`Importer ${users.length} utilisateurs dans le parcours "${Parcours.slug}" ? Cette action remplacera la liste actuelle.`)) {
+                if (await confirm(`Importer ${users.length} utilisateurs dans le parcours "${Parcours.slug}" ? Cette action remplacera la liste actuelle.`)) {
                     await this.saveUsers(users);
                     this.renderUserList();
                     alert('Importation terminée !');

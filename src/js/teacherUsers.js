@@ -341,7 +341,7 @@ class TeacherUsers {
         const student = this.students.find(s => s.id === studentId);
         if (!student) return;
 
-        const confirmed = confirm(
+        const confirmed = await confirm(
             `⚠️ Supprimer l'apprenant "${student.name}" ?\n\n` +
             'Cette action est irréversible et supprimera :\n' +
             '• Le compte de l\'apprenant\n' +
@@ -558,7 +558,7 @@ class TeacherUsers {
             );
         }
 
-        const confirmed = confirm(
+        const confirmed = await confirm(
             `⚠️ SUPPRESSION GROUPEE\n\n` +
             `Êtes-vous SÛR de vouloir supprimer ${filtered.length} apprenant(s) ?\n\n` +
             `Cette action est IRRÉVERSIBLE et supprimera définitivement ces comptes et toutes leurs progressions.`
