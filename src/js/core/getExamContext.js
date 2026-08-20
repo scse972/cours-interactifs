@@ -55,9 +55,14 @@ function getExamContext(chapter, chapterConfig = null, globalContext = {}) {
 
     return {
         // vrais booléens pour chaque mode
+        // Atelier AR : c'est un mode Découverte. Il n'a volontairement AUCUN levier propre ici —
+        // il obtient le comportement Découverte par absence des autres drapeaux (chaque branche
+        // du code teste explicitement exam / blind / millionnaire). Ce qu'il change se joue au
+        // niveau des questions ouvertes à correction manuelle (cf. "mode atelier AR.md").
         isExamMode:        mode === 'exam',
         isBlindMode:       mode === 'blind',
         isMillionnaireMode: mode === 'millionnaire',
+        isAtelierMode:     mode === 'atelier',
         isNormalMode:      mode === 'normal',
 
         // état progression

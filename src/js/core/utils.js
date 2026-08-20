@@ -22,6 +22,8 @@ function matchesStatus(state, statusFilter) {
             return state.mode === 'exam';
         case 'blind':
             return state.mode === 'blind';
+        case 'atelier':
+            return state.mode === 'atelier';
         default:
             return state.status === statusFilter;
     }

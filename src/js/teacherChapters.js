@@ -96,6 +96,7 @@ class TeacherChapters {
                                 <option value="exam" ${chapterMode === 'exam' ? 'selected' : ''}>Examen</option>
                                 <option value="blind" ${chapterMode === 'blind' ? 'selected' : ''}>Blind</option>
                                 <option value="millionnaire" ${chapterMode === 'millionnaire' ? 'selected' : ''}>Millionnaire</option>
+                                <option value="atelier" ${chapterMode === 'atelier' ? 'selected' : ''}>Atelier AR</option>
                             </select>
                         </label>
                     </div>

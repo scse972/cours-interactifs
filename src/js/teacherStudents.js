@@ -167,6 +167,7 @@ class TeacherStudents {
                         <option value="exam_in_progress">⛔ Examen en cours</option>
                         <option value="exam">📋 Mode examen</option>
                         <option value="blind">🥽 Mode blind</option>
+                        <option value="atelier">🧾 Mode atelier AR</option>
                         <option value="in_progress">🟡 En cours</option>
                         <option value="not_started">⚪ Non commencé</option>
                         <option value="locked">🔒 Verrouillé</option>

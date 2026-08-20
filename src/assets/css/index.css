@@ -450,7 +450,7 @@ body {
 }
 
 /* ============================================================================
-   BADGE DU MODE DE CHAPITRE (exam, blind, millionnaire, normal → Découverte)
+   BADGE DU MODE DE CHAPITRE (exam, blind, millionnaire, atelier, normal → Découverte)
    Badge centré en haut de la carte
    ============================================================================ */
 
@@ -483,6 +483,12 @@ body {
     background: #ffeaa7;
     color: #6d4c00;
     border: 1px solid #f1c40f;
+}
+
+.chapter-mode-badge.mode-atelier {
+    background: #d6eaf8;
+    color: #1b4f72;
+    border: 1px solid #85c1e9;
 }
 
 .chapter-mode-badge.mode-normal {
