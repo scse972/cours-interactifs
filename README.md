@@ -30,6 +30,10 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── teacherStudents.js             #   Gestion des élèves (formateur)
 │   │   ├── teacherSubmissions.js          #   Soumissions (formateur)
 │   │   ├── teacherUsers.js                #   Utilisateurs (formateur)
+│   │   ├── atelier/                       #   Mode Atelier AR (voir "mode atelier AR.md")
+│   │   │   ├── atelierCodes.js            #     Codes de validation et AR (partagé apprenant/formateur)
+│   │   │   ├── atelierQuestion.js         #     Vue apprenant de la consigne
+│   │   │   └── suiviAtelier.js            #     Logique de l'outil de validation
 │   │   ├── chapter/
 │   │   │   ├── chapterBilan.js            #   Bilan de chapitre
 │   │   │   ├── chapterSubmission.js       #   Soumission de chapitre
@@ -54,15 +58,16 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │       ├── login.html                     #   Connexion apprenant
 │       ├── teacher-login.html             #   Connexion formateur
 │       ├── teacher.html                   #   Gestion parcours (formateur)
+│       ├── suiviAtelier.html              #   Outil de validation en main propre (mobile, autonome)
 │       └── user.html                      #   Profil utilisateur
 │
-├── parcours/                              # ★ Données pédagogiques (générées par outils_xlsx/)
+├── parcours/                              # ★ Données pédagogiques (publiées par XSpro)
 │   ├── cours.json                         #   Registre JSON complet de TOUS les parcours
 │   │                                      #   (contient la totalité des données : chapitres,
 │   │                                      #    questions, réponses, feedbacks, html incorporé)
 │   │                                      #   Chargé via staticJson.get('/parcours/cours.json')
 │   └── src/
-│       └── chapter_template.html          #   Template HTML unique pour générer les chapitres
+│       └── chapter_template.html          #   Page unique de chapitre (?parcours=&chapitre=)
 │
 ├── storage/                               # ★ Configuration du backend de stockage
 │   ├── config.json                        #   Provider actif (copie locale de .supabase ou .local)
@@ -81,17 +86,13 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 ├── tools/                                 # ★ Outils de développement (non déployés)
 │   └── generer-cours-demo.js              #   Export XSpro → parcours/cours.json (démo/secours)
 │
-├── tools_xlsx/                            # ★ Fichiers source et SQL (non déployés)
-│   ├── coursexportXSPRO.xlsx              #   Fichier source Excel (contenu pédagogique)
-│   ├── cours.xlsx                         #   Fichier source Excel (variable suivant besoins)
-│   ├── SUPABASE_SETUP.sql                 #   Schéma SQL pour la table Supabase app_data
-│   ├── templates/
-│   │   └── chapter_template.html          #   Copie legacy du template (voir parcours/src/)
-│   └── generated/                         #   Sortie legacy du générateur Python (supprimé)
+├── tools_xlsx/                            # ★ Vestige de la chaîne Excel (non déployé)
+│   └── SUPABASE_SETUP.sql                 #   Schéma SQL pour les tables app_data / parcours_data
 │
 ├── deploiement.md                         # Documentation déploiement
 ├── DETAILS_VUES.md                        # Documentation vues
 ├── principe flux.md                       # Documentation flux de données
+├── mode atelier AR.md                     # Mode Atelier AR : intention, codes, modèle de données
 │
 └── .gitignore
 ```
@@ -181,7 +182,9 @@ La totalité du contenu pédagogique est centralisée dans :
 
 Ce fichier agit comme un registre global des parcours.
 
-Il est généré automatiquement à partir de fichiers Excel via des scripts Python.
+Il est produit par **XSpro** (`publishParcours.js`), seule source de vérité du format. Le fichier
+statique versionné ici sert de jeu de démonstration et de secours ; voir « Génération du contenu
+pédagogique » plus bas pour le régénérer.
 
 ---
 
@@ -235,10 +238,14 @@ Le script appelle `buildParcours()` de XSpro plutôt que de réimplémenter le f
 un dépôt XSpro accessible (`--xspro <chemin>`, défaut `../XSpro`). C'est un outil de développement,
 jamais utilisé au déploiement.
 
-L'ancien générateur Python (`tools_xlsx/generate_chapters.py`) est supprimé : il produisait un format
-antérieur au tableau `items`, que le template de chapitre ne sait plus afficher.
+L'ancienne chaîne Excel est démantelée : le générateur Python (`tools_xlsx/generate_chapters.py`), les
+fichiers `.xlsx` source et la copie legacy du template de chapitre ont été supprimés. Le générateur
+produisait un format antérieur au tableau `items`, que le template de chapitre ne sait plus afficher.
+`tools_xlsx/` ne conserve que le schéma SQL.
 
-`tools_xlsx/` ne conserve que les fichiers Excel source et le schéma SQL.
+Le contrat d'autorat pour l'IA (`parcours/model/modelChapitre.json`) a également été retiré : la
+définition des types, règles et corrections vit désormais uniquement dans `manifest_parcours.js` côté
+XSpro, seule source de vérité.
 
 ---
 
@@ -291,10 +298,49 @@ Le tableau de bord permet :
 * statistiques globales,
 * correction des réponses ouvertes,
 * verrouillage des chapitres,
-* mode examen,
+* mode du chapitre (Découverte, Examen, Blind, Millionnaire, Atelier AR),
 * dates limites,
 * gestion des utilisateurs,
 * import/export CSV.
+
+---
+
+# Modes de chapitre
+
+Un mode est une **politique de chapitre** choisie par le formateur, indépendante du contenu : le même
+chapitre peut être joué dans un mode différent d'une classe à l'autre. Il est stocké dans
+`slug:config:chapter_config` (`chapterMode`), figé par apprenant au premier démarrage
+(`frozenChapterMode`), et résolu par la source unique de vérité `src/js/core/getExamContext.js`.
+
+| Mode | Icône | Principe |
+|---|---|---|
+| Découverte | 📖 | Feedback immédiat, l'apprenant peut réessayer |
+| Examen | 📝 | Pas de feedback, enregistrement en temps réel, tout se verrouille au rendu |
+| Blind | 🥽 | Saisie silencieuse, bilan min/max à la validation |
+| Millionnaire | 💰 | Une erreur réinitialise les questions auto-corrigées |
+| Atelier AR | 🧾 | Les consignes se valident **en main propre**, par échange de codes |
+
+## 🧾 Le mode Atelier AR
+
+C'est un mode Découverte dans lequel les questions **ouvertes à correction manuelle** deviennent des
+consignes : un travail réalisé hors écran, que l'apprenant vient faire valider auprès de son formateur.
+
+1. L'apprenant rédige son compte rendu, se positionne sur une échelle à trois niveaux, puis se déclare
+   prêt — ce qui produit un **code de validation** de 6 caractères.
+2. Le formateur ouvre `src/html/suiviAtelier.html` (page mobile autonome), saisit ce code, voit le
+   travail, attribue des points et une appréciation, et obtient un **AR** de 8 caractères qu'il dicte.
+3. L'apprenant saisit l'AR : les points s'inscrivent alors dans sa progression.
+
+L'objectif est pédagogique — rendre l'échange obligatoire — et c'est ce qui explique la mécanique :
+l'outil de validation n'écrit pas `teacherScore` mais des champs d'attente (`arPoints`,
+`arAppreciation`), et **c'est la saisie de l'AR qui les promeut** dans le calcul. Aucun masquage de note
+n'est donc nécessaire : les points ne sont pas cachés, ils ne sont simplement pas encore dans le champ
+que le calcul regarde. Au moment de rendre sa copie, l'apprenant est averti nommément des consignes qui
+partiront à 0 point faute d'AR.
+
+**Documentation complète : `mode atelier AR.md`** (intention, format des codes, modèle de données,
+limites assumées). À lire avant toute modification : plusieurs choix y sont contre-intuitifs et
+protègent la fonction du dispositif.
 
 ---
 
@@ -481,6 +527,19 @@ Contient les données dynamiques utilisateur :
 * utilisateurs,
 * statistiques,
 * configuration applicative.
+
+Familles de clés, toutes préfixées par le slug du parcours :
+
+| Clé | Contenu |
+|---|---|
+| `slug:teacher:users_list` | Liste des jetons du parcours |
+| `slug:config:chapter_config` | Verrous, mode, dates limites par chapitre |
+| `slug:token:student_<token>_progress` | Progression complète d'un apprenant |
+| `slug:atelier:code_<CODE>` | Mode Atelier AR — ticket écrit par l'apprenant à sa demande de validation, résolu par l'outil de suivi puis supprimé à la saisie de l'AR |
+| `slug:atelier:ar_<token>_<chap>_<question>` | Mode Atelier AR — l'AR en clair, pour les surfaces formateur (réémission, vérification d'un code recopié sur un carnet) |
+
+Une clé par ticket et par AR, jamais de liste partagée : deux appareils qui écrivent en même temps ne
+peuvent pas s'écraser mutuellement, ce qui compte avec la file de synchronisation hors-ligne.
 
 Routes API :
 

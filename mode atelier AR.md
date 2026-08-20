@@ -290,7 +290,7 @@ progression n'a pas encore été synchronisée. En cas de divergence, `arPoints`
 | 3 | ✅ fait | Outil de validation `suiviAtelier.html` : page autonome mobile, mot de passe formateur, choix du parcours, résolution du code, sélecteur de repli, attribution des points, émission de l'AR |
 | 4 | ✅ fait | Avertissement au rendu, nommant les consignes non validées |
 | 5 | ✅ fait | Vue de correction : ligne d'état « validé en main propre », ajustement possible |
-| 6 | à faire | Documentation : `DETAILS_VUES.md`, `README.md` |
+| 6 | ✅ fait | Documentation : `DETAILS_VUES.md`, `README.md` |
 | 7 | à faire | XSpro : `atelier` en fin de `PARCOURS_MODE` pour publier un mode par défaut par chapitre |
 
 Les lots 1 à 3 forment le premier ensemble testable : sans l'outil, rien ne peut émettre d'AR. Les lots 4 et 5

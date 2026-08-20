@@ -70,12 +70,30 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Pas de feedback pendant la saisie | ✅ |
 | Tout est verrouillé après rendu | ✅ |
 
+### 🧾 Mode Atelier AR
+| Action | Comportement |
+|---|---|
+| Questions auto, courtes, QCM, sélection | Identique au mode Découverte |
+| Question **ouverte + `manuel`** | Devient une **consigne** validée en main propre |
+| Décoration du bloc | Ajoutée à l'affichage par `AtelierQuestion.init()`, jamais à la publication |
+| Bouton « Vérifier » | Renommé « 💾 Enregistrer mon compte rendu », comportement inchangé |
+| Compte rendu | Figé dès que l'apprenant a demandé la validation |
+| Attribution des points | Par saisie de l'AR, qui promeut `arPoints` en `teacherScore` |
+| Saisie de l'AR | **Reste active même chapitre verrouillé** — seule exception au verrouillage |
+
+> `AtelierQuestion` ne modifie **jamais** le tableau de vérité : une consigne est une question `manuel`,
+> donc `isCorrect` reste `null` et les points ne viennent que du formateur. Voir `mode atelier AR.md`.
+
 ### 🔴 Chapitre rendu / corrigé
 | Action | Comportement |
 |---|---|
 | **TOUS** les champs sont verrouillés | ✅ |
 | Aucune modification possible | ✅ |
 | Feedback de correction visible | ✅ |
+| Exception | Le champ de saisie de l'AR du mode Atelier reste utilisable |
+
+> Les modes **Blind** et **Millionnaire** ne sont pas détaillés dans ce document.
+> `src/js/core/getExamContext.js` est la source de vérité des cinq modes.
 
 ---
 
