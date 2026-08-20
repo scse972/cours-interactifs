@@ -17,7 +17,11 @@ async function getParcours(slug) {
 async function getChapitre(parcoursSlug, chapitreId) {
     const parcours = await getParcours(parcoursSlug);
     if (!parcours) return null;
-    return parcours.chapitres.find(c => String(c.id) === String(chapitreId));
+    const wanted = String(chapitreId);
+    return parcours.chapitres.find(c =>
+        String(c.id) === wanted ||
+        (c.numero != null && String(c.numero) === wanted)
+    );
 }
 
 // Permet l'accès depuis une balise <script type="module"> normale
