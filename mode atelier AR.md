@@ -93,6 +93,11 @@ Une fois la demande faite, le compte rendu est **figé** : c'est l'engagement de
 l'échange. Il peut **annuler sa demande** tant qu'aucun AR n'a été saisi — sans cette porte de sortie, un apprenant
 qui s'est déclaré prêt trop vite resterait bloqué si le formateur ne vient pas.
 
+**Règle non négociable : relire la progression avant de vérifier un AR.** Le formateur évalue sur *son* appareil ;
+la page de l'apprenant, restée ouverte, ne connaît pas encore l'AR émis. Sans relecture, un AR valide est refusé — et
+ce cas n'est pas rare, c'est le cas **normal** de tout échange en présence. La relecture ne reprend que les champs
+écrits par l'outil, pour ne pas écraser avec une version plus ancienne ce que l'apprenant vient de saisir localement.
+
 Une **pastille « 🧾 Atelier »** signale la question. Elle évite le pire malentendu : un apprenant qui rédige et attend
 une note qui n'arrivera jamais parce qu'il n'est pas venu la chercher. Attention : cette pastille ne peut pas être
 inscrite dans le contenu à la publication, puisque le mode est choisi ensuite par le formateur, parfois pour une
@@ -121,8 +126,19 @@ pour vivre — et l'indépendance est garantie par construction au lieu d'être 
 **Sans friction inutile :** le code identifie l'apprenant, donc l'outil affiche **toutes ses consignes en attente**,
 pas seulement celle du code. Un passage suffit pour en valider trois, avec un AR par consigne.
 
-**Authentification :** jeton de type formateur, conservé le temps de la session seulement. L'outil affiche en
-permanence sous quel nom il est ouvert — il tournera sur des appareils partagés.
+**Authentification : le mécanisme existant, pas un nouveau.** L'outil demande le **mot de passe formateur** — le même
+que `teacher-login.html`, avec le jeton de récupération en secours — et reconnaît `teacher_authenticated` en
+`sessionStorage` : un formateur déjà connecté à son tableau de bord dans le même navigateur n'a rien à ressaisir.
+L'outil affiche en permanence sous quel nom il est ouvert et sur quel parcours : il tournera sur des appareils
+partagés, et c'est ce nom qui signe les AR.
+
+**Le parcours est choisi en arrivant**, une fois par session, et porté dans l'URL (`?parcours=`) comme le fait le
+tableau de bord. Un code de validation seul ne dit pas de quel parcours il vient — la clé du ticket est préfixée par
+le parcours — et chercher dans tous les parcours publiés multiplierait les requêtes sur un réseau d'atelier souvent
+médiocre.
+
+**Écrans, dans l'ordre :** accès → parcours → code → évaluation → AR à dicter. Un seul à la fois : l'outil est une
+suite de gestes, pas un menu.
 
 ---
 
@@ -178,8 +194,11 @@ devine le nom et manipule l'API à la main. C'est un obstacle bien plus raide qu
 secret est publié, mais ce n'est pas un mur. Le rituel résiste au contournement ordinaire, pas à un apprenant
 déterminé et outillé.
 
-**Où est l'autorité :** dans le jeton formateur de l'outil. Le code de validation ouvre la fiche, le jeton donne le droit
-de noter, l'AR transporte le résultat.
+**Où est l'autorité :** dans l'authentification formateur de l'outil. Le code de validation ouvre la fiche, le mot de
+passe donne le droit de noter, l'AR transporte le résultat.
+
+**Le code de validation est supprimé à la saisie de l'AR** : l'échange est clos, il n'a plus à être résolvable. Un
+ajustement ultérieur des points passe par la vue de correction, pas par un nouveau passage.
 
 ---
 
@@ -264,17 +283,22 @@ progression n'a pas encore été synchronisée. En cas de divergence, `arPoints`
 
 ## 8. Plan d'implémentation
 
-| Lot | Contenu |
-|---|---|
-| 1 | Le mode existe : valeur ajoutée **en fin** de `PARCOURS_MODE` (l'indice est stocké en base pour les chapitres), badge, icône, sélecteur formateur, pastille posée à l'affichage |
-| 2 | Vue apprenant : la consigne, ses champs, la déclaration « prêt », le code de validation, la saisie de l'AR |
-| 3 | Outil de validation `suiviAtelier.html` : page autonome mobile, jeton formateur, résolution du code, sélecteur de repli, attribution des points, émission de l'AR |
-| 4 | Avertissement au rendu, nommant les consignes non validées |
-| 5 | Vue de correction : ligne d'état « validé en main propre », ajustement possible |
-| 6 | Documentation : `DETAILS_VUES.md`, `README.md` |
+| Lot | État | Contenu |
+|---|---|---|
+| 1 | ✅ fait | Le mode existe : valeur ajoutée **en fin** de `PARCOURS_MODE` (l'indice est stocké en base pour les chapitres), badge, icône, sélecteur formateur, filtre, pastille posée à l'affichage |
+| 2 | ✅ fait | Vue apprenant : la consigne, ses champs, la déclaration « prêt », le code de validation, la saisie de l'AR |
+| 3 | ✅ fait | Outil de validation `suiviAtelier.html` : page autonome mobile, mot de passe formateur, choix du parcours, résolution du code, sélecteur de repli, attribution des points, émission de l'AR |
+| 4 | à faire | Avertissement au rendu, nommant les consignes non validées |
+| 5 | à faire | Vue de correction : ligne d'état « validé en main propre », ajustement possible |
+| 6 | à faire | Documentation : `DETAILS_VUES.md`, `README.md` |
+| 7 | à faire | XSpro : `atelier` en fin de `PARCOURS_MODE` pour publier un mode par défaut par chapitre |
 
 Les lots 1 à 3 forment le premier ensemble testable : sans l'outil, rien ne peut émettre d'AR. Les lots 4 et 5
 complètent le dispositif sans rien modifier des précédents.
+
+**Vérifié bout en bout** sur backend SQLite local : demande de l'apprenant → ticket en base → résolution par code
+dans l'outil → émission de l'AR → saisie par l'apprenant → points promus dans `manualScore`. Y compris la
+réévaluation, qui invalide l'AR précédent.
 
 **Le point le plus facile à rater** est la pastille : posée à la publication au lieu de l'affichage, elle oblige à
 republier un cours pour changer de mode.

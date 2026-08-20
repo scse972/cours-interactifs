@@ -267,6 +267,31 @@ const AtelierQuestion = {
     // ACTIONS
     // ------------------------------------------------------------------------
 
+    /**
+     * Relit la progression enregistrée et n'en reprend QUE les champs écrits par
+     * l'outil de validation. Le reste de l'état local reste maître : la progression
+     * s'enregistre en objet entier, on ne veut pas écraser ce que l'apprenant vient
+     * de saisir ici avec une version plus ancienne venue du serveur.
+     */
+    async _rafraichirEvaluation(questionId) {
+        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
+        const locale = this._donnees(questionId);
+        if (!slug || !locale || !ChapterSession.studentId) return;
+
+        try {
+            const cle = `${slug}:${ChapterSession.studentId}:student_${ChapterSession.studentId}_progress`;
+            const enregistree = await storage.get(cle);
+            const distante = enregistree?.chapters?.[ChapterSession.chapterId]?.questions?.[questionId];
+            if (!distante) return;
+
+            ['arPoints', 'arAppreciation', 'arHash', 'arEmisAt', 'arEmisPar'].forEach(champ => {
+                if (distante[champ] !== undefined) locale[champ] = distante[champ];
+            });
+        } catch (e) {
+            console.warn('[Atelier] Relecture de l\'évaluation impossible :', e.message);
+        }
+    },
+
     async _positionner(consigne, valeur) {
         const donnees = this._donnees(consigne.id);
         if (!donnees) return;
@@ -331,6 +356,12 @@ const AtelierQuestion = {
 
         const code = AtelierCodes.normaliser(saisie);
 
+        // Le formateur vient d'évaluer sur SON appareil : la progression en mémoire ici
+        // ne connaît pas encore l'AR. Sans cette relecture, un AR valide serait refusé —
+        // ce qui arriverait à chaque échange, l'apprenant restant sur sa page pendant
+        // que le formateur note.
+        await this._rafraichirEvaluation(consigne.id);
+
         if (code.length !== AtelierCodes.LONGUEUR_AR) {
             return this._message(consigne, `Un AR compte ${AtelierCodes.LONGUEUR_AR} caractères.`, 'erreur');
         }
@@ -366,6 +397,13 @@ const AtelierQuestion = {
         donnees.correctedBy = donnees.arEmisPar || 'atelier';
         donnees.arSaisiAt = new Date().toISOString();
         donnees.arCode = code;
+
+        // L'échange est clos : le code de validation n'a plus à être résolvable.
+        // Un ajustement ultérieur des points se fait depuis la vue de correction.
+        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
+        if (slug && donnees.codeValidation) {
+            await storage.remove(AtelierCodes.cleCodeValidation(slug, donnees.codeValidation));
+        }
 
         await this._enregistrer();
         this._rendre(consigne);
