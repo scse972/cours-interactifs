@@ -1,8 +1,8 @@
 # 🧾 Mode de chapitre « Atelier AR »
 
-> **Statut :** implémenté et documenté côté coursInteractifs (lots 1 à 6), vérifié bout en bout sur backend local
+> **Statut :** implémenté et documenté (lots 1 à 7), vérifié bout en bout sur backend local
 > **Version :** 7 — trois surfaces, aucun masquage, un outil de validation autonome
-> **Portée :** coursInteractifs uniquement. Reste à faire côté XSpro : publier `atelier` comme mode par défaut de chapitre (lot 7).
+> **Portée :** coursInteractifs et XSpro. Les sept lots sont faits.
 
 ---
 
@@ -291,7 +291,7 @@ progression n'a pas encore été synchronisée. En cas de divergence, `arPoints`
 | 4 | ✅ fait | Avertissement au rendu, nommant les consignes non validées |
 | 5 | ✅ fait | Vue de correction : ligne d'état « validé en main propre », ajustement possible |
 | 6 | ✅ fait | Documentation : `DETAILS_VUES.md`, `README.md` |
-| 7 | à faire | XSpro : `atelier` en fin de `PARCOURS_MODE` pour publier un mode par défaut par chapitre |
+| 7 | ✅ fait | XSpro : `atelier` ajouté en fin de `PARCOURS_MODE`, libellés de la grille des chapitres, badge du suivi apprenant, et script de synchronisation de la copie embarquée du site |
 
 Les lots 1 à 3 forment le premier ensemble testable : sans l'outil, rien ne peut émettre d'AR. Les lots 4 et 5
 complètent le dispositif sans rien modifier des précédents.
