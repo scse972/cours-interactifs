@@ -257,6 +257,7 @@ async function initChapterPage() {
 
     // 🎲 Ordre des questions, puis révélation du contenu masqué par le template.
     window.ChapterOrdre?.appliquer();
+    window.ChapterPagination?.init();
     window.ChapterOrdre?.reveler();
 
     if (tentativeReinitialisee) afficherBandeauNouvelleTentative();

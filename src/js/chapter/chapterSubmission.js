@@ -527,6 +527,9 @@ const ChapterSubmission = {
     lockChapterAfterSubmission() {
         document.body.classList.add('chapter-locked');
 
+        // Copie rendue : la relecture se fait d'un seul tenant, plus étape par étape.
+        window.ChapterPagination?.toutAfficher();
+
         // 1. Désactiver tous les champs de saisie
         document.querySelectorAll('input, select, textarea').forEach(el => {
             el.disabled = true;

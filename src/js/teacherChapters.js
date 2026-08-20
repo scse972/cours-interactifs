@@ -80,6 +80,12 @@ class TeacherChapters {
                 ? chapterMode === 'millionnaire'
                 : config.ordreAleatoire === true;
 
+            // 📄 Questions par questions : Examen et Blind uniquement, sans condition sur
+            // le type de correction — afficher une question ouverte seule ne pose aucun
+            // problème. Décoché par défaut : ça change toute l'expérience de l'apprenant.
+            const paginationProposable = ['exam', 'blind'].includes(chapterMode);
+            const paginationActive = config.questionParQuestion === true;
+
             html += `
                 <div class="chapter-control-card">
                     <div class="control-header">
@@ -114,6 +120,13 @@ class TeacherChapters {
                             <input type="checkbox" ${ordreActif ? 'checked' : ''}
                                 onchange="dashboard.modules.chapters.toggleOrdreAleatoire('${chapter.id}', this.checked)">
                             🎲 Ordre aléatoire
+                        </label>` : ''}
+                        ${paginationProposable ? `
+                        <label class="date-limit-toggle" style="margin-top:0.4rem;"
+                               title="Une seule question affichée à la fois, avec navigation libre dans les deux sens. Les blocs de cours comptent comme des étapes.">
+                            <input type="checkbox" ${paginationActive ? 'checked' : ''}
+                                onchange="dashboard.modules.chapters.toggleQuestionParQuestion('${chapter.id}', this.checked)">
+                            📄 Questions par questions
                         </label>` : ''}
                     </div>
 
@@ -184,6 +197,13 @@ class TeacherChapters {
     async toggleOrdreAleatoire(chapterId, actif) {
         await this.dashboard.updateChapterConfig(chapterId, {
             ordreAleatoire: actif
+        });
+        this.render();
+    }
+
+    async toggleQuestionParQuestion(chapterId, actif) {
+        await this.dashboard.updateChapterConfig(chapterId, {
+            questionParQuestion: actif
         });
         this.render();
     }

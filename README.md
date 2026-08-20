@@ -37,6 +37,7 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── chapter/
 │   │   │   ├── chapterBilan.js            #   Bilan de chapitre
 │   │   │   ├── chapterOrdre.js            #   Ordre d'affichage des questions (option aléatoire)
+│   │   │   ├── chapterPagination.js       #   Affichage question par question (Examen, Blind)
 │   │   │   ├── chapterSubmission.js       #   Soumission de chapitre
 │   │   │   └── chapterUI.js               #   UI chapitre
 │   │   └── core/
@@ -337,6 +338,24 @@ Les blocs de cours ne bougent pas : seules les questions permutent entre elles. 
 (modale de correction, bilan) conservent toujours l'ordre publié — le formateur a besoin d'une référence
 stable, pas de l'ordre vu par tel apprenant. Voir `src/js/chapter/chapterOrdre.js`.
 
+## 📄 Option « questions par questions »
+
+Proposée aux modes **Examen et Blind**, sans condition sur le type de correction — afficher une question
+ouverte seule à l'écran ne pose aucun problème. Décochée par défaut : elle change toute l'expérience.
+Stockée dans `chapter_config` (`questionParQuestion`).
+
+Un écran = un élément, **blocs de cours compris** : sans cela un long cours resterait affiché au-dessus
+de chaque question. Navigation libre **dans les deux sens** (boutons, et flèches gauche/droite du
+clavier hors champ de saisie) : aucune étape ne verrouille la suivante.
+
+Rien n'est mémorisé là non plus. À l'ouverture on se place sur la **première étape non faite** —
+question sans réponse, ou cours à valider non validé — ce qui est déduit des réponses déjà
+enregistrées, pas d'un avancement stocké. Sans cela l'apprenant devrait recliquer autant de fois qu'il
+a déjà répondu de questions.
+
+Dès que la copie est rendue, ou le chapitre verrouillé, la pagination s'efface : la relecture se fait
+d'un seul tenant. Voir `src/js/chapter/chapterPagination.js`.
+
 ## 🧾 Le mode Atelier AR
 
 C'est un mode Découverte dans lequel les questions **ouvertes à correction manuelle** deviennent des
@@ -550,7 +569,7 @@ Familles de clés, toutes préfixées par le slug du parcours :
 | Clé | Contenu |
 |---|---|
 | `slug:teacher:users_list` | Liste des jetons du parcours |
-| `slug:config:chapter_config` | Verrous, mode, option d'ordre aléatoire, dates limites par chapitre |
+| `slug:config:chapter_config` | Verrous, mode, options d'affichage (ordre aléatoire, questions par questions), dates limites par chapitre |
 | `slug:token:student_<token>_progress` | Progression complète d'un apprenant |
 | `slug:atelier:code_<CODE>` | Mode Atelier AR — ticket écrit par l'apprenant à sa demande de validation, résolu par l'outil de suivi puis supprimé à la saisie de l'AR |
 | `slug:atelier:ar_<token>_<chap>_<question>` | Mode Atelier AR — l'AR en clair, pour les surfaces formateur (réémission, vérification d'un code recopié sur un carnet) |
