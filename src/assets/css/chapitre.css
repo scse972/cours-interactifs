@@ -755,3 +755,44 @@
         font-size: 0.85rem;
     }
 }
+
+/* ============================================
+   TABLEAUX DANS LES BLOCS DE COURS
+   Le Markdown des cours peut contenir des tableaux (GFM). Sans ces styles ils
+   s'afficheraient sans bordures ni espacement — le navigateur n'en met aucun.
+   ============================================ */
+.content-box table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+}
+
+.content-box thead th {
+    background: #f0f4f8;
+    color: #2c3e50;
+    font-weight: 700;
+    text-align: left;
+}
+
+.content-box th,
+.content-box td {
+    border: 1px solid #dfe6ec;
+    padding: 0.5rem 0.75rem;
+}
+
+.content-box tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+/* Un tableau large défile dans son propre cadre : la page, elle, ne défile jamais
+   horizontalement. */
+.content-box {
+    overflow-x: auto;
+}
+
+.content-box hr {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 1.5rem 0;
+}
