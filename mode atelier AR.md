@@ -1,8 +1,8 @@
 # 🧾 Mode de chapitre « Atelier AR »
 
-> **Statut :** conception arrêtée — non implémentée
+> **Statut :** implémenté côté coursInteractifs (lots 1 à 5), vérifié bout en bout sur backend local
 > **Version :** 7 — trois surfaces, aucun masquage, un outil de validation autonome
-> **Portée :** coursInteractifs uniquement. XSpro n'est pas concerné.
+> **Portée :** coursInteractifs uniquement. Reste à faire côté XSpro : publier `atelier` comme mode par défaut de chapitre (lot 7).
 
 ---
 
@@ -288,8 +288,8 @@ progression n'a pas encore été synchronisée. En cas de divergence, `arPoints`
 | 1 | ✅ fait | Le mode existe : valeur ajoutée **en fin** de `PARCOURS_MODE` (l'indice est stocké en base pour les chapitres), badge, icône, sélecteur formateur, filtre, pastille posée à l'affichage |
 | 2 | ✅ fait | Vue apprenant : la consigne, ses champs, la déclaration « prêt », le code de validation, la saisie de l'AR |
 | 3 | ✅ fait | Outil de validation `suiviAtelier.html` : page autonome mobile, mot de passe formateur, choix du parcours, résolution du code, sélecteur de repli, attribution des points, émission de l'AR |
-| 4 | à faire | Avertissement au rendu, nommant les consignes non validées |
-| 5 | à faire | Vue de correction : ligne d'état « validé en main propre », ajustement possible |
+| 4 | ✅ fait | Avertissement au rendu, nommant les consignes non validées |
+| 5 | ✅ fait | Vue de correction : ligne d'état « validé en main propre », ajustement possible |
 | 6 | à faire | Documentation : `DETAILS_VUES.md`, `README.md` |
 | 7 | à faire | XSpro : `atelier` en fin de `PARCOURS_MODE` pour publier un mode par défaut par chapitre |
 

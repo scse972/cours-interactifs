@@ -282,6 +282,22 @@ const ChapterSubmission = {
         if (submissionStatus === 'returned_for_revision') {
             confirmMessage += '🔄 Vous êtes sur le point de re-rendre ce chapitre après les retouches demandées.\n\n';
         }
+        // 🧾 MODE ATELIER AR : nommer les consignes qui partiront à 0 point faute d'AR.
+        // Une phrase générale ne suffit pas — on clique sans lire et on découvre le 0
+        // trop tard. On dit « non validée », jamais « fausse » : le travail a peut-être
+        // été fait, c'est la procédure qui n'est pas allée au bout.
+        const consignesSansAR = window.AtelierQuestion?.consignesNonValidees?.() || [];
+        if (consignesSansAR.length > 0) {
+            const uneSeule = consignesSansAR.length === 1;
+            confirmMessage += uneSeule
+                ? '🧾 Une consigne n\'a pas été validée en main propre :\n'
+                : `🧾 ${consignesSansAR.length} consignes n'ont pas été validées en main propre :\n`;
+            confirmMessage += consignesSansAR.map(c => `   • ${c.libelle}`).join('\n');
+            confirmMessage += uneSeule
+                ? '\n\nElle comptera pour 0 point.\n\n'
+                : '\n\nElles compteront pour 0 point.\n\n';
+        }
+
         confirmMessage += 'Êtes-vous sûr de vouloir rendre votre copie ?\n';
         confirmMessage += 'Cette action est irréversible et toutes les réponses seront figées.';
 

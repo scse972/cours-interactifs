@@ -49,6 +49,31 @@ const AtelierQuestion = {
         return questions.filter(q => q.type === 'ouverte' && q.correctionType === 'manuel');
     },
 
+    /**
+     * Consignes qui partiront à 0 point faute d'AR, pour l'avertissement au rendu.
+     * Retourne une liste vide hors mode Atelier AR : le rendu des autres modes n'a
+     * pas à s'encombrer de ce message.
+     */
+    consignesNonValidees() {
+        if (!window.currentExamContext?.isAtelierMode) return [];
+
+        return this.consignes()
+            .filter(consigne => !this._donnees(consigne.id)?.arSaisiAt)
+            .map(consigne => ({
+                id: consigne.id,
+                points: consigne.points,
+                libelle: this._libelleConsigne(consigne)
+            }));
+    },
+
+    /** « Question 9 — "Expliquez en quelques phrases pourquoi…" » */
+    _libelleConsigne(consigne) {
+        const enonce = String(consigne.questionText || '').replace(/\s+/g, ' ').trim();
+        if (!enonce) return consigne.title || consigne.id;
+        const extrait = enonce.length > 50 ? enonce.slice(0, 50).trimEnd() + '…' : enonce;
+        return `${consigne.title || consigne.id} — « ${extrait} »`;
+    },
+
     // ------------------------------------------------------------------------
     // ACCÈS PROGRESSION
     // ------------------------------------------------------------------------

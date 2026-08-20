@@ -474,3 +474,24 @@ body:has(#student-chapter-view-modal) {
     width: 100% !important;
     border: none !important;
 }
+
+/* ============================================
+   MODE ATELIER AR — ligne d'état de la consigne
+   Voir "mode atelier AR.md" §3.2
+   ============================================ */
+.correction-row-atelier {
+    background: #f4f9fd;
+    border-left: 3px solid #1b4f72;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    margin: 0.35rem 0;
+}
+
+.correction-row-atelier .correction-label {
+    color: #1b4f72;
+    font-weight: 600;
+}
+
+.correction-row-atelier small {
+    color: #666;
+}

@@ -543,6 +543,57 @@ class CorrectionModal {
     /**
      * Rendu d'un élément question individuel
      */
+    /**
+     * Ligne d'état du mode Atelier AR.
+     *
+     * Dit au formateur ce qui s'est déjà passé en main propre, pour qu'il ne refasse
+     * pas une évaluation déjà faite — et pour qu'il comprenne pourquoi une consigne
+     * évaluée peut n'avoir encore rapporté aucun point : les points attendent dans
+     * `arPoints` et ne sont promus en `teacherScore` qu'à la saisie de l'AR par
+     * l'apprenant (voir "mode atelier AR.md" §7).
+     *
+     * Affichée dès que les champs existent, indépendamment du mode courant du
+     * chapitre : ce qui compte est ce qui a eu lieu, pas la configuration du moment.
+     */
+    renderAtelierRow(question) {
+        if (!question.codeValidation && !question.arEmisAt && !question.arSaisiAt) return '';
+
+        const date    = (iso) => iso ? new Date(iso).toLocaleDateString('fr-FR') : '?';
+        const nombre  = (valeur) => Number(valeur || 0).toLocaleString('fr-FR');
+        const maxPts  = nombre(question.points || 0);
+        const par     = this.escapeHtml(question.arEmisPar || 'formateur');
+
+        const NIVEAUX = {
+            non_acquis: '🔴 Pas encore acquis',
+            en_cours:   '🟠 En cours d\'acquisition',
+            acquis:     '🟢 Acquis'
+        };
+
+        let etat;
+        if (question.arSaisiAt) {
+            const points = nombre(question.teacherScore ?? question.arPoints);
+            etat = `✅ Validé en main propre — ${points} / ${maxPts} pt attribué(s) par ${par}, ` +
+                   `AR saisi par l'apprenant le ${date(question.arSaisiAt)}`;
+        } else if (question.arEmisAt) {
+            etat = `📤 AR émis le ${date(question.arEmisAt)} par ${par} — ${nombre(question.arPoints)} / ${maxPts} pt ` +
+                   `<strong>en attente</strong> : l'apprenant n'a pas encore saisi son AR, les points ne comptent pas`;
+        } else {
+            etat = `⏳ Validation demandée le ${date(question.codeValidationAt)} ` +
+                   `(code ${this.escapeHtml(question.codeValidation)}) — pas encore évaluée`;
+        }
+
+        const positionnement = question.autoPositionnement
+            ? `<br><small>L'apprenant s'estimait : ${NIVEAUX[question.autoPositionnement] || 'non précisé'}</small>`
+            : '';
+
+        return `
+                <div class="correction-row correction-row-atelier">
+                    <div class="correction-label">🧾 Atelier:</div>
+                    <div class="correction-value">${etat}${positionnement}</div>
+                </div>
+        `;
+    }
+
     renderQuestionItem(question) {
         const maxPoints = question.points || 0;
         // ✅ ROBUSTE: prendre le teacherScore seulement si c'est un nombre valide
@@ -675,6 +726,8 @@ class CorrectionModal {
                     ${treatedToggleHtml}
                     <span class="status-badge ${badgeCssClass}">${displayStatus.label}</span>
                 </div>
+
+                ${this.renderAtelierRow(question)}
 
                 ${question.questionText ? `
                 <div class="correction-row">
