@@ -504,3 +504,179 @@
     -ms-user-select: none !important;
     user-select: none !important;
 }
+/* ============================================
+   MODE ATELIER AR — bloc de validation en main propre
+   Voir "mode atelier AR.md" §3.1
+   ============================================ */
+
+.badge-atelier {
+    background: #1b4f72;
+    color: white;
+}
+
+.question-atelier .question-box {
+    border-left: 4px solid #1b4f72;
+}
+
+.criteres-atelier {
+    display: block !important;
+}
+
+.criteres-atelier .criteres-titre {
+    font-weight: 600;
+    color: #1b4f72;
+    margin-bottom: 0.35rem;
+}
+
+.atelier-bloc {
+    background: #f4f9fd;
+    border: 1px solid #d6eaf8;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.atelier-entete {
+    font-weight: 600;
+    color: #1b4f72;
+    margin-bottom: 0.75rem;
+}
+
+.atelier-entete-validee {
+    color: #1e8449;
+}
+
+.atelier-consigne-texte {
+    font-size: 0.9rem;
+    color: #555;
+    margin: 0 0 0.75rem 0;
+}
+
+.atelier-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #34495e;
+    margin-bottom: 0.35rem;
+}
+
+.atelier-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #cfd8dc;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    background: white;
+}
+
+/* Le code de validation est dicté ou montré : il doit être lisible de loin,
+   sans confusion possible entre caractères. */
+.atelier-code {
+    font-family: 'Courier New', monospace;
+    font-size: 1.6rem;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    text-align: center;
+    color: #1b4f72;
+    background: white;
+    border: 2px dashed #85c1e9;
+    border-radius: 8px;
+    padding: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.atelier-positionnement-fige {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 0.75rem;
+}
+
+.atelier-saisie {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.atelier-input-ar {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #cfd8dc;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.atelier-resultat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.atelier-points {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #1e8449;
+}
+
+.atelier-date {
+    font-size: 0.85rem;
+    color: #777;
+}
+
+.atelier-appreciation {
+    background: white;
+    border-left: 3px solid #82e0aa;
+    border-radius: 4px;
+    padding: 0.6rem 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+}
+
+.atelier-carnet {
+    font-size: 0.85rem;
+    color: #555;
+    margin-top: 0.75rem;
+}
+
+.atelier-carnet strong {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.1em;
+    color: #1b4f72;
+}
+
+.atelier-message {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    min-height: 1.2em;
+}
+
+.atelier-message-erreur  { color: #c0392b; }
+.atelier-message-attente { color: #b9770e; }
+
+.atelier-annuler {
+    background: none;
+    border: none;
+    color: #777;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 0.75rem;
+}
+
+.atelier-annuler:hover {
+    color: #c0392b;
+}
+
+@media (max-width: 600px) {
+    .atelier-saisie {
+        flex-direction: column;
+    }
+    .atelier-code {
+        font-size: 1.3rem;
+    }
+}

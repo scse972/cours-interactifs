@@ -1,0 +1,416 @@
+// ============================================================================
+// ATELIER QUESTION - Vue apprenant du mode Atelier AR
+// ============================================================================
+// En mode Atelier AR, une question OUVERTE à correction MANUELLE cesse d'être un
+// cadre à remplir : elle devient un travail à faire, validé en main propre.
+//
+// L'apprenant rédige son compte rendu, se positionne, se déclare prêt — ce qui
+// produit un code de validation — puis rapporte l'AR dicté par le formateur.
+// C'est la saisie de l'AR qui inscrit les points.
+//
+// ⚠️ Ce module DÉCORE le HTML publié, il ne le remplace pas. Le mode est choisi
+//    par le formateur APRÈS la publication du parcours (et parfois pour une classe
+//    et pas pour l'autre) : rien de tout ceci ne peut être inscrit dans cours.json,
+//    sous peine d'avoir à republier un cours pour changer de mode.
+//
+// Voir "mode atelier AR.md" §3.1.
+// ============================================================================
+
+const AtelierQuestion = {
+
+    // Échelle d'auto-positionnement — volontairement fixe et non paramétrable :
+    // elle sert de langage commun à l'échange, pas d'outil de notation.
+    NIVEAUX: [
+        { cle: 'non_acquis', label: '🔴 Pas encore acquis' },
+        { cle: 'en_cours',   label: '🟠 En cours d\'acquisition' },
+        { cle: 'acquis',     label: '🟢 Acquis' }
+    ],
+
+    // ------------------------------------------------------------------------
+    // ENTRÉE
+    // ------------------------------------------------------------------------
+
+    init() {
+        if (!window.currentExamContext?.isAtelierMode) return;
+
+        const consignes = this.consignes();
+        if (!consignes.length) return;
+
+        consignes.forEach(consigne => this._decorer(consigne));
+        console.log(`[Atelier] ${consignes.length} consigne(s) décorée(s)`);
+    },
+
+    /**
+     * Les questions concernées : ouvertes ET à correction manuelle.
+     * Restriction assumée du mode — la règle se dit en une phrase, sans exception.
+     */
+    consignes() {
+        const questions = window.currentChapterConfig?.questions || [];
+        return questions.filter(q => q.type === 'ouverte' && q.correctionType === 'manuel');
+    },
+
+    // ------------------------------------------------------------------------
+    // ACCÈS PROGRESSION
+    // ------------------------------------------------------------------------
+
+    _chapitre() {
+        return ChapterSession.progress?.chapters?.[ChapterSession.chapterId] || null;
+    },
+
+    _donnees(questionId) {
+        return this._chapitre()?.questions?.[questionId] || null;
+    },
+
+    /**
+     * État de la consigne, déduit des seules données de progression.
+     * brouillon → demandee → validee
+     */
+    _etat(questionId) {
+        const donnees = this._donnees(questionId);
+        if (!donnees) return 'brouillon';
+        if (donnees.arSaisiAt) return 'validee';
+        if (donnees.codeValidation) return 'demandee';
+        return 'brouillon';
+    },
+
+    async _enregistrer() {
+        const pm = window.ProgressManager;
+        const chapitre = this._chapitre();
+        if (!pm || !chapitre) return;
+        if (pm.recomputeChapterStats) pm.recomputeChapterStats(chapitre);
+        if (pm.recomputeGlobalStats) pm.recomputeGlobalStats(ChapterSession.progress);
+        if (pm.saveProgress) await pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
+    },
+
+    // ------------------------------------------------------------------------
+    // DÉCORATION
+    // ------------------------------------------------------------------------
+
+    _decorer(consigne) {
+        const question = document.querySelector(`.question-section[data-question-id="${consigne.id}"]`);
+        if (!question) return;
+
+        question.classList.add('question-atelier');
+        this._pastille(question);
+        this._revelerCriteres(question, consigne.id);
+        this._renommerBoutonEnregistrer(question);
+        this._rendre(consigne);
+    },
+
+    /** Pastille de mode, posée à l'affichage — jamais à la publication. */
+    _pastille(question) {
+        const meta = question.querySelector('.question-meta');
+        if (!meta || meta.querySelector('.badge-atelier')) return;
+        const pastille = document.createElement('span');
+        pastille.className = 'correction-badge badge-atelier';
+        pastille.textContent = '🧾 Atelier';
+        pastille.title = 'Cette consigne se valide en main propre auprès de votre formateur';
+        meta.appendChild(pastille);
+    },
+
+    /**
+     * L'indication devient les critères de réussite, visibles AVANT le travail :
+     * l'apprenant ne peut se positionner que s'il sait ce qui est attendu.
+     */
+    _revelerCriteres(question, questionId) {
+        const conteneur = question.querySelector(`#hint_${questionId}`);
+        if (!conteneur) return;
+
+        const bouton = question.querySelector('[data-hint-btn]');
+        if (bouton) bouton.style.display = 'none';
+
+        conteneur.style.display = 'block';
+        conteneur.classList.add('criteres-atelier');
+
+        if (!conteneur.querySelector('.criteres-titre')) {
+            const titre = document.createElement('div');
+            titre.className = 'criteres-titre';
+            titre.textContent = '✔️ Critères de réussite';
+            conteneur.prepend(titre);
+        }
+    },
+
+    /**
+     * Le bouton existant continue de faire exactement ce qu'il faisait — enregistrer
+     * la réponse. Seul son libellé change, pour que « enregistrer » et « demander la
+     * validation » ne soient pas confondus. Aucune logique de sauvegarde dupliquée.
+     */
+    _renommerBoutonEnregistrer(question) {
+        const bouton = question.querySelector('.btn-check-answer');
+        if (bouton) bouton.textContent = '💾 Enregistrer mon compte rendu';
+    },
+
+    // ------------------------------------------------------------------------
+    // RENDU DU BLOC
+    // ------------------------------------------------------------------------
+
+    _rendre(consigne) {
+        const question = document.querySelector(`.question-section[data-question-id="${consigne.id}"]`);
+        if (!question) return;
+
+        let bloc = question.querySelector('.atelier-bloc');
+        if (!bloc) {
+            bloc = document.createElement('div');
+            bloc.className = 'atelier-bloc';
+            const actions = question.querySelector('.question-actions');
+            const zone = question.querySelector('.answer-area');
+            if (actions) actions.parentNode.insertBefore(bloc, actions);
+            else if (zone) zone.after(bloc);
+            else question.querySelector('.question-box')?.appendChild(bloc);
+        }
+
+        const etat = this._etat(consigne.id);
+        bloc.dataset.etat = etat;
+        bloc.innerHTML = this._html(consigne, etat);
+        this._brancher(bloc, consigne, etat);
+        this._verrouiller(question, etat);
+    },
+
+    _html(consigne, etat) {
+        const donnees = this._donnees(consigne.id) || {};
+
+        if (etat === 'validee') {
+            const points = donnees.teacherScore ?? 0;
+            const appreciation = donnees.teacherComment || donnees.arAppreciation || '';
+            return `
+                <div class="atelier-entete atelier-entete-validee">🧾 Consigne validée en main propre</div>
+                <div class="atelier-resultat">
+                    <span class="atelier-points">${this._nombre(points)} / ${this._nombre(consigne.points)} point${consigne.points > 1 ? 's' : ''}</span>
+                    <span class="atelier-date">le ${this._date(donnees.arSaisiAt)}</span>
+                </div>
+                ${appreciation ? `<div class="atelier-appreciation">${this._echapper(appreciation)}</div>` : ''}
+                ${donnees.arCode ? `
+                <div class="atelier-carnet">
+                    À recopier sur votre carnet : <strong>${AtelierCodes.formater(donnees.arCode)}</strong>
+                </div>` : ''}
+            `;
+        }
+
+        if (etat === 'demandee') {
+            return `
+                <div class="atelier-entete">🧾 Validation demandée le ${this._date(donnees.codeValidationAt)}</div>
+                <p class="atelier-consigne-texte">
+                    Présentez ce code de validation à votre formateur. Il évaluera votre travail
+                    et vous dictera votre AR.
+                </p>
+                <div class="atelier-code">${AtelierCodes.formater(donnees.codeValidation)}</div>
+                <div class="atelier-positionnement-fige">
+                    Vous vous êtes positionné : <strong>${this._libelleNiveau(donnees.autoPositionnement)}</strong>
+                </div>
+                <label class="atelier-label" for="atelier-ar-${consigne.id}">Saisir mon AR</label>
+                <div class="atelier-saisie">
+                    <input type="text" id="atelier-ar-${consigne.id}" class="atelier-input-ar"
+                           placeholder="XXXX-XXXX" maxlength="12" autocomplete="off">
+                    <button type="button" class="btn btn-primary atelier-btn-ar">Valider</button>
+                </div>
+                <div class="atelier-message" id="atelier-msg-${consigne.id}"></div>
+                <button type="button" class="atelier-annuler">Annuler ma demande</button>
+            `;
+        }
+
+        const options = this.NIVEAUX.map(niveau => `
+            <option value="${niveau.cle}" ${donnees.autoPositionnement === niveau.cle ? 'selected' : ''}>
+                ${niveau.label}
+            </option>`).join('');
+
+        return `
+            <div class="atelier-entete">🧾 Travail à faire valider en main propre</div>
+            <label class="atelier-label" for="atelier-pos-${consigne.id}">Où j'estime en être</label>
+            <select id="atelier-pos-${consigne.id}" class="atelier-select">
+                <option value="">— choisissez —</option>
+                ${options}
+            </select>
+            <button type="button" class="btn btn-primary atelier-btn-demander">
+                ✅ Je me déclare prêt — demander la validation
+            </button>
+            <div class="atelier-message" id="atelier-msg-${consigne.id}"></div>
+        `;
+    },
+
+    _brancher(bloc, consigne, etat) {
+        if (etat === 'brouillon') {
+            bloc.querySelector('.atelier-select')?.addEventListener('change', (e) => {
+                this._positionner(consigne, e.target.value);
+            });
+            bloc.querySelector('.atelier-btn-demander')?.addEventListener('click', () => {
+                this._demander(consigne);
+            });
+            return;
+        }
+
+        if (etat === 'demandee') {
+            const champ = bloc.querySelector('.atelier-input-ar');
+            const valider = () => this._validerAR(consigne, champ.value);
+            bloc.querySelector('.atelier-btn-ar')?.addEventListener('click', valider);
+            champ?.addEventListener('keydown', (e) => { if (e.key === 'Enter') valider(); });
+            bloc.querySelector('.atelier-annuler')?.addEventListener('click', () => {
+                this._annuler(consigne);
+            });
+        }
+    },
+
+    /**
+     * Une fois la demande faite, le compte rendu est figé : c'est l'engagement de
+     * l'apprenant, et la référence de l'échange. Il peut annuler s'il s'est déclaré
+     * prêt trop vite — sinon il resterait bloqué si le formateur ne vient pas.
+     */
+    _verrouiller(question, etat) {
+        const fige = etat !== 'brouillon';
+        question.querySelectorAll('.answer-area textarea').forEach(champ => {
+            champ.disabled = fige;
+        });
+        const bouton = question.querySelector('.btn-check-answer');
+        if (bouton) bouton.style.display = fige ? 'none' : '';
+    },
+
+    // ------------------------------------------------------------------------
+    // ACTIONS
+    // ------------------------------------------------------------------------
+
+    async _positionner(consigne, valeur) {
+        const donnees = this._donnees(consigne.id);
+        if (!donnees) return;
+        donnees.autoPositionnement = valeur || null;
+        await this._enregistrer();
+    },
+
+    async _demander(consigne) {
+        const donnees = this._donnees(consigne.id);
+
+        if (!donnees?.answered || !donnees.answer) {
+            return this._message(consigne, 'Enregistrez d\'abord votre compte rendu.', 'erreur');
+        }
+        if (!donnees.autoPositionnement) {
+            return this._message(consigne, 'Indiquez où vous estimez en être avant de demander la validation.', 'erreur');
+        }
+
+        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
+        if (!slug) return this._message(consigne, 'Parcours introuvable.', 'erreur');
+
+        const code = AtelierCodes.genererCodeValidation();
+
+        donnees.codeValidation = code;
+        donnees.codeValidationAt = new Date().toISOString();
+
+        await storage.set(AtelierCodes.cleCodeValidation(slug, code), {
+            token: ChapterSession.studentId,
+            chapitreId: ChapterSession.chapterId,
+            questionId: consigne.id,
+            demandeAt: donnees.codeValidationAt
+        });
+
+        await this._enregistrer();
+        this._rendre(consigne);
+    },
+
+    async _annuler(consigne) {
+        const donnees = this._donnees(consigne.id);
+        if (!donnees?.codeValidation) return;
+
+        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
+        if (slug) {
+            await storage.remove(AtelierCodes.cleCodeValidation(slug, donnees.codeValidation));
+        }
+
+        donnees.codeValidation = null;
+        donnees.codeValidationAt = null;
+
+        await this._enregistrer();
+        this._rendre(consigne);
+    },
+
+    /**
+     * Saisie de l'AR : c'est ici que les points entrent en compte.
+     * L'outil de validation a écrit les points dans des champs d'attente
+     * (arPoints / arAppreciation) ; l'AR les PROMEUT en teacherScore. Sans ce geste,
+     * les points ne sont nulle part dans le calcul — d'où l'absence de tout masquage.
+     */
+    async _validerAR(consigne, saisie) {
+        const donnees = this._donnees(consigne.id);
+        if (!donnees) return;
+
+        const code = AtelierCodes.normaliser(saisie);
+
+        if (code.length !== AtelierCodes.LONGUEUR_AR) {
+            return this._message(consigne, `Un AR compte ${AtelierCodes.LONGUEUR_AR} caractères.`, 'erreur');
+        }
+        if (!donnees.arHash) {
+            return this._message(consigne, 'Aucun AR n\'a encore été émis pour cette consigne.', 'attente');
+        }
+
+        const condensat = await AtelierCodes.condensat(code);
+        if (condensat !== donnees.arHash) {
+            return this._message(consigne, 'Cet AR ne correspond pas à cette consigne.', 'erreur');
+        }
+
+        // Les points enregistrés par l'outil font foi ; ceux lus dans le code ne
+        // servent qu'au cas où la progression n'a pas encore été synchronisée.
+        const lu = AtelierCodes.lireAR(code);
+        const points = donnees.arPoints ?? lu?.points ?? 0;
+
+        const pm = window.ProgressManager;
+        if (pm?.teacherCorrectQuestion) {
+            pm.teacherCorrectQuestion(
+                ChapterSession.progress,
+                ChapterSession.chapterId,
+                consigne.id,
+                points,
+                donnees.arAppreciation || donnees.teacherComment || '',
+                donnees.teacherFeedback || '',
+                'corrected'
+            );
+        } else {
+            donnees.teacherScore = points;
+        }
+
+        donnees.correctedBy = donnees.arEmisPar || 'atelier';
+        donnees.arSaisiAt = new Date().toISOString();
+        donnees.arCode = code;
+
+        await this._enregistrer();
+        this._rendre(consigne);
+
+        if (window.ChapterUI?.updateAllProgressIndicators) {
+            ChapterUI.updateAllProgressIndicators();
+        }
+    },
+
+    // ------------------------------------------------------------------------
+    // OUTILS D'AFFICHAGE
+    // ------------------------------------------------------------------------
+
+    _message(consigne, texte, type) {
+        const zone = document.getElementById(`atelier-msg-${consigne.id}`);
+        if (!zone) return;
+        zone.textContent = texte;
+        zone.className = `atelier-message atelier-message-${type}`;
+    },
+
+    /** Virgule décimale : les points tombent souvent sur des quarts (0,75 / 2,5). */
+    _nombre(valeur) {
+        return Number(valeur || 0).toLocaleString('fr-FR');
+    },
+
+    _libelleNiveau(cle) {
+        return this.NIVEAUX.find(n => n.cle === cle)?.label || 'non précisé';
+    },
+
+    _date(iso) {
+        if (!iso) return '';
+        try {
+            return new Date(iso).toLocaleDateString('fr-FR', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+        } catch (_) {
+            return '';
+        }
+    },
+
+    _echapper(texte) {
+        const noeud = document.createElement('div');
+        noeud.textContent = texte;
+        return noeud.innerHTML;
+    }
+};
+
+window.AtelierQuestion = AtelierQuestion;

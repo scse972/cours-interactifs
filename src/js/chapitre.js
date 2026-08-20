@@ -146,6 +146,7 @@ async function initChapterPage() {
         setTimeout(() => {
             ChapterUI.restoreAllAnswers();
             ChapterUI.updateAllProgressIndicators();
+            window.AtelierQuestion?.init();
         }, 500);
         return;
     }
@@ -210,10 +211,14 @@ async function initChapterPage() {
     ChapterUI.applyChapterMode();
     initCallbacks();
 
-    setTimeout(() => { 
+    setTimeout(() => {
         ChapterUI.updateSubmitButton();
         ChapterUI.restoreAllAnswers();
         ChapterUI.updateAllProgressIndicators();
+        // ⚠️ Après restoreAllAnswers : le bloc Atelier lit l'état restauré, et son champ
+        //    de saisie d'AR doit survivre au verrouillage d'un chapitre déjà rendu
+        //    (l'AR arrive souvent après le rendu — cf. "mode atelier AR.md" §3.1).
+        window.AtelierQuestion?.init();
     }, 500);
 }
 

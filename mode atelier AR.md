@@ -77,11 +77,21 @@ humaine, donc **aucune normalisation préalable n'est nécessaire**.
 La question ouverte cesse d'être un cadre à remplir : elle devient un travail à faire, avec en dessous quelques
 champs faits pour ça.
 
-* **la consigne** — l'énoncé, et les critères de réussite lisibles avant de commencer ;
-* **ce que j'ai fait** — le champ de réponse existant, qui devient un compte rendu ;
-* **où j'estime en être** — l'auto-positionnement, qui remplace la grille compliquée des versions précédentes ;
-* **je me déclare prêt** — le bouton qui produit le code de validation ;
+* **la consigne** — l'énoncé, et les critères de réussite lisibles avant de commencer : l'indication de la question
+  est affichée dépliée et intitulée « Critères de réussite », puisqu'on ne peut se positionner sans savoir ce qui est
+  attendu ;
+* **ce que j'ai fait** — le champ de réponse existant, dont le bouton est simplement renommé « 💾 Enregistrer mon
+  compte rendu ». Aucun chemin de sauvegarde n'est dupliqué ;
+* **où j'estime en être** — l'auto-positionnement, sur une échelle **fixe à trois niveaux** (pas encore acquis, en
+  cours d'acquisition, acquis). Volontairement non paramétrable : c'est un langage commun pour l'échange, pas un
+  outil de notation. Il remplace la grille compliquée des versions précédentes ;
+* **je me déclare prêt** — le bouton qui produit le code de validation. Il exige un compte rendu enregistré et un
+  positionnement : une demande vide n'aurait rien à évaluer ;
 * **mon AR** — la case où recopier le code rapporté du formateur.
+
+Une fois la demande faite, le compte rendu est **figé** : c'est l'engagement de l'apprenant et la référence de
+l'échange. Il peut **annuler sa demande** tant qu'aucun AR n'a été saisi — sans cette porte de sortie, un apprenant
+qui s'est déclaré prêt trop vite resterait bloqué si le formateur ne vient pas.
 
 Une **pastille « 🧾 Atelier »** signale la question. Elle évite le pire malentendu : un apprenant qui rédige et attend
 une note qui n'arrivera jamais parce qu'il n'est pas venu la chercher. Attention : cette pastille ne peut pas être
@@ -219,20 +229,36 @@ l'affichage côté apprenant.
 
 ## 7. Modèle de données
 
-Le rituel est porté par **la question**, pas par le chapitre.
+Le rituel est porté par **la question**, pas par le chapitre. Les champs ne sont pas créés à l'initialisation des
+questions : ils n'existent que sur les consignes réellement engagées dans un échange, pour ne pas alourdir la
+progression de toutes les questions de tous les parcours.
 
-| Champ | Rôle |
-|---|---|
-| `codeValidation` | Code de validation en cours |
-| `codeValidationAt` | Date de la déclaration « prêt » — c'est l'apprenant qui déclenche |
-| `arHash` | `SHA-256` de l'AR valide. Écrasé à chaque réévaluation |
-| `arEmisAt` | Date d'émission de l'AR |
-| `arSaisiAt` | Date de saisie par l'apprenant — trace de la rencontre |
-| `autoPositionnement` | Ce que l'apprenant déclare de son propre niveau |
+| Champ | Écrit par | Rôle |
+|---|---|---|
+| `autoPositionnement` | apprenant | Où il estime en être, sur une échelle fixe à trois niveaux |
+| `codeValidation` | apprenant | Code de validation en cours |
+| `codeValidationAt` | apprenant | Date de la déclaration « prêt » — c'est lui qui déclenche |
+| `arPoints` | outil | **Points en attente** — pas encore dans le calcul |
+| `arAppreciation` | outil | Appréciation rédigée pendant l'échange |
+| `arHash` | outil | `SHA-256` de l'AR émis. Écrasé à chaque réévaluation |
+| `arEmisAt` / `arEmisPar` | outil | Date d'émission et identifiant du formateur |
+| `arSaisiAt` | apprenant | Date de saisie de l'AR — trace de la rencontre |
+| `arCode` | apprenant | L'AR en clair, une fois validé, pour recopie sur le carnet |
 
-L'attribution des points n'introduit rien : l'outil appelle la fonction de correction existante
-(`teacherCorrectQuestion`) avec `correctedBy` = identifiant du formateur authentifié. Les scores se recalculent comme
-aujourd'hui, `manualScore` sommant déjà les points attribués aux questions à correction humaine.
+### La promotion — c'est le cœur du dispositif
+
+L'outil de validation **n'écrit pas** `teacherScore`. S'il le faisait, les points entreraient immédiatement dans
+`manualScore` et l'apprenant verrait sa note sans jamais venir chercher son AR : le dispositif serait vide.
+
+L'outil écrit donc dans des champs d'attente — `arPoints`, `arAppreciation` — et **c'est la saisie de l'AR qui les
+promeut** en `teacherScore` et `teacherComment`, via la fonction existante `teacherCorrectQuestion`, avec
+`correctedBy` = identifiant du formateur.
+
+C'est ce qui permet de n'avoir **aucun masquage** : les points ne sont pas cachés, ils ne sont simplement pas encore
+dans le champ que le calcul regarde. Rien à filtrer dans les totaux, les bilans ou les badges.
+
+Les points voyagent aussi en clair dans l'AR, en redondance : c'est ce qui permet l'affichage immédiat quand la
+progression n'a pas encore été synchronisée. En cas de divergence, `arPoints` fait foi.
 
 ---
 
