@@ -78,14 +78,16 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   ├── sync_supabase_to_sqlite.js         #   Sync Supabase → SQLite
 │   └── sync_sqlite_to_supabase.js         #   Sync SQLite → Supabase
 │
-├── tools_xlsx/                            # ★ Outils de génération (non déployés)
-│   ├── generate_chapters.py               #   Générateur Python Excel → cours.json + HTML
+├── tools/                                 # ★ Outils de développement (non déployés)
+│   └── generer-cours-demo.js              #   Export XSpro → parcours/cours.json (démo/secours)
+│
+├── tools_xlsx/                            # ★ Fichiers source et SQL (non déployés)
 │   ├── coursexportXSPRO.xlsx              #   Fichier source Excel (contenu pédagogique)
 │   ├── cours.xlsx                         #   Fichier source Excel (variable suivant besoins)
 │   ├── SUPABASE_SETUP.sql                 #   Schéma SQL pour la table Supabase app_data
 │   ├── templates/
-│   │   └── chapter_template.html          #   Template de chapitre (source, copié vers parcours/src/)
-│   └── generated/                         #   Sortie legacy (sans --parcours)
+│   │   └── chapter_template.html          #   Copie legacy du template (voir parcours/src/)
+│   └── generated/                         #   Sortie legacy du générateur Python (supprimé)
 │
 ├── deploiement.md                         # Documentation déploiement
 ├── DETAILS_VUES.md                        # Documentation vues
@@ -217,16 +219,26 @@ Cette partie n’est pas déployée sur GitHub Pages.
 
 ---
 
-# 5. `tools_xlsx/` — Usine de génération
+# 5. Génération du contenu pédagogique
 
-Ce dossier contient :
+Le contenu est créé et publié depuis **XSpro**, qui écrit `cours.json` dans `parcours_data`
+(voir `publishParcours.js` côté XSpro — source de vérité unique du format).
 
-* les fichiers Excel source,
-* les templates,
-* les scripts Python de génération,
-* les scripts SQL.
+`parcours/cours.json` reste la source **prioritaire** lue par `staticJson` : il sert de jeu de
+démonstration et de secours quand la base est vide. Pour le régénérer à partir d'un export XSpro :
 
-Le contenu pédagogique est généré automatiquement puis exporté vers `cours.json`.
+```bash
+node tools/generer-cours-demo.js "chemin/vers/export.json"
+```
+
+Le script appelle `buildParcours()` de XSpro plutôt que de réimplémenter le format — il exige donc
+un dépôt XSpro accessible (`--xspro <chemin>`, défaut `../XSpro`). C'est un outil de développement,
+jamais utilisé au déploiement.
+
+L'ancien générateur Python (`tools_xlsx/generate_chapters.py`) est supprimé : il produisait un format
+antérieur au tableau `items`, que le template de chapitre ne sait plus afficher.
+
+`tools_xlsx/` ne conserve que les fichiers Excel source et le schéma SQL.
 
 ---
 
