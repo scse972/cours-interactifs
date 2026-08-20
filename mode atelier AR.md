@@ -1,6 +1,6 @@
 # 🧾 Mode de chapitre « Atelier AR »
 
-> **Statut :** implémenté côté coursInteractifs (lots 1 à 5), vérifié bout en bout sur backend local
+> **Statut :** implémenté et documenté côté coursInteractifs (lots 1 à 6), vérifié bout en bout sur backend local
 > **Version :** 7 — trois surfaces, aucun masquage, un outil de validation autonome
 > **Portée :** coursInteractifs uniquement. Reste à faire côté XSpro : publier `atelier` comme mode par défaut de chapitre (lot 7).
 
