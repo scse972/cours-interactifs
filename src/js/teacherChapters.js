@@ -71,6 +71,15 @@ class TeacherChapters {
                 consistencyBadge = `<span class="control-status status-course-only" title="Chapitre composé uniquement de cours : pas de note, pas de bilan.">ℹ️ Cours uniquement</span>`;
             }
 
+            // 🎲 Ordre aléatoire : proposé aux seuls modes Examen, Blind et Millionnaire,
+            // et seulement si le chapitre est entièrement auto-corrigé. Coché par défaut
+            // en Millionnaire, où l'ordre fait partie du jeu.
+            const ordreProposable = ['exam', 'blind', 'millionnaire'].includes(chapterMode)
+                && window.estChapitreToutAuto(chapter.questions);
+            const ordreActif = config.ordreAleatoire === undefined
+                ? chapterMode === 'millionnaire'
+                : config.ordreAleatoire === true;
+
             html += `
                 <div class="chapter-control-card">
                     <div class="control-header">
@@ -99,6 +108,13 @@ class TeacherChapters {
                                 <option value="atelier" ${chapterMode === 'atelier' ? 'selected' : ''}>Atelier AR</option>
                             </select>
                         </label>
+                        ${ordreProposable ? `
+                        <label class="date-limit-toggle" style="margin-top:0.5rem;"
+                               title="Les questions sont présentées dans un ordre tiré au sort, propre à chaque apprenant. Les questions déjà répondues restent regroupées en tête.">
+                            <input type="checkbox" ${ordreActif ? 'checked' : ''}
+                                onchange="dashboard.modules.chapters.toggleOrdreAleatoire('${chapter.id}', this.checked)">
+                            🎲 Ordre aléatoire
+                        </label>` : ''}
                     </div>
 
                     <div class="control-actions" style="flex-direction: column; gap: 0.5rem;">
@@ -162,6 +178,13 @@ class TeacherChapters {
             examMode: mode === 'exam' // rétrocompatibilité pour le code qui lit encore examMode
         });
                 
+        this.render();
+    }
+
+    async toggleOrdreAleatoire(chapterId, actif) {
+        await this.dashboard.updateChapterConfig(chapterId, {
+            ordreAleatoire: actif
+        });
         this.render();
     }
 

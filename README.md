@@ -36,6 +36,7 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   │   └── suiviAtelier.js            #     Logique de l'outil de validation
 │   │   ├── chapter/
 │   │   │   ├── chapterBilan.js            #   Bilan de chapitre
+│   │   │   ├── chapterOrdre.js            #   Ordre d'affichage des questions (option aléatoire)
 │   │   │   ├── chapterSubmission.js       #   Soumission de chapitre
 │   │   │   └── chapterUI.js               #   UI chapitre
 │   │   └── core/
@@ -317,8 +318,24 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 | Découverte | 📖 | Feedback immédiat, l'apprenant peut réessayer |
 | Examen | 📝 | Pas de feedback, enregistrement en temps réel, tout se verrouille au rendu |
 | Blind | 🥽 | Saisie silencieuse, bilan min/max à la validation |
-| Millionnaire | 💰 | Une erreur réinitialise les questions auto-corrigées |
+| Millionnaire | 💰 | Une erreur réinitialise les questions auto-corrigées. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
 | Atelier AR | 🧾 | Les consignes se valident **en main propre**, par échange de codes |
+
+## 🎲 Option « ordre aléatoire »
+
+Proposée aux modes **Examen, Blind et Millionnaire**, et seulement pour les chapitres **entièrement
+auto-corrigés** : mélanger des questions dont certaines attendent une correction humaine n'apporte rien
+et brouillerait la lecture du formateur. Cochée par défaut en Millionnaire, où l'ordre fait partie du
+jeu ; à activer soi-même dans les deux autres. Stockée dans `chapter_config` (`ordreAleatoire`).
+
+Une seule règle d'ordonnancement, pour les trois modes : **les questions déjà répondues d'abord**, dans
+l'ordre où elles l'ont été, **puis les autres tirées au sort**. Rien n'est mémorisé — l'ordre est
+recalculé à chaque affichage. Ce qui est fait reste devant, ce qui reste à faire change de place ; et
+comme le tirage est propre à chaque apprenant, la copie sur l'écran du voisin devient malcommode.
+
+Les blocs de cours ne bougent pas : seules les questions permutent entre elles. Les vues formateur
+(modale de correction, bilan) conservent toujours l'ordre publié — le formateur a besoin d'une référence
+stable, pas de l'ordre vu par tel apprenant. Voir `src/js/chapter/chapterOrdre.js`.
 
 ## 🧾 Le mode Atelier AR
 
@@ -533,7 +550,7 @@ Familles de clés, toutes préfixées par le slug du parcours :
 | Clé | Contenu |
 |---|---|
 | `slug:teacher:users_list` | Liste des jetons du parcours |
-| `slug:config:chapter_config` | Verrous, mode, dates limites par chapitre |
+| `slug:config:chapter_config` | Verrous, mode, option d'ordre aléatoire, dates limites par chapitre |
 | `slug:token:student_<token>_progress` | Progression complète d'un apprenant |
 | `slug:atelier:code_<CODE>` | Mode Atelier AR — ticket écrit par l'apprenant à sa demande de validation, résolu par l'outil de suivi puis supprimé à la saisie de l'AR |
 | `slug:atelier:ar_<token>_<chap>_<question>` | Mode Atelier AR — l'AR en clair, pour les surfaces formateur (réémission, vérification d'un code recopié sur un carnet) |

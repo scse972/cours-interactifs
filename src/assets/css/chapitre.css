@@ -680,3 +680,21 @@
         font-size: 1.3rem;
     }
 }
+
+/* ============================================
+   ORDRE ALÉATOIRE DES QUESTIONS
+   Masquage bref pendant le réordonnancement (voir chapterOrdre.js)
+   ============================================ */
+.chapter-content.questions-en-attente .question-section {
+    visibility: hidden;
+}
+
+.bandeau-nouvelle-tentative {
+    background: #fff8e1;
+    border-left: 4px solid #f1c40f;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #7b5800;
+}

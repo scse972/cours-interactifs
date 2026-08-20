@@ -24,6 +24,7 @@
     <script src="../../src/js/atelier/atelierCodes.js"></script>
     <script src="../../src/js/atelier/atelierQuestion.js"></script>
     <script src="../../src/js/chapter/chapterUI.js"></script>
+    <script src="../../src/js/chapter/chapterOrdre.js"></script>
     <script src="../../src/js/chapter/chapterSubmission.js"></script>
     <script src="../../src/js/chapter/chapterBilan.js"></script>
     <script src="../../src/js/chapitre.js"></script>
@@ -108,6 +109,15 @@
                 </div>
             `;
             main.innerHTML = itemsHtml + globalValidation;
+
+            // L'ordre des questions peut être tiré au sort (modes Examen, Blind,
+            // Millionnaire — voir chapterOrdre.js). Le réordonnancement ne peut avoir
+            // lieu qu'une fois la progression chargée, donc après cette injection : on
+            // masque les questions le temps de ce court instant, sans quoi l'ordre
+            // publié s'afficherait avant de changer sous les yeux de l'apprenant.
+            // Filet de sécurité : le contenu réapparaît même si le script échoue.
+            main.classList.add('questions-en-attente');
+            setTimeout(() => main.classList.remove('questions-en-attente'), 4000);
         }
 
         document.getElementById('back-to-menu').onclick = () => {

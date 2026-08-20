@@ -122,6 +122,45 @@ function initCallbacks() {
 }
 
 // ============================================================================
+// MODE MILLIONNAIRE — PAS DE REPRISE
+// ============================================================================
+
+/**
+ * Réinitialise la tentative en cours quand l'apprenant revient sur un chapitre en
+ * mode Millionnaire. Sans effet si le chapitre est rendu, validé ou verrouillé, ni
+ * si rien n'a encore été répondu.
+ *
+ * @returns {Promise<boolean>} true si une tentative a effectivement été effacée
+ */
+async function reinitialiserTentativeMillionnaire() {
+    const contexte = window.currentExamContext;
+    if (!contexte?.isMillionnaireMode || contexte.isChapterLocked) return false;
+
+    const chapitre = ChapterSession.progress?.chapters?.[ChapterSession.chapterId];
+    if (!chapitre?.questions) return false;
+
+    const aDesReponses = Object.entries(chapitre.questions)
+        .some(([id, donnees]) => !id.startsWith('course_') && donnees?.answered);
+    if (!aDesReponses) return false;
+
+    await ChapterSubmission._resetAutoQuestions();
+    return true;
+}
+
+/** Prévient l'apprenant : ses réponses n'ont pas disparu par accident. */
+function afficherBandeauNouvelleTentative() {
+    const contenu = document.querySelector('.chapter-content');
+    if (!contenu || document.getElementById('bandeau-nouvelle-tentative')) return;
+
+    const bandeau = document.createElement('div');
+    bandeau.id = 'bandeau-nouvelle-tentative';
+    bandeau.className = 'bandeau-nouvelle-tentative';
+    bandeau.innerHTML = '💰 <strong>Nouvelle tentative</strong> — en mode Millionnaire, ' +
+                        'quitter le chapitre remet les questions à zéro.';
+    contenu.insertBefore(bandeau, contenu.firstChild);
+}
+
+// ============================================================================
 // INITIALISATION GLOBALE
 // ============================================================================
 
@@ -142,6 +181,10 @@ async function initChapterPage() {
         console.log('👨‍🏫 Mode formateur — affichage de la progression en lecture seule');
         ChapterUI.initializeStats();
         ChapterUI.applyChapterMode();
+
+        // Vue formateur : ordre publié, jamais tiré au sort — il a besoin d'une
+        // référence stable, pas de l'ordre vu par tel apprenant.
+        window.ChapterOrdre?.reveler();
 
         setTimeout(() => {
             ChapterUI.restoreAllAnswers();
@@ -206,6 +249,17 @@ async function initChapterPage() {
         }
         msgDiv.style.cssText = 'background: #e8f5e9; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;';
     }
+
+    // 💰 Mode Millionnaire : pas de reprise. Revenir sur le chapitre — y compris par
+    //    un simple rechargement — repart d'une tentative neuve, ce qui interdit aussi
+    //    de « sauvegarder » une bonne série en quittant la page.
+    const tentativeReinitialisee = await reinitialiserTentativeMillionnaire();
+
+    // 🎲 Ordre des questions, puis révélation du contenu masqué par le template.
+    window.ChapterOrdre?.appliquer();
+    window.ChapterOrdre?.reveler();
+
+    if (tentativeReinitialisee) afficherBandeauNouvelleTentative();
 
     ChapterUI.initializeStats();
     ChapterUI.applyChapterMode();

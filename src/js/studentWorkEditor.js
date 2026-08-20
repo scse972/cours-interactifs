@@ -414,6 +414,8 @@ class StudentWorkEditor {
         document.getElementById('millionnaire-restart-btn').addEventListener('click', async () => {
             overlay.remove();
             await window.ChapterSubmission._resetAutoQuestions();
+            // Nouvelle tentative = nouveau tirage de l'ordre des questions.
+            window.ChapterOrdre?.appliquer();
         });
 
         document.getElementById('millionnaire-submit-btn').addEventListener('click', async () => {

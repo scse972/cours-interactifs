@@ -45,6 +45,23 @@ function isQuestionValid(question) {
 }
 
 /**
+ * Un chapitre est-il entièrement auto-corrigé ?
+ *
+ * Condition d'accès à l'option « ordre aléatoire » (modes Examen, Blind,
+ * Millionnaire) : mélanger des questions dont certaines attendent une correction
+ * humaine n'apporte rien et brouillerait la lecture du formateur. Un chapitre sans
+ * aucune question répond false — il n'y a pas d'ordre à tirer.
+ *
+ * @param {Array} questions - chapter.questions (cours.json)
+ * @returns {boolean}
+ */
+function estChapitreToutAuto(questions) {
+    const liste = Array.isArray(questions) ? questions : [];
+    if (liste.length === 0) return false;
+    return liste.every(q => (q.correctionType || 'auto') === 'auto');
+}
+
+/**
  * Analyse l'ensemble des questions d'un chapitre pour détecter les incohérences
  * (questions invalides) et les cas particuliers (chapitre vide, ou uniquement du cours).
  * @param {Array} questions - chapter.questions (cours.json)
@@ -66,5 +83,6 @@ function analyzeChapterQuestions(questions, courseCount) {
 }
 
 window.matchesStatus = matchesStatus;
+window.estChapitreToutAuto = estChapitreToutAuto;
 window.isQuestionValid = isQuestionValid;
 window.analyzeChapterQuestions = analyzeChapterQuestions;
