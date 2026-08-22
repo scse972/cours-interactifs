@@ -55,7 +55,12 @@ configuration de chapitre. Libellé affiché : « Atelier AR ». Icône : 🧾.
   déjà le comportement du système ;
 * aucun masquage, aucun total à filtrer, aucune note à révéler ;
 * rien du côté de XSpro : la correction manuelle y reste ce qu'elle est ;
-* le contenu reste rejouable dans n'importe quel autre mode sans modification.
+* le contenu reste rejouable dans n'importe quel autre mode sans modification ;
+* la **protection copier-coller** de la page reste celle des autres modes (cf. `README.md`). Elle joue
+  même en faveur du dispositif : la zone de compte rendu d'une consigne est une question `ouverte` +
+  `manuel`, donc **le coller y est autorisé** — un apprenant peut y déposer un travail rédigé dans un
+  traitement de texte. Une fois la validation demandée, le champ est figé et la question ne se pose
+  plus. Le glisser-déposer, lui, reste refusé partout.
 
 **Restriction assumée :** seules les questions `ouverte` en correction `manuel` sont concernées. Rien n'empêcherait
 d'étendre aux autres types, mais la règle se dit alors en une phrase sans exception — et c'est ce qui compte le plus.

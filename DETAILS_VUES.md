@@ -204,6 +204,32 @@ flowchart LR
 
 ---
 
+## 🔒 Protection copier-coller et glisser-déposer
+
+Cette protection **ne vit pas dans `StudentWorkEditor`** : elle est posée par
+`src/js/chapterInit.js` (`_applyAntiCopyProtection`) au niveau du `document`, et uniquement en mode
+apprenant. Elle ne connaît donc rien du tableau de vérité et ne modifie aucune réponse — elle décide
+seulement de laisser passer ou non un évènement du navigateur.
+
+Une seule exemption, identifiée par un sélecteur unique :
+`.question-section[data-correction-type="manuel"] textarea`.
+
+| Champ | Copier | Couper | Coller | Menu contextuel | Glisser-déposer |
+|---|---|---|---|---|---|
+| `textarea` d'une question **ouverte + `manuel`** | ❌ | ❌ | ✅ | ✅ | ❌ |
+| `textarea` d'une question ouverte + `semi` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `input` d'une question courte, quel que soit son type de correction | ❌ | ❌ | ❌ | ❌ | ❌ |
+| QCM, liste de choix, énoncés, blocs de cours | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+> Ce qui distingue la ligne exemptée n'est **pas** la présence d'un `<textarea>` mais l'attribut
+> `data-correction-type="manuel"` **combiné** à un `<textarea>`. Une question `courte` en correction
+> manuelle n'a qu'un `<input>` : elle reste bloquée.
+
+Le copier remplace le presse-papiers par un message neutre. Rien n'est journalisé et aucun message ne
+prétend qu'une tentative est enregistrée ou signalée — ce serait faux.
+
+---
+
 ## 🛡️ Garanties et contrats
 
 ✅ **Contrats immuables**:

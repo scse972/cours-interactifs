@@ -158,83 +158,88 @@ function _lockInterfaceForTeacher() {
     }, 800);
 }
 
-function _applyAntiCopyProtection() {
-    console.log('[AntiCopy] Protection activée');
+// ============================================================================
+// PROTECTION COPIER-COLLER ET GLISSER-DÉPOSER
+// ============================================================================
+// Actif uniquement en mode apprenant (cf. l'appel plus haut, exclu de la vue
+// formateur qui doit rester manipulable normalement).
+//
+// UNE SEULE EXEMPTION, et elle est étroite : le COLLER dans la zone de texte d'une
+// question ouverte à correction MANUELLE. Un apprenant doit pouvoir y déposer un
+// travail rédigé ailleurs — c'est le seul endroit où ça a un sens pédagogique.
+//
+// Tout le reste est refusé, y compris depuis cette zone :
+//   - le sens SORTANT (copier, couper) est bloqué partout, sinon l'énoncé et les
+//     réponses des autres questions s'exfiltrent par le champ exempté ;
+//   - les questions ouvertes en correction SEMI ont aussi des <textarea> et ne
+//     sont PAS exemptées : la règle porte sur data-correction-type="manuel" ;
+//   - le glisser-déposer est bloqué partout, dans les deux sens, y compris dans la
+//     zone exemptée : c'est un contournement complet du presse-papiers.
+//
+// AUCUNE JOURNALISATION, et aucun message prétendant qu'une tentative est
+// enregistrée ou signalée : ce serait faux. Le message dit seulement que le
+// contenu est protégé.
+// ============================================================================
 
-    const ANTI_COPY_MSG =
-        '═══════════════════════════════════════════════════\n' +
-        '       ⚠️  TENTATIVE DE TRICHE DÉTECTÉE  ⚠️\n' +
-        '═══════════════════════════════════════════════════\n\n' +
-        'Le dispositif anti-triche s\'est enclenché et sera\n' +
-        'signalé à votre formateur.\n\n' +
-        '→ Cette tentative a été enregistrée.\n' +
-        '→ Toute récidive pourra entraîner des sanctions.\n' +
-        '→ Le contenu de ce chapitre est protégé.\n\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+function _applyAntiCopyProtection() {
+
+    const ANTI_COPY_MSG = '🔒 Contenu protégé — copier/coller désactivé sur ce chapitre.';
 
     /**
-     * Vérifie si l'événement se produit dans un champ de saisie
-     * (textarea ou input) → exempté de la protection.
+     * LA règle d'exemption, unique : zone de texte d'une question ouverte à
+     * correction manuelle. Toute exception au blocage passe par ici.
      */
-    function _isInInputField(target) {
-        const el = target.closest('textarea, input');
-        return !!el;
+    function _isManualOpenTextarea(target) {
+        return !!target?.closest?.('.question-section[data-correction-type="manuel"] textarea');
     }
 
-    // ── Intercepte les copier → message d'avertissement (sauf dans les champs) ──
+    // ── Copier : bloqué partout, presse-papiers neutralisé ──────────────────
+    // Aucune exemption : le sens sortant est fermé même dans la zone qui accepte
+    // le coller, sans quoi elle servirait de porte de sortie au contenu.
     document.addEventListener('copy', (e) => {
-        if (_isInInputField(e.target)) {
-            console.log('[AntiCopy] copy ignoré (champ de saisie)');
-            return;
-        }
-        console.log('[AntiCopy] copy event déclenché, target:', e.target);
         e.clipboardData.setData('text/plain', ANTI_COPY_MSG);
         e.preventDefault();
-        console.log('[AntiCopy] presse-papier remplacé par message avertissement');
     });
 
-    // ── Bloque le menu contextuel (sauf dans les champs) ──
-    document.addEventListener('contextmenu', (e) => {
-        if (_isInInputField(e.target)) {
-            console.log('[AntiCopy] contextmenu ignoré (champ de saisie)');
-            return;
-        }
-        console.log('[AntiCopy] contextmenu bloqué');
-        e.preventDefault();
-    });
-
-    // ── Bloque le couper (sauf dans les champs) ──
+    // ── Couper : bloqué partout, pour la même raison ────────────────────────
     document.addEventListener('cut', (e) => {
-        if (_isInInputField(e.target)) {
-            console.log('[AntiCopy] cut ignoré (champ de saisie)');
-            return;
-        }
-        console.log('[AntiCopy] cut bloqué');
         e.preventDefault();
     });
 
-    // ── Bloque le coller (sauf dans les champs) ──
+    // ── Coller : autorisé dans la seule zone exemptée ───────────────────────
     document.addEventListener('paste', (e) => {
-        if (_isInInputField(e.target)) {
-            console.log('[AntiCopy] paste ignoré (champ de saisie)');
-            return;
-        }
-        console.log('[AntiCopy] paste bloqué');
+        if (_isManualOpenTextarea(e.target)) return;
         e.preventDefault();
     });
 
-    // ── Bloque les raccourcis claviers en amont (sauf dans les champs) ──
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            const key = e.key.toLowerCase();
-            if (['x', 'v'].includes(key)) {
-                if (_isInInputField(e.target)) {
-                    console.log('[AntiCopy] keydown Ctrl+' + key + ' ignoré (champ de saisie)');
-                    return;
-                }
-                console.log('[AntiCopy] keydown Ctrl+' + key + ' bloqué');
-                e.preventDefault();
-            }
-        }
+    // ── Menu contextuel : autorisé dans la zone exemptée uniquement ─────────
+    // Sans cela, le « Coller » du menu contextuel serait inaccessible et
+    // l'exemption ne vaudrait que pour les apprenants qui connaissent Ctrl+V.
+    document.addEventListener('contextmenu', (e) => {
+        if (_isManualOpenTextarea(e.target)) return;
+        e.preventDefault();
     });
+
+    // ── Raccourcis clavier, interceptés en amont ────────────────────────────
+    // Ctrl/Cmd+X toujours bloqué ; Ctrl/Cmd+V seulement hors zone exemptée.
+    // Ctrl+C n'est pas traité ici : l'évènement 'copy' ci-dessus le couvre déjà.
+    document.addEventListener('keydown', (e) => {
+        if (!e.ctrlKey && !e.metaKey) return;
+
+        const touche = e.key.toLowerCase();
+        if (touche === 'x') e.preventDefault();
+        if (touche === 'v' && !_isManualOpenTextarea(e.target)) e.preventDefault();
+    });
+
+    // ── Glisser-déposer : bloqué partout, dans les deux sens ────────────────
+    // En capture pour intercepter avant toute cible : un handler posé par un
+    // composant ne doit pas pouvoir rétablir le dépôt.
+    document.addEventListener('dragstart', (e) => e.preventDefault(), { capture: true });
+
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+    }, { capture: true });
+
+    document.addEventListener('drop', (e) => e.preventDefault(), { capture: true });
 }

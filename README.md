@@ -18,7 +18,8 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── config.js                      #   Configuration globale
 │   │   ├── index.js                       #   Grille des chapitres (page d'accueil du parcours)
 │   │   ├── chapitre.js                    #   Logique page chapitre
-│   │   ├── chapterInit.js                 #   Init page chapitre (auth, vue formateur)
+│   │   ├── chapterInit.js                 #   Init page chapitre (auth, vue formateur,
+│   │   │                                  #   protection copier-coller et glisser-déposer)
 │   │   ├── correctionModal.js             #   Modale de correction formateur
 │   │   ├── studentCorrectionModal.js      #   Modale de correction élève
 │   │   ├── studentWorkEditor.js           #   Éditeur de travail élève
@@ -377,6 +378,44 @@ partiront à 0 point faute d'AR.
 **Documentation complète : `mode atelier AR.md`** (intention, format des codes, modèle de données,
 limites assumées). À lire avant toute modification : plusieurs choix y sont contre-intuitifs et
 protègent la fonction du dispositif.
+
+---
+
+# 🛡️ Protection copier-coller et glisser-déposer
+
+Portée par `src/js/chapterInit.js` (`_applyAntiCopyProtection`), **active uniquement en mode
+apprenant** : la vue formateur (`?teacher_view=true`) reste entièrement manipulable.
+
+Il n'y a **qu'une exemption, et elle est étroite** : le *coller* dans la zone de texte d'une question
+**ouverte à correction manuelle**. Un apprenant doit pouvoir y déposer un travail rédigé ailleurs —
+c'est le seul endroit où ça a un sens pédagogique.
+
+| Action | Zone de texte `ouverte` + `manuel` | Partout ailleurs |
+|---|---|---|
+| Copier | ❌ presse-papiers remplacé par un message | ❌ idem |
+| Couper | ❌ | ❌ |
+| Coller (Ctrl+V ou menu contextuel) | ✅ **autorisé** | ❌ |
+| Menu contextuel | ✅ autorisé, sans quoi le « Coller » serait inaccessible | ❌ |
+| Glisser-déposer, dans les deux sens | ❌ | ❌ |
+
+Trois points qui expliquent la forme de ce tableau :
+
+**Le sens sortant est fermé même dans la zone exemptée.** Sans cela, l'énoncé et les réponses des
+autres questions s'exfiltreraient en passant par le seul champ ouvert.
+
+**Les questions ouvertes en correction `semi` ont aussi une zone de texte, et ne sont pas exemptées.**
+La règle porte sur `data-correction-type="manuel"`, pas sur la présence d'un `<textarea>` — et une
+question `courte` en correction manuelle, qui n'a qu'un `<input>`, n'est pas exemptée non plus.
+
+**Le glisser-déposer est bloqué partout**, y compris dans la zone exemptée : c'est un contournement
+complet du presse-papiers, dans un sens comme dans l'autre. Les écouteurs sont posés en capture pour
+qu'aucun composant ne puisse rétablir le dépôt. La sélection de texte, elle, reste possible : la
+bloquer casserait l'édition dans les zones de saisie, et elle ne suffit pas à exporter quoi que ce soit
+puisque le copier est neutralisé.
+
+**Aucune journalisation, aucune menace.** L'ancien message affirmait que la tentative « a été
+enregistrée » et « sera signalée à votre formateur » : c'était faux, rien n'était enregistré. Le
+message se contente maintenant de constater que le contenu est protégé.
 
 ---
 

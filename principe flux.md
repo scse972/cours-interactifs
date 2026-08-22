@@ -134,6 +134,25 @@ Page du chapitre chargée
 6. Si toutes les questions validées + cours lus → chapitre complété
 ```
 
+### 6.1 Ce que l'apprenant ne peut pas faire
+
+Dès l'ouverture d'un chapitre en mode apprenant, une protection est posée sur la page
+(`chapterInit.js`). Du point de vue de l'apprenant :
+
+- **il ne peut rien copier** — ni l'énoncé, ni un bloc de cours, ni même sa propre réponse. Une
+  tentative de copie remplace le presse-papiers par « 🔒 Contenu protégé » ;
+- **il ne peut coller que dans une question ouverte à correction manuelle**, au clavier comme par le
+  menu contextuel. C'est le seul champ où l'on attend un travail éventuellement rédigé ailleurs ;
+- **partout ailleurs, coller est refusé** : QCM, réponses courtes, et même les questions ouvertes en
+  correction semi-automatique, qui ont pourtant la même zone de texte ;
+- **le glisser-déposer ne fonctionne nulle part**, ni pour sortir du contenu de la page, ni pour y
+  déposer du texte ou un fichier — y compris dans le champ où le coller est autorisé.
+
+Rien n'est journalisé : aucune tentative n'est enregistrée ni transmise au formateur, et le message
+affiché ne prétend pas le contraire.
+
+En **vue formateur** (`?teacher_view=true`), aucune de ces restrictions ne s'applique.
+
 ---
 
 ## 7. 👨‍🏫 Flux formateur (tableau de bord)
