@@ -70,6 +70,32 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Pas de feedback pendant la saisie | ✅ |
 | Tout est verrouillé après rendu | ✅ |
 
+### 🥽 Mode Blind
+| Action | Comportement |
+|---|---|
+| Boutons "Vérifier" cachés | ✅ |
+| Réponse saisie | Enregistrée **en silence** : `onAnswerValidated` avec `isCorrect = null` et `points = 0` |
+| Feedback | Aucun, ni à la saisie ni à la restauration (`restoreAllAnswers` sort avant l'affichage) |
+| Rendu | `validateAllQuestions()` puis **bilan min/max** en modale (`ChapterBilan.showBlindBilan`) |
+| Après confirmation | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé |
+
+> Le bilan min/max n'est pas une estimation optimiste : une question auto sans réponse ou fausse
+> compte 0 dans les **deux** bornes, c'est définitif. Seules les questions manuelles ou semi avec une
+> réponse réelle (et le seuil de caractères atteint, s'il y en a un) font monter la borne haute.
+
+### 💰 Mode Millionnaire
+| Action | Comportement |
+|---|---|
+| Boutons "Vérifier" visibles | ✅ — le mode se joue question par question |
+| Réponse auto **fausse** | Modale de choix : **Recommencer** ou **Rendre la copie** |
+| Recommencer | `_resetAutoQuestions()` — remet à zéro les questions auto **et semi**, conserve les manuelles, puis re-tire l'ordre |
+| Retour sur le chapitre | **Pas de reprise** : la tentative en cours est effacée et l'ordre re-tiré, y compris après un simple rechargement |
+| Ordre des questions | Tiré au sort **par défaut** si le chapitre est entièrement auto-corrigé |
+
+> Le rechargement compte comme une nouvelle tentative : c'est ce qui empêche de « sauvegarder » une
+> bonne série en quittant la page. Un bandeau prévient l'apprenant, sinon il croirait avoir perdu ses
+> réponses par accident.
+
 ### 🧾 Mode Atelier AR
 | Action | Comportement |
 |---|---|
@@ -92,8 +118,31 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Feedback de correction visible | ✅ |
 | Exception | Le champ de saisie de l'AR du mode Atelier reste utilisable |
 
-> Les modes **Blind** et **Millionnaire** ne sont pas détaillés dans ce document.
-> `src/js/core/getExamContext.js` est la source de vérité des cinq modes.
+---
+
+## 🎛️ Options d'affichage, indépendantes du mode
+
+Deux réglages de chapitre s'ajoutent au mode, cochés par le formateur dans le tableau de bord. Ils sont
+stockés dans `slug:config:chapter_config` et ne touchent ni les réponses ni les scores : **seul l'ordre
+et le découpage de l'affichage changent**.
+
+| Option | Modes concernés | Condition | Défaut |
+|---|---|---|---|
+| 🎲 Ordre aléatoire | Examen, Blind, Millionnaire | Chapitre **entièrement auto-corrigé** | coché en Millionnaire, décoché ailleurs |
+| 📄 Questions par questions | Examen, Blind | aucune | décoché |
+
+**Ordre aléatoire** (`ChapterOrdre`) — questions déjà répondues d'abord, dans l'ordre où elles l'ont
+été, puis les autres mélangées. Rien n'est mémorisé : l'ordre est recalculé à chaque affichage. Les
+blocs de cours ne bougent pas. Les vues formateur gardent toujours l'ordre publié.
+
+**Questions par questions** (`ChapterPagination`) — un écran = un élément, blocs de cours compris,
+navigation libre dans les deux sens. À l'ouverture, on se place sur la première étape non faite. La
+pagination s'efface dès que le chapitre est rendu ou verrouillé.
+
+> La **source unique de vérité des cinq modes** est `src/js/core/getExamContext.js`. Le mode effectif
+> d'un apprenant est **figé à son premier démarrage** (`frozenChapterMode`) : le formateur qui change
+> le mode ensuite n'affecte que ceux qui n'ont pas commencé. Les deux options ci-dessus, elles, sont
+> relues à chaque affichage.
 
 ---
 
