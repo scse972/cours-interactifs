@@ -100,7 +100,8 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Action | Comportement |
 |---|---|
 | Questions auto, courtes, QCM, sélection | Identique au mode Découverte |
-| Question **ouverte + `manuel`** | Devient une **consigne** validée en main propre |
+| Question **ouverte + `manuel`**, règle « Texte » ou aucune | Devient une **consigne** validée en main propre |
+| Question **ouverte + `manuel`**, règle « Texte non vide » | **Exclue du rituel** : question ordinaire, collé autorisé, aucun AR |
 | Décoration du bloc | Ajoutée à l'affichage par `AtelierQuestion.init()`, jamais à la publication |
 | Bouton « Vérifier » | Renommé « 💾 Enregistrer mon compte rendu », comportement inchangé |
 | Compte rendu | Figé dès que l'apprenant a demandé la validation |
@@ -109,6 +110,10 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 
 > `AtelierQuestion` ne modifie **jamais** le tableau de vérité : une consigne est une question `manuel`,
 > donc `isCorrect` reste `null` et les points ne viennent que du formateur. Voir `mode atelier AR.md`.
+
+> La règle « Texte non vide » (`texte(10)`) est le discriminant assumé (`AtelierQuestion.REGLE_HORS_CONSIGNE`) :
+> elle existe pour les questions ouvertes passées en correction manuelle dans le seul but d'autoriser le collé.
+> L'exclusion est écrite en négatif — sans règle renseignée, la question reste une consigne.
 
 ### 🔴 Chapitre rendu / corrigé
 | Action | Comportement |

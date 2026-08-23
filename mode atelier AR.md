@@ -67,6 +67,26 @@ d'étendre aux autres types, mais la règle se dit alors en une phrase sans exce
 Effet secondaire heureux : `ouverte` est déjà l'un des types que le code traite comme relevant de la correction
 humaine, donc **aucune normalisation préalable n'est nécessaire**.
 
+**Sortie explicite du rituel — la règle « Texte non vide » :** la protection copier-coller n'autorise le collé
+que dans les questions `ouverte` + `manuel`. Un formateur qui veut simplement une question ouverte où l'apprenant
+peut coller un texte doit donc la passer en correction manuelle — et héritait alors du code de validation et de
+l'AR, dont il n'a que faire. D'où une porte de sortie prise sur une règle qui existe déjà :
+
+| Type | Correction | Règle | Résultat en mode Atelier |
+|---|---|---|---|
+| `ouverte` | `manuel` | **Texte** (ou aucune) | **Consigne AR** : code de validation, AR, 0 point sans AR |
+| `ouverte` | `manuel` | **Texte non vide** | Question ouverte ordinaire : collé autorisé, **aucun AR**, corrigée à la main comme partout ailleurs |
+| `ouverte` | `semi` / `auto` | indifférente | Question ordinaire, collé refusé |
+
+Le choix de la règle porteuse n'est pas arbitraire : une consigne se juge en présence, sur le travail rendu, pas
+au compteur de caractères — « Texte non vide » n'avait donc aucun sens sur une consigne, et en fait un discriminant
+sans perte. L'exclusion est écrite en négatif dans le code (`AtelierQuestion.REGLE_HORS_CONSIGNE`) : toute question
+ouverte manuelle reste une consigne par défaut, y compris sans règle renseignée, et seul un choix explicite l'en sort.
+
+⚠️ Conséquence à connaître : « Texte non vide » impose un **minimum de 10 caractères** avant que la réponse puisse
+être enregistrée (`minLength`, contrôlé quelle que soit la correction). C'est le prix de la porte de sortie, et il
+est sans effet sur la correction, qui reste humaine.
+
 ---
 
 ## 3. Trois surfaces

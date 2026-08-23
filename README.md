@@ -376,6 +376,15 @@ n'est donc nécessaire : les points ne sont pas cachés, ils ne sont simplement 
 que le calcul regarde. Au moment de rendre sa copie, l'apprenant est averti nommément des consignes qui
 partiront à 0 point faute d'AR.
 
+**Sortir une question du rituel — la règle « Texte non vide ».** Comme le coller n'est autorisé que dans
+les questions ouvertes à correction manuelle (voir plus bas), on passe parfois une question en correction
+manuelle *uniquement* pour permettre le collé, sans vouloir d'AR. La règle **« Texte non vide »**
+(`texte(10)`) dit exactement cela : la question reste ouverte, corrigée à la main, le collé y est
+autorisé, mais elle n'affiche **aucun bloc de validation** et ne figure pas dans l'avertissement des
+0 points. La règle **« Texte »** (ou aucune règle) reste celle des consignes. Le choix est cohérent :
+une consigne se juge en présence, pas au compteur de caractères. Attention, « Texte non vide » impose un
+**minimum de 10 caractères** pour enregistrer la réponse.
+
 **Documentation complète : `mode atelier AR.md`** (intention, format des codes, modèle de données,
 limites assumées). À lire avant toute modification : plusieurs choix y sont contre-intuitifs et
 protègent la fonction du dispositif.
@@ -447,6 +456,11 @@ autres questions s'exfiltreraient en passant par le seul champ ouvert.
 **Les questions ouvertes en correction `semi` ont aussi une zone de texte, et ne sont pas exemptées.**
 La règle porte sur `data-correction-type="manuel"`, pas sur la présence d'un `<textarea>` — et une
 question `courte` en correction manuelle, qui n'a qu'un `<input>`, n'est pas exemptée non plus.
+
+> Conséquence côté conception du parcours : pour qu'une question ouverte accepte le collé, il faut la
+> passer en correction **manuelle**. En mode Atelier AR, cela en ferait une consigne à valider en main
+> propre — ce qui n'est pas toujours voulu. La règle **« Texte non vide »** sert de porte de sortie :
+> collé autorisé, aucun AR. Voir le mode Atelier AR ci-dessus.
 
 **Le glisser-déposer est bloqué partout**, y compris dans la zone exemptée : c'est un contournement
 complet du presse-papiers, dans un sens comme dans l'autre. Les écouteurs sont posés en capture pour

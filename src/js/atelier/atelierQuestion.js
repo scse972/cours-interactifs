@@ -40,13 +40,35 @@ const AtelierQuestion = {
         console.log(`[Atelier] ${consignes.length} consigne(s) décorée(s)`);
     },
 
+    // Règle qui EXCLUT une question ouverte manuelle du rituel de l'AR.
+    //
+    // Pourquoi une règle sert de discriminant : le collé n'est autorisé que dans les
+    // zones de texte des questions ouvertes à correction manuelle (voir la protection
+    // copier-coller dans chapterInit.js). Un formateur qui veut une question ouverte
+    // acceptant le collé doit donc la passer en correction manuelle — et héritait
+    // alors du rituel du code et de l'AR, qu'il ne voulait pas.
+    //
+    // « Texte non vide » (texte(10)) désigne désormais ce cas : question ouverte
+    // corrigée à la main, collé autorisé, AUCUNE validation en main propre. La règle
+    // « Texte », sans contrainte de longueur, reste celle des consignes — cohérent :
+    // une consigne se juge en présence, pas au compteur de caractères.
+    REGLE_HORS_CONSIGNE: 'texte(10)',
+
     /**
-     * Les questions concernées : ouvertes ET à correction manuelle.
-     * Restriction assumée du mode — la règle se dit en une phrase, sans exception.
+     * Les questions concernées : ouvertes, à correction manuelle, dont la règle n'est
+     * pas celle qui exclut explicitement du rituel.
+     *
+     * L'exclusion est formulée en négatif à dessein : toute question ouverte manuelle
+     * reste une consigne par défaut, y compris celles dont la règle est absente. Seul
+     * un choix explicite du formateur l'en sort.
      */
     consignes() {
         const questions = window.currentChapterConfig?.questions || [];
-        return questions.filter(q => q.type === 'ouverte' && q.correctionType === 'manuel');
+        return questions.filter(q =>
+            q.type === 'ouverte' &&
+            q.correctionType === 'manuel' &&
+            q.rule !== this.REGLE_HORS_CONSIGNE
+        );
     },
 
     /**
