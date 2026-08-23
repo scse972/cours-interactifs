@@ -327,7 +327,7 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 ## 🎲 Option « ordre aléatoire »
 
 Proposée aux modes **Examen, Blind et Millionnaire**, et seulement pour les chapitres **entièrement
-auto-corrigés** : mélanger des questions dont certaines attendent une correction humaine n'apporte rien
+auto-corrigés** : mélanger des questions dont certaines attendent une correction manuelle n'apporte rien
 et brouillerait la lecture du formateur. Cochée par défaut en Millionnaire, où l'ordre fait partie du
 jeu ; à activer soi-même dans les deux autres. Stockée dans `chapter_config` (`ordreAleatoire`).
 

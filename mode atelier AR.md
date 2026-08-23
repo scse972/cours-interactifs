@@ -65,7 +65,7 @@ configuration de chapitre. Libellé affiché : « Atelier AR ». Icône : 🧾.
 **Restriction assumée :** seules les questions `ouverte` en correction `manuel` sont concernées. Rien n'empêcherait
 d'étendre aux autres types, mais la règle se dit alors en une phrase sans exception — et c'est ce qui compte le plus.
 Effet secondaire heureux : `ouverte` est déjà l'un des types que le code traite comme relevant de la correction
-humaine, donc **aucune normalisation préalable n'est nécessaire**.
+manuelle, donc **aucune normalisation préalable n'est nécessaire**.
 
 **Sortie explicite du rituel — la règle « Texte non vide » :** la protection copier-coller n'autorise le collé
 que dans les questions `ouverte` + `manuel`. Un formateur qui veut simplement une question ouverte où l'apprenant
@@ -85,7 +85,7 @@ ouverte manuelle reste une consigne par défaut, y compris sans règle renseign�
 
 ⚠️ Conséquence à connaître : « Texte non vide » impose un **minimum de 10 caractères** avant que la réponse puisse
 être enregistrée (`minLength`, contrôlé quelle que soit la correction). C'est le prix de la porte de sortie, et il
-est sans effet sur la correction, qui reste humaine.
+est sans effet sur la correction, qui reste manuelle.
 
 ---
 

@@ -367,7 +367,7 @@ const ChapterUI = {
                 // sans question auto-corrigée a lui aussi un bilan à consulter.
                 const titre = nbQuestionsAuto > 0
                     ? `📊 Exercices auto-corrigés (${stats.autoMaxPossible} points attribuables sur ${chapterConfig.maxPoints})`
-                    : `📊 Bilan du chapitre (${chapterConfig.maxPoints} points, tous à correction humaine)`;
+                    : `📊 Bilan du chapitre (${chapterConfig.maxPoints} points, aucun exercice auto-corrigé)`;
 
                 statsDiv.innerHTML = `
                     <div class="stats-card">

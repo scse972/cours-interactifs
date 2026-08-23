@@ -409,7 +409,7 @@ const ChapterBilan = {
                         </div>
                         ${blindMinScore !== blindMaxScore ? `
                         <p style="text-align:center; font-size:0.85rem; color:#666; margin-top:0.75rem;">
-                            L'écart vient des questions qui attendent une correction humaine.
+                            L'écart vient des questions qui attendent une correction manuelle.
                         </p>
                         ` : ''}
                         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">

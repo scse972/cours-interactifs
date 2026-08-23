@@ -49,7 +49,7 @@ function isQuestionValid(question) {
  *
  * Condition d'accès à l'option « ordre aléatoire » (modes Examen, Blind,
  * Millionnaire) : mélanger des questions dont certaines attendent une correction
- * humaine n'apporte rien et brouillerait la lecture du formateur. Un chapitre sans
+ * manuelle n'apporte rien et brouillerait la lecture du formateur. Un chapitre sans
  * aucune question répond false — il n'y a pas d'ordre à tirer.
  *
  * @param {Array} questions - chapter.questions (cours.json)
