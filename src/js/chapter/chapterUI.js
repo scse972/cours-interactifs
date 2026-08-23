@@ -315,30 +315,67 @@ const ChapterUI = {
                     ? `<button class="details-btn" id="bilan-btn" title="Voir le corrigé détaillé">📄 Voir le corrigé</button>`
                     : `<button class="details-btn" id="bilan-btn" title="Bilan des exercices">⭐ Voir le bilan</button>`;
 
-                statsDiv.innerHTML = `
-                    <div class="stats-card">
-                        <h3>
-                            📊 Exercices auto-corrigés (${stats.autoMaxPossible} points attribuables sur ${chapterConfig.maxPoints})
-                            ${bilanBtnHtml}
-                        </h3>
-                        <div class="stats-grid">
+                // ── Indicateurs : n'afficher que ceux qui veulent dire quelque chose ──
+                // Tous portent sur les questions AUTO-corrigées. Sans elles, les
+                // calculs ne sont pas à zéro, ils sont absurdes : accuracy vaut
+                // (0 + 100) / 2 = 50 %, ce qui affiche « Précision 50 % » sur un
+                // chapitre où rien n'est auto-corrigé. Mieux vaut ne rien montrer
+                // qu'un chiffre inventé.
+                const nbQuestionsAuto = (chapterConfig.questions || [])
+                    .filter(q => q.correctionType === 'auto').length;
+
+                const indicateurs = [];
+
+                if (nbQuestionsAuto > 0) {
+                    // L'avancement et les points sont vrais même à zéro : « tu n'as
+                    // encore rien acquis » est une information.
+                    indicateurs.push(`
                             <div class="stat-item" title="Pourcentage d'exercices auto-corrigés réussis sur le total.">
                                 <span>📈 Avancement</span>
                                 <strong>${Math.round(stats.avctBonneReponse)}%</strong>
-                            </div>
-                            <div class="stat-item" title="Taux de réussite au premier essai.">
+                            </div>`);
+
+                    // Le taux au premier essai se calcule SUR LES RÉUSSITES : sans
+                    // aucune réussite il n'a pas de dénominateur, et 0 % se lirait
+                    // comme un échec alors que rien n'a encore été réussi.
+                    if (stats.totalSuccessQuestions > 0) {
+                        indicateurs.push(`
+                            <div class="stat-item" title="Part des réussites obtenues du premier coup.">
                                 <span>🥇 1er essai</span>
                                 <strong>${stats.firstAttemptRate}%</strong>
-                            </div>
+                            </div>`);
+                    }
+
+                    // La précision juge la qualité des réponses : tant qu'aucune
+                    // question auto n'a été tentée, elle ne juge rien.
+                    if (stats.answeredQuestionsAuto > 0) {
+                        indicateurs.push(`
                             <div class="stat-item accuracy-item" title="Mesure la qualité des réponses en tenant compte du nombre d'essais.">
                                 <span>🎯 Précision</span>
                                 <strong>${stats.accuracy}%</strong>
-                            </div>
+                            </div>`);
+                    }
+
+                    indicateurs.push(`
                             <div class="stat-item" title="Points obtenus à partir de la note calculée sur les exercices auto-corrigés.">
                                 <span>⭐ Points obtenus</span>
                                 <strong>${stats.pointsObtenus}/${stats.autoMaxPossible}</strong>
-                            </div>
-                        </div>
+                            </div>`);
+                }
+
+                // Le bouton de bilan reste accessible dans tous les cas : un chapitre
+                // sans question auto-corrigée a lui aussi un bilan à consulter.
+                const titre = nbQuestionsAuto > 0
+                    ? `📊 Exercices auto-corrigés (${stats.autoMaxPossible} points attribuables sur ${chapterConfig.maxPoints})`
+                    : `📊 Bilan du chapitre (${chapterConfig.maxPoints} points, tous à correction humaine)`;
+
+                statsDiv.innerHTML = `
+                    <div class="stats-card">
+                        <h3>
+                            ${titre}
+                            ${bilanBtnHtml}
+                        </h3>
+                        ${indicateurs.length ? `<div class="stats-grid">${indicateurs.join('')}</div>` : ''}
                     </div>
                 `;
             }

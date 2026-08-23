@@ -213,7 +213,15 @@ const ChapterBilan = {
                     <span class="detail-qid">${q.title}</span>
                     <span class="detail-type">${q.type}</span>
                     <span class="detail-status ${statusClass}">${statusIcon} ${statusText}</span>
-                    <span class="detail-attempts">Nombre d'essais: ${q.attempts}</span>
+                    <span class="detail-attempts">${
+                        // Le nombre d'essais n'a de sens que sur une question
+                        // auto-corrigée effectivement tentée : ailleurs, « 0 essai »
+                        // ou un compteur sur une question corrigée à la main ne
+                        // désigne rien.
+                        (q.type === 'auto' && q.attempts > 0)
+                            ? `Nombre d'essais: ${q.attempts}`
+                            : ''
+                    }</span>
                     <span class="detail-points">${q.pointsEarned > 0 ? '+' : ''}${q.pointsEarned}/${q.points}</span>
                 </div>
             `;
@@ -235,18 +243,23 @@ const ChapterBilan = {
                         ` : ''}
                         <div class="section-title">📋 Résumé</div>
                         <div class="note-range">
+                            ${autoMaxPossible > 0 ? `
                             <div class="note-item">
                                 <span class="note-label">Points auto-corrigés</span>
                                 <span class="note-value current">${autoProjectedScore} sur ${autoMaxPossible}</span>
                             </div>
+                            ` : ''}
+                            ${(totalPossiblePoints - autoMaxPossible) > 0 ? `
                             <div class="note-item">
                                 <span class="note-label">Points semi/manuels validés</span>
                                 <span class="note-value current">${manualCurrentScore} sur ${totalPossiblePoints - autoMaxPossible}</span>
                             </div>
+                            ` : ''}
                             <div class="note-item">
                                 <span class="note-label">Total acquis actuellement</span>
                                 <span class="note-value current">${currentScore} sur ${totalPossiblePoints}</span>
                             </div>
+                            ${minScore !== maxScorePossible ? `
                             <div class="note-item">
                                 <span class="note-label">Total minimal possible</span>
                                 <span class="note-value min">${minScore} sur ${totalPossiblePoints}</span>
@@ -259,6 +272,12 @@ const ChapterBilan = {
                                 <span class="note-label">Note maximale possible</span>
                                 <span class="note-value max">${maxNote.toFixed(1)} sur 20</span>
                             </div>
+                            ` : `
+                            <div class="note-item">
+                                <span class="note-label">Note</span>
+                                <span class="note-value final">${minNote.toFixed(1)} sur 20</span>
+                            </div>
+                            `}
                         </div>
                         ${chapterConfig.courseValidationCount > 0 ? `
                         <div class="section-title">📚 Cours validés</div>
@@ -372,6 +391,7 @@ const ChapterBilan = {
                     <div class="modal-body">
                         <div class="section-title">📊 Résumé</div>
                         <div class="note-range">
+                            ${blindMinScore !== blindMaxScore ? `
                             <div class="note-item">
                                 <span class="note-label">Note minimale</span>
                                 <span class="note-value min">${blindMinNote.toFixed(1)} / ${noteMax} (${blindMinScore} pt${blindMinScore > 1 ? 's' : ''})</span>
@@ -380,7 +400,18 @@ const ChapterBilan = {
                                 <span class="note-label">Note maximale</span>
                                 <span class="note-value max">${blindMaxNote.toFixed(1)} / ${noteMax} (${blindMaxScore} pt${blindMaxScore > 1 ? 's' : ''})</span>
                             </div>
+                            ` : `
+                            <div class="note-item">
+                                <span class="note-label">Note</span>
+                                <span class="note-value final">${blindMinNote.toFixed(1)} / ${noteMax} (${blindMinScore} pt${blindMinScore > 1 ? 's' : ''})</span>
+                            </div>
+                            `}
                         </div>
+                        ${blindMinScore !== blindMaxScore ? `
+                        <p style="text-align:center; font-size:0.85rem; color:#666; margin-top:0.75rem;">
+                            L'écart vient des questions qui attendent une correction humaine.
+                        </p>
+                        ` : ''}
                         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
                             <button class="btn btn-success" id="blind-validate-btn" style="padding: 0.75rem 1.5rem; font-size: 1.1rem;">
                                 ✅ Valider définitivement
