@@ -796,3 +796,39 @@
     border-top: 1px solid #e0e0e0;
     margin: 1.5rem 0;
 }
+
+/* ============================================
+   SIMULATION FORMATEUR
+   Bandeau permanent : ce qui se passe ici ne compte pas. Voir simulation.js
+   ============================================ */
+.bandeau-simulation {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #1b4f72;
+    color: #eaf3fa;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.bandeau-simulation strong {
+    color: white;
+}
+
+.bandeau-simulation button {
+    margin-left: 0.75rem;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 6px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.bandeau-simulation button:hover {
+    background: rgba(255,255,255,0.32);
+}

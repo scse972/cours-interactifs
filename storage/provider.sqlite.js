@@ -30,6 +30,11 @@ SQLiteProvider.prototype._fetch = async function (method, path, body) {
     const url = this._base + path;
     const options = {
         method,
+        // cache: 'no-store' — sans cela le navigateur peut resservir une réponse GET
+        // périmée après une écriture ou une suppression : on relit alors une donnée
+        // qui n'existe plus en base. Le backend local ne pose aucun en-tête de cache,
+        // c'est donc au client de refuser le cache.
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
     };
     if (body !== undefined && body !== null) options.body = JSON.stringify(body);

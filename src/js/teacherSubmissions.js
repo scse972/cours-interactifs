@@ -430,7 +430,7 @@ class TeacherSubmissions {
             <div class="modal-overlay" id="student-chapter-view-modal">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>👁️ Vue Apprenant - ${chapterConfig.title} (${student.name})</h3>
+                        <h3>👁️ Vue Apprenant - ${this.escapeHtml(chapterConfig.title)} (${this.escapeHtml(student.name)})</h3>
                         <button class="close-btn" onclick="dashboard.modules.submissions.closeStudentChapterView()">&times;</button>
                     </div>
                     

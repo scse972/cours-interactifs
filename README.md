@@ -25,6 +25,7 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── studentWorkEditor.js           #   Éditeur de travail élève
 │   │   ├── progressManager.js             #   Gestionnaire de progression
 │   │   ├── getChapterBadgeState.js        #   État des badges chapitre
+│   │   ├── simulation.js                  #   Simulation apprenant (identité isolée + purge)
 │   │   ├── teacherDashboard.js            #   Tableau de bord formateur
 │   │   ├── teacherChapters.js             #   Gestion des chapitres (formateur)
 │   │   ├── teacherStats.js                #   Statistiques (formateur)
@@ -378,6 +379,46 @@ partiront à 0 point faute d'AR.
 **Documentation complète : `mode atelier AR.md`** (intention, format des codes, modèle de données,
 limites assumées). À lire avant toute modification : plusieurs choix y sont contre-intuitifs et
 protègent la fonction du dispositif.
+
+---
+
+# 👁 Simulation apprenant
+
+Dans la vue **Gestion des chapitres**, une icône 👁 placée après la pastille de statut ouvre le chapitre
+**dans un nouvel onglet, tel qu'un apprenant le verra** : le mode et ses règles, l'ordre des questions,
+la pagination, les consignes, la protection copier-coller. L'interface est **vivante** — on répond, on
+valide, on rend la copie, on voit le bilan. Un bandeau le rappelle en permanence.
+
+## Enregistrer puis purger, plutôt que neutraliser
+
+La persistance ne passe pas par un point unique : les écritures vont par paires (`saveProgress` **et**
+un `storage.set` explicite sur la même clé, en cinq endroits), une simple lecture alimente le cache
+localStorage, et la file hors-ligne rejoue plus tard ce qui n'a pas pu partir. Neutraliser tout cela
+ferait tourner le code dans des conditions qu'il ne rencontre jamais en vrai — et un simulateur qui
+simule mal ne sert à rien.
+
+La simulation laisse donc le code **écrire normalement**, sous une identité isolée, et purge.
+
+| Aspect | Choix |
+|---|---|
+| Identité | `SIMU001`, « Simulation formateur », `type: 'student'` + indicateur `simulation: true` |
+| Transport de l'identité | Par l'URL (`?simulation=true&student_id=SIMU001`), comme l'aperçu formateur — **la session de l'onglet n'est jamais écrite** |
+| Moment de la purge | **À l'entrée**, jamais à la sortie : un onglet fermé brutalement n'exécute aucun nettoyage |
+| Portée de la purge | Progression, clés annexes de l'apprenant, AR et **tickets** du mode Atelier, opérations encore en file de synchronisation |
+| Visibilité | L'apprenant de simulation n'apparaît dans les vues formateur que s'il a une **activité** — pas seulement une progression, qui est recréée vide à chaque ouverture |
+
+La purge est **déterministe d'abord** : elle vise des clés connues d'avance, et lit la progression pour
+retrouver les tickets Atelier dont le code est aléatoire. L'énumération des clés (`storage.keys()`) ne
+sert que de balayage complémentaire — elle n'est pas garantie par tous les backends, et une purge qui en
+dépendrait échouerait en silence.
+
+**Hypothèse assumée :** un seul formateur simule à la fois sur un parcours donné. L'authentification
+formateur étant un mot de passe partagé, deux personnes simulant le même parcours écriraient dans les
+mêmes clés.
+
+L'aperçu formateur existant (`?teacher_view=true&student_id=…`) est conservé : il sert à consulter la
+copie d'un apprenant réel, en lecture seule. La simulation, elle, ne touche jamais aux données d'un
+apprenant.
 
 ---
 

@@ -214,8 +214,11 @@ const ChapterSubmission = {
 
             const { earnedPoints, totalPoints } = result;
 
-            // Afficher le bilan simplifié dans une modale
-            ChapterBilan.showBlindBilan(earnedPoints, totalPoints, chapterConfig);
+            // Afficher le bilan simplifié dans une modale.
+            // ⚠️ Le 4e argument est la progression du chapitre : sans lui, showBlindBilan
+            //    travaillait sur un objet vide et affichait toujours 0 point, en min
+            //    comme en max — le bilan Blind ne montrait donc jamais rien d'utile.
+            ChapterBilan.showBlindBilan(earnedPoints, totalPoints, chapterConfig, chapter);
             return;
         }
 

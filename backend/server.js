@@ -52,6 +52,21 @@ app.use(express.json({ limit: '10mb' }));
 // ENDPOINTS — app_data
 // ============================================================================
 
+// IMPORTANT : /api/app_data/keys doit être déclaré AVANT /api/app_data/:key, sinon
+// Express fait correspondre « keys » au paramètre :key et renvoie une valeur nulle
+// au lieu de la liste des clés. C'est ce qui cassait storage.keys() en mode local —
+// et donc le scan des données orphelines du tableau de bord. Le même piège est déjà
+// signalé plus bas pour parcours_data.
+app.get('/api/app_data/keys', (req, res) => {
+    try {
+        const rows = db.prepare('SELECT key FROM app_data ORDER BY key').all();
+        res.json(rows);
+    } catch (e) {
+        console.error('[SQLite] Erreur GET /app_data/keys:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/app_data/:key', (req, res) => {
     try {
         const { key } = req.params;
@@ -115,15 +130,6 @@ app.delete('/api/app_data/:key', (req, res) => {
     }
 });
 
-app.get('/api/app_data/keys', (req, res) => {
-    try {
-        const rows = db.prepare('SELECT key FROM app_data ORDER BY key').all();
-        res.json(rows);
-    } catch (e) {
-        console.error('[SQLite] Erreur GET /keys:', e.message);
-        res.status(500).json({ error: e.message });
-    }
-});
 
 // ============================================================================
 // ENDPOINTS — parcours_data

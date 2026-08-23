@@ -45,9 +45,12 @@ function getCurrentChapterId() {
 function getCurrentStudentId() {
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Mode vue formateur : le student_id de l'URL doit primer sur toute session
-    // élève restée active dans cet onglet (sinon on affiche le mauvais apprenant)
-    if (urlParams.get('teacher_view') === 'true' && urlParams.has('student_id')) {
+    // Identité portée par l'URL — aperçu formateur ou simulation : le student_id doit
+    // primer sur toute session élève restée active dans cet onglet, sinon on
+    // afficherait et on écrirait sous le mauvais apprenant.
+    const identiteParUrl = urlParams.get('teacher_view') === 'true' ||
+                           urlParams.get('simulation') === 'true';
+    if (identiteParUrl && urlParams.has('student_id')) {
         return urlParams.get('student_id');
     }
 
@@ -563,13 +566,50 @@ function unlockNextChapter(progress, currentChapterId, chaptersConfig) {
     }
     
     const nextId = nextChapterConfig.id;
-    
+
     // Déverrouiller le chapitre suivant
     if (!progress.chapters[nextId]) {
         progress.chapters[nextId] = initChapter(nextChapterConfig);
+
+        // ⚠️ NE PAS FIGER ICI. nextChapterConfig vient de cours.json STATIQUE : il ignore
+        // les réglages du formateur (mode, verrou, date limite) qui ne vivent que dans
+        // chapter_config. Figer maintenant enfermerait l'apprenant dans le mode publié
+        // alors qu'il n'a même pas ouvert le chapitre. Le gel a lieu à son vrai premier
+        // démarrage, dans ensureChapterInitialized(), avec la config effective.
+        degelerContexteChapitre(progress.chapters[nextId]);
     }
     progress.chapters[nextId].isLocked = false;
     progress.chapters[nextId].unlockedAt = new Date().toISOString();
+}
+
+/**
+ * Fige le mode et la date limite d'un chapitre pour cet apprenant, à son premier
+ * démarrage. Une fois posés, ces champs ne suivent plus les changements de config —
+ * c'est voulu : plusieurs classes peuvent démarrer le même chapitre à des dates
+ * différentes sans que le formateur ne casse l'expérience de ceux qui ont commencé.
+ *
+ * @param {Object} chapter - entrée de progression du chapitre
+ * @param {Object} config  - configuration EFFECTIVE (statique + réglages formateur)
+ */
+function gelerContexteChapitre(chapter, config) {
+    if (!chapter || !config) return;
+    chapter.frozenChapterMode      = config.chapterMode || (config.examMode ? 'exam' : 'normal');
+    chapter.frozenDateLimitEnabled = config.dateLimitEnabled === true;
+    chapter.frozenEndDate          = config.endDate || null;
+    chapter.frozenAt               = new Date().toISOString();
+}
+
+/**
+ * Remet un chapitre à l'état « jamais démarré ». getExamContext considère un chapitre
+ * comme démarré dès que frozenAt est posé : sans ce dégel, un chapitre créé d'avance
+ * par unlockNextChapter passerait pour commencé.
+ */
+function degelerContexteChapitre(chapter) {
+    if (!chapter) return;
+    chapter.frozenChapterMode      = null;
+    chapter.frozenDateLimitEnabled = false;
+    chapter.frozenEndDate          = null;
+    chapter.frozenAt               = null;
 }
 
 /**
@@ -600,8 +640,20 @@ function ensureChapterInitialized(progress, chaptersConfig) {
             ? { ...chapterConfig, ...liveConfig }
             : chapterConfig;
         progress.chapters[chapterId] = initChapter(effectiveConfig);
+    } else if (progress.chapters[chapterId].frozenAt == null) {
+        // Le chapitre existe déjà mais n'a jamais été démarré : c'est unlockNextChapter
+        // qui l'a créé quand le chapitre précédent a été terminé, sans le figer.
+        // Le gel du mode a lieu ICI, au vrai premier démarrage, et avec la config
+        // EFFECTIVE (statique + réglages formateur) — sinon un chapitre déverrouillé
+        // d'avance serait figé sur le mode publié, en ignorant celui choisi depuis le
+        // tableau de bord.
+        const liveConfig = window.currentChapterConfig;
+        const effectiveConfig = (liveConfig && String(liveConfig.id) === String(chapterId))
+            ? { ...chapterConfig, ...liveConfig }
+            : chapterConfig;
+        gelerContexteChapitre(progress.chapters[chapterId], effectiveConfig);
     }
-    
+
     // S'assurer que toutes les questions sont initialisées
     if (chapterConfig.questions) {
         chapterConfig.questions.forEach(q => {

@@ -92,12 +92,15 @@ class TeacherChapters {
                         <div class="control-header-badges">
                             <span class="control-status ${statusClass}">${statusText}</span>
                             ${consistencyBadge}
+                            <button class="btn-simuler"
+                                    title="Tester ce chapitre comme un apprenant — rien n'est conservé"
+                                    onclick="dashboard.modules.chapters.simulerChapitre('${chapter.id}')">👁</button>
                         </div>
                         <h4 style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${this.escapeHtml(chapter.title)}">${this.escapeHtml(chapter.title)}</h4>
                     </div>
 
                     <div class="control-actions">
-                        <button class="control-btn btn-unlock" onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">
+                        <button class="control-btn ${isLocked ? 'btn-unlock' : 'btn-lock'}" onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">
                             ${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
                         </button>
                     </div>
@@ -192,6 +195,23 @@ class TeacherChapters {
         });
                 
         this.render();
+    }
+
+    /**
+     * 👁 Ouvre le chapitre dans un nouvel onglet, tel qu'un apprenant le verra.
+     *
+     * La purge de la simulation précédente n'est PAS faite ici mais au chargement de
+     * la page simulée : d'une part pour que l'ouverture reste un geste synchrone (un
+     * window.open après un await se fait bloquer comme fenêtre surgissante), d'autre
+     * part pour que le nettoyage ait lieu même si la simulation est ouverte autrement.
+     */
+    simulerChapitre(chapterId) {
+        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
+        if (!slug) {
+            alert('Aucun parcours sélectionné');
+            return;
+        }
+        window.open(Simulation.url(slug, chapterId), '_blank');
     }
 
     async toggleOrdreAleatoire(chapterId, actif) {

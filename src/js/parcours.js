@@ -81,13 +81,24 @@
       return '';
   }
   // ── 3. LECTURE DU TOKEN ─────────────────────────────────────
+  /**
+   * L'identité de la page est-elle imposée par l'URL plutôt que par la session ?
+   * Vrai pour l'aperçu formateur (teacher_view) et pour la simulation.
+   */
+  function identiteParUrl(params) {
+    return params.get('teacher_view') === 'true' || params.get('simulation') === 'true';
+  }
+
   function readToken(slug) {
     if (!slug) return null;
     var params  = new URLSearchParams(window.location.search);
 
-    // Mode vue formateur : le student_id de l'URL désigne l'apprenant prévisualisé,
-    // indépendamment de toute session élève active dans cet onglet.
-    if (params.get('teacher_view') === 'true' && params.has('student_id')) {
+    // Identité portée par l'URL, indépendamment de toute session élève active dans
+    // cet onglet : aperçu formateur (apprenant réel prévisualisé) ou simulation
+    // (apprenant de simulation). Dans les deux cas on ne touche pas à la session,
+    // voir plus bas — sinon ouvrir un aperçu depuis le tableau de bord y installerait
+    // une identité d'élève.
+    if (identiteParUrl(params) && params.has('student_id')) {
       return params.get('student_id');
     }
 
@@ -205,11 +216,13 @@
   // ── 7. ASSEMBLAGE ────────────────────────────────────────────
   var slug  = detectSlug();
   var token = readToken(slug);
-  var isTeacherPreview = new URLSearchParams(window.location.search).get('teacher_view') === 'true';
+  var identitePortéeParUrl = identiteParUrl(new URLSearchParams(window.location.search));
 
-  // Compatibilité avec le code existant qui lit sessionStorage directement
-  // (ne pas polluer la session élève réelle de l'onglet avec l'ID prévisualisé par le formateur)
-  if (token && !isTeacherPreview) {
+  // Compatibilité avec le code existant qui lit sessionStorage directement.
+  // On n'écrit PAS la session quand l'identité vient de l'URL : ni l'apprenant
+  // prévisualisé par le formateur, ni l'apprenant de simulation ne doivent
+  // s'installer dans la session de l'onglet.
+  if (token && !identitePortéeParUrl) {
     sessionStorage.setItem('current_student_token', token);
   }
 

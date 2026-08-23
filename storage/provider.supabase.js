@@ -37,7 +37,10 @@ SupabaseProvider.prototype._fetch = async function (method, path, body, extraHea
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), this._timeout);
 
-    const options = { method, headers, signal: controller.signal };
+    // cache: 'no-store' — une réponse GET resservie depuis le cache du navigateur
+    // ferait relire une donnée déjà modifiée ou supprimée. Protection symétrique de
+    // celle du provider SQLite.
+    const options = { method, headers, cache: 'no-store', signal: controller.signal };
     if (body !== undefined && body !== null) options.body = JSON.stringify(body);
 
     let response;

@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="../../src/assets/css/chapter-bilan.css">
     
     <script src="../../src/js/config.js"></script>
+    <script src="../../src/js/simulation.js"></script>
     <script src="../../src/js/parcours.js"></script>
     <script src="../../src/js/storage.js"></script>
     <script src="../../src/js/dataStorage.js"></script>
@@ -121,9 +122,15 @@
             setTimeout(() => main.classList.remove('questions-en-attente'), 4000);
         }
 
-        document.getElementById('back-to-menu').onclick = () => {
-            window.location.href = (window.BASE || '') + '/src/html/user.html?parcours=' + parcoursSlug;
-        };
+        // Défensif : ce bouton peut être absent (page partielle, simulation…). Une
+        // exception ici empêcherait initChapterPage() plus bas de s'exécuter, donc la
+        // page entière resterait non initialisée pour un bouton manquant.
+        const boutonRetour = document.getElementById('back-to-menu');
+        if (boutonRetour) {
+            boutonRetour.onclick = () => {
+                window.location.href = (window.BASE || '') + '/src/html/user.html?parcours=' + parcoursSlug;
+            };
+        }
 
         if (typeof initChapterPage === 'function') {
             await initChapterPage();

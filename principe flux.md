@@ -174,6 +174,29 @@ Pour chaque chapitre, le formateur peut :
 | 📝 **Mode examen** | `slug:config:chapter_config` → `{1: {examMode: true/false}}` |
 | 📅 **Limite de date** | `slug:config:chapter_config` → `{1: {endDate: "2026-06-01T19:00:00", dateLimitEnabled: true}}` |
 
+### 7.4 Simulation apprenant (icône 👁)
+
+Depuis la gestion des chapitres, le formateur ouvre le chapitre dans un nouvel onglet **comme un
+apprenant** : il répond, valide, rend sa copie, voit le bilan. Rien de tout cela ne compte.
+
+Le mécanisme n'empêche pas les écritures — il les isole puis les efface :
+
+```
+Clic sur 👁
+    ↓
+Nouvel onglet : ?simulation=true&student_id=SIMU001
+    ↓
+Au chargement : purge de tout ce que la simulation précédente a laissé
+   (progression, clés annexes, tickets et AR du mode Atelier, file de synchronisation)
+    ↓
+La page tourne EXACTEMENT comme pour un apprenant, sous l'identité SIMU001
+    ↓
+L'apprenant « Simulation formateur » apparaît dans les vues de suivi
+   tant qu'il a une activité — donc jusqu'à la purge suivante
+```
+
+La session de l'onglet du tableau de bord n'est jamais modifiée : l'identité voyage dans l'URL.
+
 ### 7.3 Correction manuelle (modal)
 Pour les questions de type `manuel` et `semi` en attente, le formateur utilise `correctionModal.js` pour attribuer une note et un feedback.
 

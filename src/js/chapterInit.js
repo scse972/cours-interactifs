@@ -30,7 +30,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let student = null;
 
-    if (isTeacherView && teacherStudentId) {
+    if (window.Simulation?.active()) {
+        // Simulation : ni session élève, ni redirection vers la connexion. L'identité
+        // vient de l'URL et l'apprenant de simulation est inscrit à la volée.
+        student = await _initSimulationView();
+        if (!student) return;
+    } else if (isTeacherView && teacherStudentId) {
         student = await _initTeacherView(auth, teacherStudentId);
         if (!student) return; // _initTeacherView gère l'alerte et la redirection
     } else {
@@ -67,6 +72,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================================
 
 /**
+ * Initialise la page en simulation formateur.
+ *
+ * Contrairement à l'aperçu formateur, l'interface reste ENTIÈREMENT vivante : le
+ * formateur doit pouvoir répondre, valider, rendre sa copie et voir le bilan. Rien
+ * n'est verrouillé, et la protection copier-coller s'applique comme pour un
+ * apprenant — c'est le but, voir ce qu'il vit.
+ *
+ * @returns {object|null} La fiche de l'apprenant de simulation
+ */
+async function _initSimulationView() {
+    const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
+    const student = await Simulation.assurerUtilisateur(slug);
+    Simulation.afficherBandeau();
+    return student;
+}
+
+/**
  * Initialise la page en mode formateur.
  * Charge l'apprenant cible et désactive l'interface dès que le DOM est stable.
  * @returns {object|null} L'objet student, ou null si introuvable
@@ -79,8 +101,13 @@ async function _initTeacherView(auth, teacherStudentId) {
 
     if (!student) {
         alert('Apprenant introuvable');
-        if (window.parent?.dashboard) {
-            window.parent.dashboard.closeStudentChapterView();
+        // La fermeture est portée par le module submissions ; le tableau de bord la
+        // délègue. Appeler directement dashboard.closeStudentChapterView() levait un
+        // TypeError et laissait la modale ouverte sur une page vide.
+        try {
+            window.parent?.dashboard?.closeStudentChapterView?.();
+        } catch (e) {
+            console.warn('[TeacherView] Fermeture de la modale impossible :', e.message);
         }
         return null;
     }
@@ -130,8 +157,17 @@ function _lockInterfaceForTeacher() {
     // après requestAnimationFrame. Avec setTimeout on laisse le temps au module
     // de terminer son rendu (injection du HTML + initChapterPage).
     setTimeout(() => {
-        // 1. Désactiver tous les boutons
+        // 1. Désactiver les boutons, SAUF ceux qui servent à se déplacer : désactiver
+        //    la navigation enfermait le formateur dans l'aperçu, sans retour au menu
+        //    ni passage d'une étape à l'autre quand le chapitre est paginé.
+        const estNavigation = (btn) =>
+            btn.closest('.chapter-nav') ||
+            btn.closest('.pagination-barre') ||
+            btn.id === 'back-to-menu' ||
+            btn.id === 'logout-btn';
+
         document.querySelectorAll('button').forEach(btn => {
+            if (estNavigation(btn)) return;
             btn.disabled = true;
             btn.style.opacity = '0.5';
             btn.style.pointerEvents = 'none';

@@ -93,6 +93,30 @@ const SyncManager = {
         localStorage.removeItem(SYNC_QUEUE_KEY);
     },
 
+    /**
+     * Retire de la queue toutes les opérations dont la clé satisfait le prédicat.
+     *
+     * Nécessaire pour purger réellement des données : supprimer une clé ne suffit pas
+     * si une écriture la concernant dort encore dans la queue — elle serait rejouée
+     * au prochain chargement de page et recréerait la donnée effacée.
+     *
+     * @param {(cle: string) => boolean} predicat
+     * @returns {number} nombre d'opérations retirées
+     */
+    dropQueued(predicat) {
+        const queue = this.getQueue();
+        if (queue.length === 0) return 0;
+
+        const restantes = queue.filter(op => !predicat(op.key));
+        const retirees  = queue.length - restantes.length;
+
+        if (retirees > 0) {
+            if (restantes.length > 0) localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(restantes));
+            else this.clearQueue();
+        }
+        return retirees;
+    },
+
     hasPending() {
         return this.getQueue().length > 0;
     },

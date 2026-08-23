@@ -60,7 +60,11 @@ async function loadChapterConfig() {
 // ============================================================================
 
 
-async function initProgression() {
+/**
+ * @param {Object}  [options]
+ * @param {boolean} [options.lectureSeule] Aperçu formateur : ne RIEN écrire.
+ */
+async function initProgression({ lectureSeule = false } = {}) {
     const pm = window.ProgressManager;
     if (!pm || !pm.getOrCreateStudentProgress) return;
 
@@ -69,12 +73,24 @@ async function initProgression() {
 
     if (!ChapterSession.studentId || !ChapterSession.chapterId) return;
 
-    ChapterSession.progress = await pm.getOrCreateStudentProgress(
-        ChapterSession.studentId,
-        'Apprenant',
-        window.currentChapterConfig || {}
-    );
+    if (lectureSeule) {
+        // Consulter la copie d'un apprenant ne doit pas modifier ses données.
+        // getOrCreateStudentProgress écrit quand la progression n'existe pas encore,
+        // et le saveProgress plus bas écrivait de toute façon à chaque ouverture :
+        // l'aperçu formateur touchait donc la progression de l'apprenant observé.
+        // Ici on lit, et s'il n'y a rien on travaille sur un objet en mémoire.
+        ChapterSession.progress =
+            (pm.loadProgress ? await pm.loadProgress(ChapterSession.studentId) : null)
+            || (pm.initProgress ? pm.initProgress(ChapterSession.studentId, 'Apprenant', null) : { chapters: {} });
+    } else {
+        ChapterSession.progress = await pm.getOrCreateStudentProgress(
+            ChapterSession.studentId,
+            'Apprenant',
+            window.currentChapterConfig || {}
+        );
+    }
 
+    // Ces deux appels ne modifient que l'objet en mémoire.
     if (pm.ensureChapterInitialized && window.chaptersIndex) {
         pm.ensureChapterInitialized(ChapterSession.progress, window.chaptersIndex);
     }
@@ -83,7 +99,7 @@ async function initProgression() {
         pm.restoreSavedAnswers(ChapterSession.progress, ChapterSession.chapterId);
     }
 
-    if (pm.saveProgress) {
+    if (!lectureSeule && pm.saveProgress) {
         await pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
     }
 
@@ -173,7 +189,16 @@ async function initChapterPage() {
     const isTeacherView = urlParams.get('teacher_view') === 'true';
 
     await loadChapterConfig();
-    await initProgression();
+
+    // 👁 Simulation : purge AVANT toute lecture ou écriture de progression, pour que
+    //    la répétition démarre vierge — et pour qu'un résidu laissé par une session
+    //    interrompue ne survive pas. C'est ici, et pas à la fermeture, parce qu'un
+    //    onglet fermé brutalement n'exécute aucun nettoyage de sortie.
+    if (window.Simulation?.active()) {
+        await Simulation.purger(window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null));
+    }
+
+    await initProgression({ lectureSeule: isTeacherView });
 
     // Mode formateur : lecture seule (verrouillage déjà géré par _lockInterfaceForTeacher).
     // On charge quand même la progression pour afficher les réponses de l'apprenant.

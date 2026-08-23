@@ -820,7 +820,24 @@ class TeacherDashboard {
             total: Array.isArray(users) ? users.length : -1,
             students: Array.isArray(users) ? users.filter(u => u.type === 'student').length : -1,
         });
-        return users.filter(u => u.type === 'student');
+        const eleves = users.filter(u => u.type === 'student');
+
+        // 👁 L'apprenant de simulation est un apprenant ordinaire, mais il ne compte que
+        // s'il a une progression : purgé, il disparaît de toutes les vues qui passent par
+        // ici — liste, statistiques, rendus. Le voir signifie qu'une simulation est en
+        // cours ou a été abandonnée en route, ce qui est une information, pas du bruit.
+        // La règle est posée à la source pour n'avoir à la maintenir qu'une fois.
+        if (window.Simulation && eleves.some(u => Simulation.estSimulation(u))) {
+            const cle = `${slug}:${Simulation.JETON}:student_${Simulation.JETON}_progress`;
+            const progression = await storage.get(cle);
+            // Le critère est l'activité, pas l'existence de la progression : ouvrir un
+            // chapitre en simulation en crée toujours une, vide.
+            if (!Simulation.aDesDonnees(progression)) {
+                return eleves.filter(u => !Simulation.estSimulation(u));
+            }
+        }
+
+        return eleves;
     }
 
     async getStudentProgress(studentId) {
@@ -871,6 +888,17 @@ class TeacherDashboard {
     showStudentChapterView(studentId, chapterId) {
         if (this.modules.submissions && typeof this.modules.submissions.showStudentChapterView === 'function') {
             this.modules.submissions.showStudentChapterView(studentId, chapterId);
+        }
+    }
+
+    /**
+     * Symétrique de showStudentChapterView. Manquait : la page de chapitre appelle
+     * window.parent.dashboard.closeStudentChapterView() quand l'apprenant prévisualisé
+     * est introuvable, ce qui levait un TypeError et laissait la modale ouverte.
+     */
+    closeStudentChapterView() {
+        if (this.modules.submissions && typeof this.modules.submissions.closeStudentChapterView === 'function') {
+            this.modules.submissions.closeStudentChapterView();
         }
     }
 
