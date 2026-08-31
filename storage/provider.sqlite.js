@@ -11,14 +11,26 @@
 //   async keys()           → tableau de strings (lève une exception si indisponible)
 //
 // Configuration :
-//   config.apiBaseUrl  — ex: 'http://localhost:3000/api'  (défaut)
+//   config.apiBaseUrl  — URL de base de l'API : '/api' (relatif à l'origine de
+//                        la page — défaut quand la page est servie en http/https :
+//                        un élève connecté depuis une autre machine parle alors
+//                        au serveur qui sert la page, pas au « localhost » de sa
+//                        propre machine) ou une URL absolue
+//                        'http://hote:3000/api' (contexte file://)
 //   config.table       — préfixe de route :
 //                          'app_data' → /api/app_data/... (app_data, défaut)
 //                          'parcours_data' → /api/parcours_data/... (parcours_data)
 // ============================================================================
 
 function SQLiteProvider(config) {
-    this._base  = (config.apiBaseUrl || 'http://localhost:3000/api').replace(/\/$/, '');
+    // apiBaseUrl peut être absolu ('http://hote:3000/api') ou relatif ('/api').
+    // Une URL relative est résolue par le navigateur par rapport à l'origine de
+    // la page : c'est le défaut en http(s) (site déployé/auto-hébergé). En
+    // contexte file:// (iframe Electron) le relatif n'a pas d'origine sensée —
+    // mais ce provider n'y est de toute façon pas utilisé (ElectronProvider).
+    var pageServieEnHttp = typeof window !== 'undefined' && window.location
+        && (window.location.protocol === 'http:' || window.location.protocol === 'https:');
+    this._base  = (config.apiBaseUrl || (pageServieEnHttp ? '/api' : 'http://localhost:3000/api')).replace(/\/$/, '');
     this._table = config.table || 'app_data';
 }
 
