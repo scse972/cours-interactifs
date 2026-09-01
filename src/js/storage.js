@@ -267,20 +267,57 @@ async function loadConfig() {
 
     // ── Electron : priorité à parametresCoursServer.json (config Electron) ──
     if (window.IS_ELECTRON) {
-        // window.BASE pointe vers coursInteractifs/ ; on remonte d'un niveau
-        // pour atteindre la racine de l'application Electron.
-        var base = (window.BASE || '').replace(/\/$/, '');
-        var appRoot = base.substring(0, base.lastIndexOf('/'));
-        var electronConfigUrl = appRoot + '/parametresCoursServer.json';
-        // console.log('[storage] Tentative config Electron : ' + electronConfigUrl);
-        try {
-            var resp = await fetch(electronConfigUrl);
-            if (resp.ok) {
-                config = await resp.json();
-                //console.log('[storage] Config chargée depuis parametresCoursServer.json (Electron)');
+        // On demande la config au process main par IPC plutôt que par fetch() :
+        // en mode packagé, coursInteractifs/ vit À L'INTÉRIEUR de app.asar alors
+        // que parametresCoursServer.json vit EN DEHORS — un fetch sur un chemin
+        // file:// calculé depuis window.location (donc toujours relatif à
+        // l'intérieur de l'archive) ne peut jamais atteindre le vrai fichier une
+        // fois packagé, même si ça fonctionne par coïncidence en dev (les deux
+        // chemins coïncident alors). L'IPC, lui, part du process main qui connaît
+        // le vrai chemin (Globals.appliPath) dans les deux cas.
+        //
+        // window.top résout TOUJOURS la fenêtre de plus haut niveau, quelle que
+        // soit la profondeur d'imbrication — contrairement à window.parent, qui
+        // ne remonte que d'un cran. window.top === window quand la page n'est pas
+        // dans une iframe (ex: popup de simulation ouvert par window.open(), cf.
+        // simulation.js + setWindowOpenHandler côté XSpro), donc un seul test
+        // couvre uniformément : cette fenêtre elle-même, une iframe simple (Suivi
+        // des réponses), et une iframe imbriquée à deux niveaux (vue formateur
+        // d'une soumission élève, cf. teacherSubmissions.js) — la fenêtre XSpro
+        // tout en haut a toujours require, peu importe combien d'iframes séparent
+        // cette page d'elle.
+        var ipcConfig = null;
+        if (window.top && typeof window.top.require === 'function') {
+            try { ipcConfig = window.top.require('electron').ipcRenderer; }
+            catch (e) { /* ignoré, fallback fetch ci-dessous */ }
+        }
+        if (ipcConfig) {
+            try {
+                config = await ipcConfig.invoke('serveur-local:getConfig');
+                //console.log('[storage] Config chargée via IPC serveur-local:getConfig (Electron)');
+            } catch (e) {
+                console.info('[storage] IPC serveur-local:getConfig indisponible, fallback fetch:', e.message);
             }
-        } catch (e) {
-            console.info('[storage] parametresCoursServer.json indisponible, fallback config.json');
+        }
+
+        // Fallback : page ouverte en file:// sans nodeIntegration accessible
+        // (tests directs hors XSpro, sans le setWindowOpenHandler) — valable
+        // seulement si window.BASE coïncide avec le dossier réel contenant
+        // parametresCoursServer.json (dev).
+        if (!config) {
+            var base = (window.BASE || '').replace(/\/$/, '');
+            var appRoot = base.substring(0, base.lastIndexOf('/'));
+            var electronConfigUrl = appRoot + '/parametresCoursServer.json';
+            // console.log('[storage] Tentative config Electron : ' + electronConfigUrl);
+            try {
+                var resp = await fetch(electronConfigUrl);
+                if (resp.ok) {
+                    config = await resp.json();
+                    //console.log('[storage] Config chargée depuis parametresCoursServer.json (Electron)');
+                }
+            } catch (e) {
+                console.info('[storage] parametresCoursServer.json indisponible, fallback config.json');
+            }
         }
     }
 
@@ -363,44 +400,54 @@ async function loadProvider() {
             console.log('[storage] _parcoursProvider (SQLite) → table: parcours_data');
 
         } else if (providerName === 'electron') {
-            if (typeof require !== 'undefined') {
-                console.log('[storage] Electron: nodeIntegration active → ElectronProvider natif');
-                if (typeof ElectronProvider === 'undefined') {
-                    console.log('[storage] Injection script: provider.electron.js');
-                    await injectScript(storagePath('provider.electron.js'));
-                }
-                provider = new ElectronProvider(config.electron || {});
-                console.log('[storage] ElectronProvider instancié → dbName:', (config.electron || {}).dbName || '(manquant)');
-
-                window._parcoursProvider = new ElectronProvider(
-                    Object.assign({}, config.electron || {}, { table: 'parcours_data', dbName: 'parcours_data.db' })
-                );
-                console.log('[storage] _parcoursProvider (Electron) → table: parcours_data, dbName: parcours_data.db');
+            // Toujours par IPC vers le main process, jamais de connexion SQLite native
+            // ici. Le main process (ipcCoursInteractifs.js) possède déjà LA connexion
+            // unique (_electronProvider / _parcoursElectronProvider) que publishParcours()
+            // utilise pour écrire cours.json ; en ouvrir une seconde ici (ex: ElectronProvider
+            // natif dans ce contexte) créerait une désynchronisation — sans compter que
+            // ElectronProvider exige config.electron.userDataPath, jamais fourni ici.
+            //
+            // window.top résout TOUJOURS la fenêtre de plus haut niveau, quelle que soit
+            // la profondeur d'imbrication (== window si pas d'iframe). Un seul test couvre
+            // donc uniformément : cette fenêtre elle-même (popup de simulation ouvert par
+            // window.open(), cf. simulation.js + setWindowOpenHandler côté XSpro), une iframe
+            // simple (Suivi des réponses), et une iframe imbriquée à deux niveaux (vue
+            // formateur d'une soumission élève, cf. teacherSubmissions.js) — la fenêtre XSpro
+            // tout en haut a toujours require, peu importe combien d'iframes séparent cette
+            // page d'elle. window.parent.require (un seul niveau) ne suffisait pas pour ce
+            // dernier cas.
+            var ipcNatif = null;
+            if (window.top && typeof window.top.require === 'function') {
+                try { ipcNatif = window.top.require('electron').ipcRenderer; }
+                catch (e) { /* ignoré, délégation au parent ci-dessous */ }
+            }
+            if (ipcNatif) {
+                console.log('[storage] Electron: IPC via window.top.require → main process');
+                provider = {
+                    get:    async function (key) { return ipcNatif.invoke('storage:get', key); },
+                    set:    async function (key, value) { await ipcNatif.invoke('storage:set', key, value); },
+                    remove: async function (key) { await ipcNatif.invoke('storage:remove', key); },
+                    keys:   async function () { return ipcNatif.invoke('storage:keys'); },
+                };
+                window._parcoursProvider = {
+                    get:    async function (key) { return ipcNatif.invoke('storage:parcoursGet', key); },
+                    set:    async function (key, value) { await ipcNatif.invoke('storage:parcoursSet', key, value); },
+                    remove: async function (key) { await ipcNatif.invoke('storage:parcoursRemove', key); },
+                    keys:   async function () { return ipcNatif.invoke('storage:parcoursKeys'); },
+                };
+                console.log('[storage] _parcoursProvider (Electron IPC) → handlers parcoursGet/Set/Remove/Keys');
             } else if (window.parent && window.parent !== window && window.parent._storageProvider) {
-                // Contexte iframe (ex: vue formateur) : pas de require, mais le parent Electron
-                // a déjà son provider initialisé — on le réutilise directement.
+                // Filet de secours si window.top.require était indisponible pour une raison
+                // quelconque : le parent immédiat est lui-même une page coursInteractifs déjà
+                // initialisée (son propre provider a été résolu la même façon) — on le réutilise
+                // directement plutôt que de repartir de zéro.
                 console.log('[storage] Electron: iframe détectée → délégation au provider du parent');
                 provider = window.parent._storageProvider;
                 window._parcoursProvider = window.parent._parcoursProvider || null;
                 window._storageBackend = window.parent._storageBackend || providerName;
                 console.log('[storage] _parcoursProvider délégué au parent:', window._parcoursProvider ? '✅' : '⚠️ absent');
             } else {
-                // Fallback : tenter window.parent.require (peut échouer si parent sans nodeIntegration)
-                console.log('[storage] Electron: pas de nodeIntegration → tentative IPC via window.parent.require');
-                var ipc = window.parent.require('electron').ipcRenderer;
-                provider = {
-                    get:    async function (key) { return ipc.invoke('storage:get', key); },
-                    set:    async function (key, value) { await ipc.invoke('storage:set', key, value); },
-                    remove: async function (key) { await ipc.invoke('storage:remove', key); },
-                    keys:   async function () { return ipc.invoke('storage:keys'); },
-                };
-                window._parcoursProvider = {
-                    get:    async function (key) { return ipc.invoke('storage:parcoursGet', key); },
-                    set:    async function (key, value) { await ipc.invoke('storage:parcoursSet', key, value); },
-                    remove: async function (key) { await ipc.invoke('storage:parcoursRemove', key); },
-                    keys:   async function () { return ipc.invoke('storage:parcoursKeys'); },
-                };
-                console.log('[storage] _parcoursProvider (Electron IPC) → handlers parcoursGet/Set/Remove/Keys');
+                throw new Error('[storage] Electron: aucun accès IPC disponible (ni window.top.require, ni provider du parent)');
             }
 
         } else {
