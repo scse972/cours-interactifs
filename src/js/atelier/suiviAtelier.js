@@ -15,7 +15,7 @@
 
 const SuiviAtelier = {
 
-    MOT_DE_PASSE_DEFAUT: 'formateur2026',
+    MOT_DE_PASSE_DEFAUT: 'XSedu',
     JETON_RECUPERATION: 'YXORP@97240',
 
     slug: null,
@@ -31,7 +31,9 @@ const SuiviAtelier = {
         this._brancher();
 
         if (sessionStorage.getItem('teacher_authenticated') !== 'true') {
-            return this._ecran('acces');
+            this._ecran('acces');
+            this._indicerMotDePasseParDefaut();
+            return;
         }
         await this._chargerIdentite();
 
@@ -101,17 +103,65 @@ const SuiviAtelier = {
         const saisie = document.getElementById('champ-mdp').value.trim();
 
         if (saisie === this.JETON_RECUPERATION) {
+            sessionStorage.removeItem('teacher_login_echecs');
             return this._accesAccorde('Admin');
         }
 
         let motDePasseEnregistre = null;
         try { motDePasseEnregistre = await storage.get('teacher_password'); } catch (_) {}
 
-        if (motDePasseEnregistre && saisie === motDePasseEnregistre) return this._accesAccorde();
-        if (!motDePasseEnregistre && saisie === this.MOT_DE_PASSE_DEFAUT) return this._accesAccorde();
+        if (motDePasseEnregistre && saisie === motDePasseEnregistre) {
+            sessionStorage.removeItem('teacher_login_echecs');
+            return this._accesAccorde();
+        }
+        if (!motDePasseEnregistre && saisie === this.MOT_DE_PASSE_DEFAUT) {
+            sessionStorage.removeItem('teacher_login_echecs');
+            return this._accesAccorde();
+        }
+
+        // Après 3 échecs sur un mot de passe personnalisé oublié, uniquement depuis
+        // XSpro (IS_ELECTRON — seul signal fiable, cf. mode atelier AR.md) : proposer
+        // une réinitialisation en un clic, sans fenêtre supplémentaire.
+        if (window.IS_ELECTRON && motDePasseEnregistre) {
+            const echecs = (parseInt(sessionStorage.getItem('teacher_login_echecs'), 10) || 0) + 1;
+            sessionStorage.setItem('teacher_login_echecs', String(echecs));
+            if (echecs >= 3) return this._proposerReinitialisation();
+        }
 
         this._message('msg-acces', 'Mot de passe incorrect.');
         document.getElementById('champ-mdp').value = '';
+    },
+
+    /**
+     * Mot de passe encore par défaut ? Le dire tout de suite, avant même une tentative
+     * de connexion — uniquement depuis XSpro, jamais sur le site déployé.
+     */
+    async _indicerMotDePasseParDefaut() {
+        if (!window.IS_ELECTRON) return;
+        let motDePasseEnregistre = null;
+        try { motDePasseEnregistre = await storage.get('teacher_password'); } catch (_) { return; }
+        if (motDePasseEnregistre) return;
+        this._message('msg-acces',
+            `🔑 Mot de passe encore par défaut (${this.MOT_DE_PASSE_DEFAUT}) — pensez à le changer depuis le tableau de bord.`,
+            'info');
+    },
+
+    async _proposerReinitialisation() {
+        this._message('msg-acces', 'Mot de passe incorrect.');
+        document.getElementById('champ-mdp').value = '';
+
+        if (document.getElementById('btn-reset-mdp')) return;
+        const bouton = document.createElement('button');
+        bouton.type = 'button';
+        bouton.id = 'btn-reset-mdp';
+        bouton.className = 'sa-bouton';
+        bouton.textContent = `🔄 Réinitialiser au mot de passe par défaut (${this.MOT_DE_PASSE_DEFAUT})`;
+        bouton.addEventListener('click', async () => {
+            await storage.remove('teacher_password');
+            sessionStorage.removeItem('teacher_login_echecs');
+            await this._accesAccorde();
+        });
+        document.getElementById('msg-acces').insertAdjacentElement('afterend', bouton);
     },
 
     async _accesAccorde(nom) {

@@ -176,7 +176,7 @@ https://scse972.github.io/cours-interactifs/parcours/src/math-2de?token=STU001
 ### Pour les formateurs
 
 1. Accédez à `https://scse972.github.io/cours-interactifs/teacher/`
-2. Saisissez le mot de passe formateur (défaut : `formateur2026`)
+2. Saisissez le mot de passe formateur (défaut : `XSedu`)
 3. Sélectionnez un parcours via les onglets
 4. Consultez les statistiques, corrigez les réponses ouvertes, configurez les chapitres
 5. Gérez les utilisateurs de chaque parcours (import/export CSV)

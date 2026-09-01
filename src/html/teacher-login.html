@@ -101,7 +101,7 @@
     </div>
 
     <script>
-        const DEFAULT_PASSWORD = "formateur2026";
+        const DEFAULT_PASSWORD = "XSedu";
         const RECOVERY_TOKEN = "YXORP@97240";
 
         const errorBox = document.getElementById('error-message');
@@ -152,12 +152,28 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const form          = document.getElementById('teacher-login-form');
             const passwordInput = document.getElementById('teacher-password');
 
             if (sessionStorage.getItem('teacher_authenticated') === 'true') {
                 window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+            }
+
+            // ── Aide passive au premier lancement, uniquement depuis XSpro ─────
+            // IS_ELECTRON (protocol file://) est le seul signal fiable de contexte
+            // XSpro dans ce dépôt — IS_IFRAME existe mais ne distingue pas l'iframe
+            // XSpro d'une autre imbrication interne à l'appli (cf. storage.js).
+            // Appel réseau indépendant de celui du formulaire : pas de cache
+            // partagé, fromNetwork évite un faux "encore par défaut" hors-ligne.
+            if (window.IS_ELECTRON) {
+                const { value: storedPassword, fromNetwork } = await getFromNetwork('teacher_password');
+                if (fromNetwork && !storedPassword) {
+                    const hint = document.createElement('div');
+                    hint.className = 'help-text';
+                    hint.textContent = `🔑 Mot de passe encore par défaut (${DEFAULT_PASSWORD}) — pensez à le changer depuis le tableau de bord.`;
+                    form.insertAdjacentElement('afterend', hint);
+                }
             }
 
             passwordInput.addEventListener('input', hideError);
@@ -168,6 +184,7 @@
 
                 // ── 1. RECOVERY_TOKEN : bypass total, meme hors-ligne ──────────
                 if (password === RECOVERY_TOKEN) {
+                    sessionStorage.removeItem('teacher_login_echecs');
                     sessionStorage.setItem('teacher_authenticated', 'true');
                     sessionStorage.setItem('teacher_role', 'admin');
                     // Pas de storage.set ici : on est peut-etre hors-ligne
@@ -196,6 +213,7 @@
 
                 // ── 3. Mot de passe personnalise stocke ───────────────────────
                 if (storedPassword && password === storedPassword) {
+                    sessionStorage.removeItem('teacher_login_echecs');
                     sessionStorage.setItem('teacher_authenticated', 'true');
                     sessionStorage.setItem('teacher_role', 'formateur');
                     const users = await storage.get('users_list') || [];
@@ -217,6 +235,7 @@
                         passwordInput.focus();
                         return;
                     }
+                    sessionStorage.removeItem('teacher_login_echecs');
                     sessionStorage.setItem('teacher_authenticated', 'true');
                     sessionStorage.setItem('teacher_role', 'formateur');
                     const users = await storage.get('users_list') || [];
@@ -230,6 +249,39 @@
                 const hint = storedPassword
                     ? 'Utilisez votre mot de passe personnalisé.'
                     : 'Mot de passe par défaut : ' + DEFAULT_PASSWORD;
+
+                // Après 3 échecs sur un mot de passe personnalisé oublié, uniquement
+                // depuis XSpro : proposer une réinitialisation en un clic, sans fenêtre.
+                if (window.IS_ELECTRON && storedPassword) {
+                    const echecs = (parseInt(sessionStorage.getItem('teacher_login_echecs'), 10) || 0) + 1;
+                    sessionStorage.setItem('teacher_login_echecs', String(echecs));
+                    if (echecs >= 3) {
+                        showError('❌ Mot de passe incorrect.\n' + hint);
+                        if (!document.getElementById('btn-reset-mdp')) {
+                            const bouton = document.createElement('button');
+                            bouton.type = 'button';
+                            bouton.id = 'btn-reset-mdp';
+                            bouton.className = 'btn btn-secondary';
+                            bouton.style.cssText = 'width:100%;margin-top:0.75rem;';
+                            bouton.textContent = `🔄 Réinitialiser au mot de passe par défaut (${DEFAULT_PASSWORD})`;
+                            bouton.addEventListener('click', async () => {
+                                await storage.remove('teacher_password');
+                                sessionStorage.removeItem('teacher_login_echecs');
+                                sessionStorage.setItem('teacher_authenticated', 'true');
+                                sessionStorage.setItem('teacher_role', 'formateur');
+                                const users = await storage.get('users_list') || [];
+                                const teacher = users.find(u => u.type === 'teacher');
+                                await storage.set('teacher_name', teacher ? teacher.name : 'Formateur');
+                                window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+                            });
+                            errorBox.insertAdjacentElement('afterend', bouton);
+                        }
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                        return;
+                    }
+                }
+
                 showError('❌ Mot de passe incorrect.\n' + hint);
                 passwordInput.value = '';
                 passwordInput.focus();
