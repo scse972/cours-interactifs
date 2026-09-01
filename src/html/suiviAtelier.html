@@ -70,7 +70,9 @@
     <div class="sa-titre">🧾 Suivi Atelier</div>
 
     <div class="sa-barre" id="barre-formateur" hidden>
-        <span>👤 <strong id="nom-formateur">—</strong> · 📚 <span id="nom-parcours">—</span></span>
+        <span>👤 <strong id="nom-formateur">—</strong> · 📚 <span id="nom-parcours">—</span>
+            <button type="button" id="btn-changer-parcours" title="Changer de parcours">🔄</button>
+        </span>
         <button type="button" id="btn-deconnexion">Quitter</button>
     </div>
 
@@ -88,9 +90,18 @@
         </form>
     </section>
 
-    <!-- ── Choix du parcours (une fois par session) ─────────────────────────── -->
+    <!-- ── Code direct, ou choix du parcours ────────────────────────────────── -->
     <section class="ecran sa-carte" data-ecran="parcours" hidden>
-        <h2>Quel parcours ?</h2>
+        <h2>Code de l'apprenant</h2>
+        <form id="form-code-direct">
+            <input type="text" id="champ-code-direct" class="sa-champ sa-champ-code"
+                   placeholder="XXX-XXX" maxlength="9" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false">
+            <button type="submit" class="sa-bouton">Ouvrir la consigne</button>
+            <div class="sa-message" id="msg-code-direct"></div>
+        </form>
+
+        <div class="sa-sous-titre">Ou choisir un parcours</div>
         <div id="liste-parcours"></div>
     </section>
 

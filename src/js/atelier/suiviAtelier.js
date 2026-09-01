@@ -48,6 +48,13 @@ const SuiviAtelier = {
             e.preventDefault();
             this._chercherCode();
         });
+        document.getElementById('form-code-direct').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this._chercherCodeDirect();
+        });
+        document.getElementById('btn-changer-parcours').addEventListener('click', () => {
+            window.location.search = '';
+        });
         document.getElementById('lien-repli').addEventListener('click', () => this._repli());
         document.getElementById('form-eval').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -70,6 +77,11 @@ const SuiviAtelier = {
         document.getElementById('barre-formateur').hidden = (nom === 'acces');
         if (nom === 'code') {
             const champ = document.getElementById('champ-code');
+            champ.value = '';
+            champ.focus();
+        }
+        if (nom === 'parcours') {
+            const champ = document.getElementById('champ-code-direct');
             champ.value = '';
             champ.focus();
         }
@@ -121,7 +133,20 @@ const SuiviAtelier = {
         }
         this.formateur = nom || 'Formateur';
         document.getElementById('nom-formateur').textContent = this.formateur;
-        document.getElementById('nom-parcours').textContent = this.slug || '—';
+        document.getElementById('nom-parcours').textContent =
+            this.slug ? await this._libelleParcours(this.slug) : '—';
+    },
+
+    /**
+     * Titre lisible d'un parcours pour l'en-tête — jamais mis en cache ici (contrairement
+     * à une factorisation qui toucherait aussi _attentes()/_ouvrir()) : ceux-là lisent des
+     * points et des énoncés au moment de noter, une republication en cours d'atelier doit
+     * s'y voir tout de suite. Le titre de l'en-tête n'a pas cet enjeu.
+     */
+    async _libelleParcours(slug) {
+        const donnees = await staticJson.get('/parcours/cours.json');
+        const parcours = (donnees && Array.isArray(donnees.parcours)) ? donnees.parcours : [];
+        return parcours.find(p => p.slug === slug)?.label || slug;
     },
 
     // ------------------------------------------------------------------------
@@ -174,6 +199,39 @@ const SuiviAtelier = {
         }
 
         this._message('msg-code', '');
+        await this._ouvrir(ticket.token, ticket.chapitreId, ticket.questionId, code);
+    },
+
+    /**
+     * Retrouve un code sans connaître le parcours au préalable — le code est une adresse
+     * pure (30 bits d'aléa, cf. atelierCodes.js), le lien vers le parcours n'existe que
+     * dans la clé de stockage qui le porte (slug:atelier:code_XXX). Il faut donc balayer
+     * les clés plutôt que lire une clé connue — même principe que simulation.js.purger().
+     */
+    async _chercherCodeDirect() {
+        const code = AtelierCodes.normaliser(document.getElementById('champ-code-direct').value);
+
+        if (code.length !== AtelierCodes.LONGUEUR_CODE_VALIDATION) {
+            return this._message('msg-code-direct', `Un code de validation compte ${AtelierCodes.LONGUEUR_CODE_VALIDATION} caractères.`);
+        }
+
+        this._message('msg-code-direct', 'Recherche…', 'attente');
+
+        const suffixe = `:atelier:code_${code}`;
+        let cles = [];
+        try { cles = await storage.keys() || []; } catch (_) {}
+        const cle = cles.find(k => k.endsWith(suffixe));
+        const ticket = cle ? await storage.get(cle) : null;
+
+        if (!ticket) {
+            return this._message('msg-code-direct', 'Code introuvable.');
+        }
+
+        this.slug = cle.slice(0, cle.length - suffixe.length);
+        window.history.replaceState(null, '', `?parcours=${encodeURIComponent(this.slug)}`);
+        await this._chargerIdentite();
+
+        this._message('msg-code-direct', '');
         await this._ouvrir(ticket.token, ticket.chapitreId, ticket.questionId, code);
     },
 

@@ -140,6 +140,12 @@ dernier mot sur les points.
 `src/html/suiviAtelier.html` — une page mobile, sans navigation : on saisit le code de l'apprenant, on voit la
 consigne et ce qu'il a écrit, on met des points et un mot, on obtient l'AR à dicter.
 
+Le code se tape **avant** de choisir un parcours : c'est une adresse pure (30 bits d'aléa, aucun lien direct
+avec le parcours ou la question — voir §4), donc le retrouver demande de balayer les clés de stockage plutôt
+que d'en lire une seule. Une fois résolu, le parcours n'a pas besoin d'être connu au préalable — le formateur
+l'apprend du code lui-même. Le libellé du parcours (pas son identifiant technique) reste affiché en
+permanence dans l'en-tête, avec un lien pour en changer sans se déconnecter.
+
 **Règle d'architecture :** l'outil parle au stockage et aux données du cours, **jamais au tableau de bord**. C'est
 cette règle, et elle seule, qui permettra plus tard de l'emballer en application téléphone ou tablette — sur un
 téléphone, cette page est déjà l'application, en signet sur l'écran d'accueil.
