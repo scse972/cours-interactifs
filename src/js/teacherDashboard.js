@@ -33,6 +33,9 @@ class TeacherDashboard {
         // Configurer le changement de mot de passe
         this.setupPasswordChange();
 
+        // Lien vers l'outil de validation Atelier AR
+        this.setupSuiviAtelier();
+
         // ── Aucun parcours sélectionné → scanner les orphelins ──
         if (!window.currentParcoursSlug) {
             // ✅ Ne remplacer QUE le contenu #chapters-content, pas #tab-chapters (qui contient danger-zone)
@@ -271,6 +274,19 @@ class TeacherDashboard {
         }
     }
     
+    setupSuiviAtelier() {
+        const btn = document.getElementById('suivi-atelier-btn');
+        if (!btn) return;
+
+        // (window.BASE || '') résout déjà la racine du site quel que soit le contexte —
+        // dev local, GitHub Pages, ou copie intégrée dans l'iframe Electron de XSpro
+        // (config.js calcule BASE à partir de CETTE page, qu'elle soit ou non dans une
+        // iframe). Même schéma que Simulation.url() pour la même raison.
+        btn.addEventListener('click', () => {
+            window.open((window.BASE || '') + '/src/html/suiviAtelier.html', '_blank');
+        });
+    }
+
     setupPasswordChange() {
         const changeBtn = document.getElementById('change-password-btn');
         const modal = document.getElementById('change-password-modal');
