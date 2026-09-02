@@ -310,6 +310,29 @@ dans le champ que le calcul regarde. Rien à filtrer dans les totaux, les bilans
 Les points voyagent aussi en clair dans l'AR, en redondance : c'est ce qui permet l'affichage immédiat quand la
 progression n'a pas encore été synchronisée. En cas de divergence, `arPoints` fait foi.
 
+### Le 4ᵉ état : `corrigee`
+
+L'outil de validation sait aussi **corriger directement**, hors rituel — c'est le second chemin ouvert avec le QRCode
+de question (voir §10 et `qrcode question.md`). Il écrit alors `teacherScore` / `teacherComment` /
+`manualCorrectionStatus`, sans aucun champ `ar*`.
+
+La consigne doit donc pouvoir se présenter autrement que par le rituel, d'où un quatrième état :
+
+```
+brouillon → demandee → validee      le rituel de l'AR
+brouillon → corrigee                noté directement, sans rituel
+```
+
+Il est **déduit** de `manualCorrectionStatus === 'corrected'`, aucun champ n'est ajouté au tableau ci-dessus. Son
+affichage reprend celui de `validee`, sans le code AR à recopier — il n'y en a pas.
+
+**L'ordre compte** : `corrigee` est testé après `arSaisiAt` et **avant** `codeValidation`. Une consigne notée en direct
+alors qu'un code dormait encore doit cesser d'afficher ce code, sinon l'apprenant relancerait un rituel déjà tranché.
+
+Conséquence sur la règle des 0 points (§5) : `consignesNonValidees()` ne filtre plus sur `arSaisiAt` mais sur
+`pointsAffiches()`, qui couvre les deux états aboutis. Une consigne corrigée directement ne doit évidemment pas être
+annoncée « comptera pour 0 point » au moment du rendu.
+
 ---
 
 ## 8. Plan d'implémentation
@@ -372,3 +395,28 @@ Ce sont **deux dispositifs distincts, et il ne faut pas les fusionner** :
 
 Remplacer la dictée du code de validation par un scan reviendrait à démonter le mode Atelier AR : la
 dictée **est** le dispositif pédagogique, pas son coût d'usage.
+
+### Ce qui a été fait, et ce qui ne l'a pas été
+
+Les deux dispositifs partagent désormais **le même outil** — `src/html/suiviAtelier.html`, rebaptisé « ✍️ Correction
+en salle » dans l'interface puisqu'il ne sert plus le seul Atelier — et c'est tout ce qu'ils partagent. L'écran d'évaluation porte deux boutons :
+
+| Bouton | Quand | Ce qu'il écrit |
+|---|---|---|
+| `Valider et générer l'AR` | **seulement** sur une consigne d'un chapitre joué en Atelier | `arPoints`, `arAppreciation`, `arHash` — champs d'attente, inchangé |
+| `Enregistrer la correction` | toujours | `teacherScore`, `teacherComment`, `manualCorrectionStatus` |
+
+Jamais un bouton qui change de sens : sur une question ordinaire, celui de l'AR n'existe pas.
+
+Le rituel n'a **pas** été optimisé au passage :
+- le code de validation se saisit toujours à la main, et la charge du QRCode entre par un champ distinct ;
+- l'AR se dicte toujours, et se saisit toujours chez l'apprenant ;
+- les champs d'attente restent des champs d'attente, la promotion reste le fait de l'apprenant.
+
+Ce qui a changé pour le rituel se limite à un raccourci d'accès : on peut atteindre une consigne en lisant la charge
+d'un QRCode au lieu de saisir le code — **quand l'apprenant a déjà généré le sien**. Ce n'est pas une dispense
+d'échange, c'est une frappe en moins pour le formateur qui est déjà devant lui.
+
+Le repli par liste (§3.3) a lui aussi été élargi — apprenant → chapitre → question, pour atteindre n'importe quelle
+question sans code. Les **consignes en attente d'AR y restent hissées en tête** : c'est le geste le plus fréquent, et
+le repli avait été écrit pour lui.

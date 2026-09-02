@@ -97,7 +97,22 @@ const ChapterBilan = {
                 effectiveWasAnswered = true;
             }
 
-            if (qData) {
+            // Une question manuelle notée reste `isCorrect === null` : sans ce cas, le bilan
+            // annoncerait « en attente, +0 » une consigne dont le bloc affiche « 8 / 10 »
+            // deux écrans plus haut. On ne compte QUE ce que l'apprenant connaît déjà —
+            // le corrigé ouvert, ou une consigne Atelier qui montre sa note. Une correction
+            // faite en direct sur un chapitre non validé reste, elle, en attente.
+            const noteConnue = qData
+                && q.correctionType !== 'auto'
+                && typeof qData.teacherScore === 'number'
+                && (submissionStatus === 'validated'
+                    || window.AtelierQuestion?.pointsAffiches?.(q.id) === true);
+
+            if (noteConnue) {
+                status = 'corrected';
+                pointsEarned = qData.teacherScore;
+                manualCurrentScore += pointsEarned;
+            } else if (qData) {
                 if (effectiveIsCorrect === true) {
                     status = 'correct';
                     pointsEarned = q.points;
@@ -205,6 +220,9 @@ const ChapterBilan = {
                     case 'pending':
                         statusIcon = '⏳'; statusText = 'En attente'; statusClass = 'pending';
                         break;
+                    // 'corrected' est traité plus haut, avec une icône proportionnelle
+                    // aux points obtenus — la branche attendait ce statut sans qu'aucun
+                    // calcul ne le produise jamais.
                 }
             }
 

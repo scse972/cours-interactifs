@@ -80,7 +80,7 @@ const AtelierQuestion = {
         if (!window.currentExamContext?.isAtelierMode) return [];
 
         return this.consignes()
-            .filter(consigne => !this._donnees(consigne.id)?.arSaisiAt)
+            .filter(consigne => !this.pointsAffiches(consigne.id))
             .map(consigne => ({
                 id: consigne.id,
                 points: consigne.points,
@@ -109,15 +109,40 @@ const AtelierQuestion = {
     },
 
     /**
-     * État de la consigne, déduit des seules données de progression.
-     * brouillon → demandee → validee
+     * État de la consigne, déduit des seules données de progression — aucun champ n'est
+     * ajouté en base pour le porter.
+     *
+     *   brouillon → demandee → validee     le rituel de l'AR
+     *   brouillon → corrigee               le formateur a noté directement, sans rituel
+     *
+     * `corrigee` passe après `validee` et avant `demandee` : une consigne notée en direct
+     * alors qu'un code dormait encore doit cesser d'afficher ce code, sinon l'apprenant
+     * relancerait un rituel déjà tranché.
      */
     _etat(questionId) {
         const donnees = this._donnees(questionId);
         if (!donnees) return 'brouillon';
         if (donnees.arSaisiAt) return 'validee';
+        if (donnees.manualCorrectionStatus === 'corrected') return 'corrigee';
         if (donnees.codeValidation) return 'demandee';
         return 'brouillon';
+    },
+
+    /**
+     * La note de cette consigne est-elle déjà sous les yeux de l'apprenant ?
+     * Le bilan s'en sert pour compter les mêmes points que ceux qu'il voit ici, au lieu
+     * de les annoncer « en attente ». Prédicat exposé plutôt que dupliqué : deux
+     * conditions séparées dériveraient.
+     */
+    pointsAffiches(questionId) {
+        // Hors mode Atelier rien n'est décoré, donc rien n'est affiché : une question
+        // manuelle notée en direct dans un chapitre Découverte reste muette jusqu'à la
+        // validation du chapitre, exactement comme avant.
+        if (!window.currentExamContext?.isAtelierMode) return false;
+        if (!this.consignes().some(c => c.id === questionId)) return false;
+
+        const etat = this._etat(questionId);
+        return etat === 'validee' || etat === 'corrigee';
     },
 
     async _enregistrer() {
@@ -230,6 +255,23 @@ const AtelierQuestion = {
                 <div class="atelier-carnet">
                     À recopier sur votre carnet : <strong>${AtelierCodes.formater(donnees.arCode)}</strong>
                 </div>` : ''}
+            `;
+        }
+
+        // Corrigée : le formateur a noté directement, hors rituel. Même présentation que
+        // `validee`, sans le code AR à recopier — il n'y en a pas.
+        if (etat === 'corrigee') {
+            const points = donnees.teacherScore ?? 0;
+            const appreciation = donnees.teacherComment || donnees.arAppreciation || '';
+            const par = donnees.correctedBy && donnees.correctedBy !== 'teacher'
+                ? ` par ${this._echapper(donnees.correctedBy)}` : '';
+            return `
+                <div class="atelier-entete atelier-entete-corrigee">✍️ Consigne corrigée${par}</div>
+                <div class="atelier-resultat">
+                    <span class="atelier-points">${this._nombre(points)} / ${this._nombre(consigne.points)} point${consigne.points > 1 ? 's' : ''}</span>
+                    <span class="atelier-date">le ${this._date(donnees.correctedAt)}</span>
+                </div>
+                ${appreciation ? `<div class="atelier-appreciation">${this._echapper(appreciation)}</div>` : ''}
             `;
         }
 

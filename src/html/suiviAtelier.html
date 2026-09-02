@@ -1,10 +1,12 @@
-<!-- src/html/suiviAtelier.html — outil de validation en main propre (mode Atelier AR) -->
+<!-- src/html/suiviAtelier.html — Correction en salle
+     Le fichier garde son nom : XSpro/main.js teste cette URL pour accorder l'accès au
+     stockage à la popup (setWindowOpenHandler). Le renommer casserait ça en silence. -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi Atelier - Validation en main propre</title>
+    <title>Correction en salle</title>
     <link rel="icon" href="data:,">
     <script>window._ELECTRON_DEPTH = 2;</script>
     <script src="../../src/js/config.js"></script>
@@ -12,6 +14,8 @@
     <script src="../../src/js/parcours.js"></script>
     <script src="../../src/js/storage.js"></script>
     <script src="../../src/js/atelier/atelierCodes.js"></script>
+    <script src="../../src/js/qrCharge.js"></script>
+    <script src="../../src/js/progressManager.js"></script>
     <script src="../../src/js/atelier/suiviAtelier.js"></script>
     <style>
         /* Outil conçu pour un téléphone tenu à une main, en atelier :
@@ -63,12 +67,19 @@
         .sa-ar-points { text-align: center; font-size: 1.1rem; font-weight: 600; color: #1e8449; }
         .sa-points-ligne { display: flex; align-items: center; gap: 0.5rem; }
         .sa-points-ligne .sa-champ { max-width: 7rem; }
+        /* Le bouton secondaire ne doit pas se disputer l'attention avec l'action principale. */
+        .sa-bouton-secondaire { background: white; color: #1b4f72; border: 2px solid #1b4f72; }
+        .sa-bouton-secondaire:active { background: #eaf2f8; }
+        /* Scan : la charge est longue et minuscule, on ne la relit pas de loin — l'inverse
+           exact d'un code dicté, d'où un champ ordinaire et non .sa-champ-code. */
+        .sa-scan-video { width: 100%; border-radius: 8px; background: #000; display: block; }
+        .sa-scan-charge { font-family: 'Courier New', monospace; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 <div class="sa-page">
 
-    <div class="sa-titre">🧾 Suivi Atelier</div>
+    <div class="sa-titre">✍️ Correction en salle</div>
 
     <div class="sa-barre" id="barre-formateur" hidden>
         <span>👤 <strong id="nom-formateur">—</strong> · 📚 <span id="nom-parcours">—</span>
@@ -102,6 +113,8 @@
             <div class="sa-message" id="msg-code-direct"></div>
         </form>
 
+        <button type="button" class="sa-lien lien-scan">📷 Scanner le QRCode d'une question</button>
+
         <div class="sa-sous-titre">Ou choisir un parcours</div>
         <div id="liste-parcours"></div>
     </section>
@@ -116,15 +129,45 @@
             <button type="submit" class="sa-bouton">Ouvrir la consigne</button>
             <div class="sa-message" id="msg-code"></div>
         </form>
+        <button type="button" class="sa-lien lien-scan">📷 Scanner le QRCode d'une question</button>
         <button type="button" class="sa-lien" id="lien-repli">
-            L'apprenant n'a pas de code — passer par la liste
+            Pas de code — choisir dans la liste des apprenants
         </button>
     </section>
 
+    <!-- ── Scan d'un QRCode de question ─────────────────────────────────────── -->
+    <!-- La charge porte son propre parcours : on peut arriver ici sans en avoir choisi
+         un, et sans que l'apprenant ait généré le moindre code de validation. -->
+    <section class="ecran sa-carte" data-ecran="scan" hidden>
+        <h2>Scanner le QRCode d'une question</h2>
+
+        <!-- Monté seulement si la caméra est disponible (jamais dans XSpro) — voir _scan(). -->
+        <div id="scan-camera" hidden>
+            <video id="scan-video" class="sa-scan-video" playsinline muted></video>
+            <button type="button" class="sa-bouton" id="btn-scan-demarrer">Démarrer la caméra</button>
+            <div class="sa-message" id="msg-scan-camera"></div>
+            <div class="sa-sous-titre">Ou coller la charge</div>
+        </div>
+
+        <form id="form-charge">
+            <label class="sa-label" for="champ-charge">Contenu du QRCode</label>
+            <textarea id="champ-charge" class="sa-champ sa-scan-charge" rows="3"
+                      placeholder="XSQ1|…" autocomplete="off" spellcheck="false"></textarea>
+            <button type="submit" class="sa-bouton">Ouvrir la question</button>
+            <div class="sa-message" id="msg-scan"></div>
+        </form>
+        <button type="button" class="sa-lien" data-retour-code>← Revenir au code</button>
+    </section>
+
     <!-- ── Repli : liste des apprenants ─────────────────────────────────────── -->
+    <!-- ── Navigation par liste ─────────────────────────────────────────────── -->
+    <!-- Trois niveaux : apprenant → chapitre → question. C'est le chemin sans QRCode
+         ni code, celui qu'on prend devant un écran en veille ou depuis son bureau. -->
     <section class="ecran sa-carte" data-ecran="repli" hidden>
-        <h2>Choisir un apprenant</h2>
+        <h2 id="repli-titre">Choisir un apprenant</h2>
+        <div class="sa-sous-titre" id="repli-fil" hidden></div>
         <div id="liste-apprenants"></div>
+        <button type="button" class="sa-lien" id="repli-retour" hidden>← Revenir</button>
         <button type="button" class="sa-lien" data-retour-code>← Revenir au code</button>
     </section>
 
@@ -134,14 +177,18 @@
             <h2 id="eval-apprenant">—</h2>
             <div class="sa-sous-titre" id="eval-chapitre"></div>
             <div id="eval-consigne"></div>
-            <div class="sa-sous-titre">Critères de réussite</div>
-            <div class="sa-bloc-lecture" id="eval-criteres" hidden></div>
+            <div id="eval-bloc-criteres" hidden>
+                <div class="sa-sous-titre">Critères de réussite</div>
+                <div class="sa-bloc-lecture" id="eval-criteres"></div>
+            </div>
 
-            <div class="sa-sous-titre">Compte rendu de l'apprenant</div>
+            <div class="sa-sous-titre" id="eval-titre-reponse">Réponse de l'apprenant</div>
             <div class="sa-bloc-lecture" id="eval-compte-rendu"></div>
 
-            <div class="sa-sous-titre">Il s'estime</div>
-            <div id="eval-positionnement" style="font-size:0.95rem;"></div>
+            <div id="eval-bloc-positionnement">
+                <div class="sa-sous-titre">Il s'estime</div>
+                <div id="eval-positionnement" style="font-size:0.95rem;"></div>
+            </div>
 
             <div class="sa-avis" id="eval-deja" hidden></div>
         </div>
@@ -158,10 +205,31 @@
                 <textarea id="champ-appreciation" class="sa-champ" rows="3"
                           placeholder="Ce qui est acquis, ce qui reste à travailler…"></textarea>
 
-                <button type="submit" class="sa-bouton">Valider et générer l'AR</button>
+                <!-- Deux actions, jamais un bouton qui change de sens : l'AR n'a de raison
+                     d'être que sur une consigne d'un chapitre en mode Atelier. -->
+                <button type="submit" class="sa-bouton" id="btn-ar" hidden>Valider et générer l'AR</button>
+                <button type="button" class="sa-bouton sa-bouton-secondaire" id="btn-direct">
+                    Enregistrer la correction
+                </button>
                 <div class="sa-message" id="msg-eval"></div>
             </form>
             <button type="button" class="sa-lien" data-retour-code>← Annuler</button>
+        </div>
+
+        <!-- Commentaire de l'activité, au niveau chapitre : il doit pouvoir s'écrire sans
+             toucher à la note d'une question, d'où son propre bouton. -->
+        <div class="sa-carte">
+            <button type="button" class="sa-lien" id="lien-commentaire-chapitre">
+                💬 Commentaire général sur le chapitre
+            </button>
+            <div id="bloc-commentaire-chapitre" hidden>
+                <textarea id="champ-commentaire-chapitre" class="sa-champ" rows="3"
+                          placeholder="Appréciation d'ensemble sur la prestation…"></textarea>
+                <button type="button" class="sa-bouton sa-bouton-secondaire" id="btn-commentaire-chapitre">
+                    Enregistrer le commentaire
+                </button>
+                <div class="sa-message" id="msg-commentaire-chapitre"></div>
+            </div>
         </div>
 
         <div id="eval-autres" hidden></div>

@@ -546,6 +546,12 @@
     color: #1e8449;
 }
 
+/* Corrigée hors rituel : notée, mais sans l'échange en main propre. Un bleu plutôt que
+   le vert de la validation — le résultat est acquis, la scène ne s'est pas jouée. */
+.atelier-entete-corrigee {
+    color: #1b4f72;
+}
+
 .atelier-consigne-texte {
     font-size: 0.9rem;
     color: #555;
@@ -950,3 +956,34 @@
     font-size: 0.9rem;
     color: #64748b;
 }
+
+/* La charge en clair : elle sert là où la caméra n'existe pas. Petite et discrète —
+   on ne la lit pas, on la copie — mais elle doit tenir sans déborder ni élargir la boîte. */
+.qr-modale-charge {
+    display: block;
+    margin-top: 0.9rem;
+    padding: 0.5rem 0.6rem;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: #475569;
+    text-align: left;
+    word-break: break-all;
+    user-select: all;
+}
+
+.qr-modale-copier {
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.qr-modale-copier:hover { background: #f1f5f9; }

@@ -10,8 +10,26 @@
 //    permettra de l'emballer plus tard en application mobile. Ne pas y importer
 //    correctionModal ni teacherDashboard.
 //
+//    progressManager.js, lui, est admis : c'est le MODÈLE de progression, même couche
+//    que storage et atelierCodes, sans effet de bord au chargement. Réimplémenter son
+//    recalcul de chapitre ici produirait deux vérités qui dériveraient.
+//
+// DEUX CHEMINS DE CORRECTION, à ne pas confondre :
+//   • le rituel AR (_emettre) — champs d'attente arPoints/arAppreciation, promus en
+//     points par la saisie de l'AR chez l'apprenant. La lenteur y est le dispositif.
+//   • la correction directe (_enregistrerDirect) — teacherScore/teacherComment écrits
+//     tout de suite, exactement comme depuis le tableau de bord après le rendu.
+//     Silencieuse pour l'apprenant : corriger ne peut pas rendre un chapitre "validated".
+//
+// On y entre par le code dicté, par la liste, ou en lisant la charge d'un QRCode de
+// question (_ouvrirCharge) — voir "qrcode question.md".
+//
 // Voir "mode atelier AR.md" §3.3.
 // ============================================================================
+
+// Même valeur que AtelierQuestion.REGLE_HORS_CONSIGNE. Elle est redéclarée plutôt
+// qu'importée : cette page ne charge pas la vue apprenant, et n'a pas à la charger.
+const REGLE_HORS_CONSIGNE = 'texte(10)';
 
 const SuiviAtelier = {
 
@@ -20,7 +38,9 @@ const SuiviAtelier = {
 
     slug: null,
     formateur: 'Formateur',
-    contexte: null,   // consigne en cours d'évaluation
+    contexte: null,   // question en cours d'évaluation
+    flux: null,       // flux caméra en cours, à couper en quittant l'écran de scan
+    _decodeur: null,  // chargement du décodeur de QRCode, à la demande
 
     // ------------------------------------------------------------------------
     // AMORÇAGE
@@ -62,6 +82,22 @@ const SuiviAtelier = {
             e.preventDefault();
             this._emettre();
         });
+        document.getElementById('btn-direct').addEventListener('click', () => this._enregistrerDirect());
+        document.querySelectorAll('.lien-scan').forEach(lien => {
+            lien.addEventListener('click', () => this._scan());
+        });
+        document.getElementById('form-charge').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this._ouvrirCharge(document.getElementById('champ-charge').value);
+        });
+        document.getElementById('btn-scan-demarrer')
+            .addEventListener('click', () => this._demarrerCamera());
+        document.getElementById('lien-commentaire-chapitre').addEventListener('click', () => {
+            const bloc = document.getElementById('bloc-commentaire-chapitre');
+            bloc.hidden = !bloc.hidden;
+        });
+        document.getElementById('btn-commentaire-chapitre')
+            .addEventListener('click', () => this._enregistrerCommentaireChapitre());
         document.querySelectorAll('[data-retour-code]').forEach(bouton => {
             bouton.addEventListener('click', () => this._ecran('code'));
         });
@@ -87,6 +123,9 @@ const SuiviAtelier = {
             champ.value = '';
             champ.focus();
         }
+        // La caméra ne survit pas au départ de son écran : une lampe témoin qui reste
+        // allumée dans une salle de classe est un problème en soi.
+        if (nom !== 'scan') this._couperCamera();
     },
 
     _message(id, texte, type = 'erreur') {
@@ -285,14 +324,174 @@ const SuiviAtelier = {
         await this._ouvrir(ticket.token, ticket.chapitreId, ticket.questionId, code);
     },
 
+    // ------------------------------------------------------------------------
+    // SCAN D'UN QRCODE DE QUESTION
+    // ------------------------------------------------------------------------
+
     /**
-     * Repli quand le code ne résout pas — typiquement une coupure réseau : la clé du
-     * ticket a été écrite quelques secondes plus tôt sur l'appareil de l'apprenant.
-     * On perd le raccourci, pas l'échange.
+     * Écran de scan. La caméra n'est proposée que là où elle peut fonctionner : dans
+     * XSpro la page tourne en file: sous Electron, et aucune permission média n'y est
+     * accordée — on s'en tient au collage, qui marche partout.
      */
+    _scan() {
+        const camera = document.getElementById('scan-camera');
+        camera.hidden = !this._cameraDisponible();
+        this._message('msg-scan', '');
+        this._ecran('scan');
+        if (camera.hidden) document.getElementById('champ-charge').focus();
+    },
+
+    _cameraDisponible() {
+        return !window.IS_ELECTRON && !!navigator.mediaDevices?.getUserMedia;
+    },
+
+    /**
+     * Le décodeur pèse 250 Ko, pour un geste que la plupart des ouvertures de l'outil ne
+     * feront pas : on ne le charge qu'au moment où la caméra démarre.
+     */
+    _chargerDecodeur() {
+        if (typeof window.jsQR === 'function') return Promise.resolve(true);
+        if (this._decodeur) return this._decodeur;
+
+        this._decodeur = new Promise(resolve => {
+            const balise = document.createElement('script');
+            balise.src = `${window.BASE || ''}/src/js/vendor/jsqr.js`;
+            balise.onload = () => resolve(typeof window.jsQR === 'function');
+            balise.onerror = () => resolve(false);
+            document.head.appendChild(balise);
+        });
+        return this._decodeur;
+    },
+
+    /**
+     * Ouvre la question désignée par la charge d'un QRCode.
+     *
+     * Contrairement au code de validation, la charge ne suppose aucun ticket en base :
+     * elle désigne n'importe quelle question de n'importe quel apprenant, qu'il ait ou
+     * non demandé une validation. Elle porte son propre parcours, donc on peut arriver
+     * ici sans en avoir choisi un.
+     */
+    async _ouvrirCharge(chaine) {
+        const charge = window.QRCharge?.lire(chaine);
+        if (!charge) {
+            return this._message('msg-scan', "Ce n'est pas un QRCode de question.");
+        }
+
+        if (charge.slug !== this.slug) {
+            this.slug = charge.slug;
+            window.history.replaceState(null, '', `?parcours=${encodeURIComponent(this.slug)}`);
+            await this._chargerIdentite();
+        }
+
+        this._message('msg-scan', 'Recherche…', 'attente');
+        const apprenants = await storage.get(`${this.slug}:teacher:users_list`) || [];
+        const token = await QRCharge.resoudre(this.slug, charge.empreinte, apprenants);
+        if (!token) {
+            return this._message('msg-scan', 'Apprenant introuvable dans ce parcours.');
+        }
+
+        this._couperCamera();
+        this._message('msg-scan', '');
+        document.getElementById('champ-charge').value = '';
+        await this._ouvrir(token, charge.chapitreId, charge.questionId, null);
+    },
+
+    /** Boucle de lecture caméra : on s'arrête à la première charge valide. */
+    async _demarrerCamera() {
+        this._message('msg-scan-camera', 'Préparation…', 'attente');
+        if (!await this._chargerDecodeur()) {
+            return this._message('msg-scan-camera', 'Lecteur de QRCode indisponible.');
+        }
+
+        const video = document.getElementById('scan-video');
+        const toile = document.createElement('canvas');
+        const contexte = toile.getContext('2d', { willReadFrequently: true });
+
+        try {
+            this.flux = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+        } catch (e) {
+            return this._message('msg-scan-camera', "Caméra indisponible : " + e.message);
+        }
+
+        video.srcObject = this.flux;
+        await video.play();
+        this._message('msg-scan-camera', 'Visez le QRCode de la question.', 'info');
+
+        const lire = () => {
+            if (!this.flux) return;                       // écran quitté
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                toile.width = video.videoWidth;
+                toile.height = video.videoHeight;
+                contexte.drawImage(video, 0, 0, toile.width, toile.height);
+                const image = contexte.getImageData(0, 0, toile.width, toile.height);
+                const lu = jsQR(image.data, image.width, image.height);
+                if (lu?.data && window.QRCharge?.lire(lu.data)) {
+                    return this._ouvrirCharge(lu.data);
+                }
+            }
+            requestAnimationFrame(lire);
+        };
+        requestAnimationFrame(lire);
+    },
+
+    _couperCamera() {
+        if (!this.flux) return;
+        this.flux.getTracks().forEach(piste => piste.stop());
+        this.flux = null;
+        const video = document.getElementById('scan-video');
+        if (video) video.srcObject = null;
+    },
+
+    // ------------------------------------------------------------------------
+    // NAVIGATION PAR LISTE — apprenant / chapitre / question
+    // ------------------------------------------------------------------------
+    // Le chemin sans QRCode ni code : devant un écran en veille, ou depuis son bureau.
+    // C'est aussi le repli d'origine, quand le code ne résout pas — typiquement une
+    // coupure réseau, la clé du ticket ayant été écrite quelques secondes plus tôt sur
+    // l'appareil de l'apprenant. On perd le raccourci, pas l'échange.
+    //
+    // Les trois niveaux réutilisent le même conteneur : la page reste « un seul écran à
+    // la fois », un niveau remplaçant le précédent plutôt que de s'empiler.
+
+    _niveau(titre, fil, retour) {
+        document.getElementById('repli-titre').textContent = titre;
+        const filAriane = document.getElementById('repli-fil');
+        filAriane.textContent = fil || '';
+        filAriane.hidden = !fil;
+        const lien = document.getElementById('repli-retour');
+        lien.hidden = !retour;
+        lien.onclick = retour || null;
+        return document.getElementById('liste-apprenants');
+    },
+
+    _choix(conteneur, libelle, detail, action, discret) {
+        const bouton = document.createElement('button');
+        bouton.type = 'button';
+        bouton.className = discret ? 'sa-choix sa-choix-discret' : 'sa-choix';
+        bouton.textContent = libelle;
+        if (detail) {
+            const petit = document.createElement('small');
+            petit.textContent = detail;
+            bouton.appendChild(petit);
+        }
+        bouton.addEventListener('click', action);
+        conteneur.appendChild(bouton);
+        return bouton;
+    },
+
+    _intertitre(conteneur, texte) {
+        const titre = document.createElement('div');
+        titre.className = 'sa-sous-titre';
+        titre.textContent = texte;
+        conteneur.appendChild(titre);
+    },
+
+    /** Niveau 1 — les apprenants du parcours. */
     async _repli() {
         this._ecran('repli');
-        const liste = document.getElementById('liste-apprenants');
+        const liste = this._niveau('Choisir un apprenant', '', null);
         liste.innerHTML = '<p>Chargement…</p>';
 
         const apprenants = (await storage.get(`${this.slug}:teacher:users_list`) || [])
@@ -305,37 +504,110 @@ const SuiviAtelier = {
 
         liste.innerHTML = '';
         apprenants.forEach(apprenant => {
-            const bouton = document.createElement('button');
-            bouton.type = 'button';
-            bouton.className = 'sa-choix';
-            bouton.innerHTML = `${apprenant.name || apprenant.id} <small>${apprenant.class || ''}</small>`;
-            bouton.addEventListener('click', () => this._consignesEnAttente(apprenant.id));
-            liste.appendChild(bouton);
+            this._choix(liste, apprenant.name || apprenant.id, apprenant.class || '',
+                        () => this._repliChapitres(apprenant));
         });
     },
 
-    /** Liste les consignes qu'un apprenant a déclarées prêtes et qui attendent un AR. */
-    async _consignesEnAttente(token) {
-        const liste = document.getElementById('liste-apprenants');
+    /**
+     * Niveau 2 — les chapitres, lus du parcours et non de la progression : un chapitre
+     * jamais ouvert par l'apprenant doit rester atteignable. Les consignes en attente
+     * d'AR sont hissées en tête, c'est le geste le plus fréquent.
+     */
+    async _repliChapitres(apprenant) {
+        const nom = apprenant.name || apprenant.id;
+        const liste = this._niveau('Choisir un chapitre', nom, () => this._repli());
         liste.innerHTML = '<p>Chargement…</p>';
 
-        const attentes = await this._attentes(token);
+        const attentes = await this._attentes(apprenant.id);
+        const chapitres = await this._chapitres();
+        const progression = await storage.get(this._cleProgression(apprenant.id));
 
-        if (!attentes.length) {
-            liste.innerHTML = `<p class="sa-message sa-message-attente">Aucune consigne en attente pour cet apprenant.</p>`;
+        liste.innerHTML = '';
+
+        if (attentes.length) {
+            this._intertitre(liste, 'Consignes en attente de validation');
+            attentes.forEach(attente => {
+                this._choix(liste, `🧾 ${attente.question.title}`, attente.titreChapitre,
+                    () => this._ouvrir(apprenant.id, attente.chapitreId, attente.question.id,
+                                       attente.donnees.codeValidation));
+            });
+            this._intertitre(liste, 'Ou parcourir les chapitres');
+        }
+
+        if (!chapitres.length) {
+            this._intertitre(liste, 'Aucun chapitre dans ce parcours.');
+            return;
+        }
+
+        chapitres.forEach(chapitre => {
+            const suivi = progression?.chapters?.[chapitre.id];
+            const nb = (chapitre.questions || []).length;
+            const detail = `${nb} question${nb > 1 ? 's' : ''} · `
+                + (suivi ? this._libelleRendu(suivi.submissionStatus) : 'non commencé');
+            this._choix(liste, chapitre.title || chapitre.id, detail,
+                        () => this._repliQuestions(apprenant, chapitre), true);
+        });
+    },
+
+    /** Niveau 3 — les questions du chapitre, avec l'état de chacune. */
+    async _repliQuestions(apprenant, chapitre) {
+        const nom = apprenant.name || apprenant.id;
+        const liste = this._niveau('Choisir une question',
+                                   `${nom} · ${chapitre.title || chapitre.id}`,
+                                   () => this._repliChapitres(apprenant));
+        liste.innerHTML = '<p>Chargement…</p>';
+
+        const progression = await storage.get(this._cleProgression(apprenant.id));
+        const questions = chapitre.questions || [];
+
+        if (!questions.length) {
+            liste.innerHTML = '<p class="sa-message sa-message-attente">Ce chapitre ne contient aucune question.</p>';
             return;
         }
 
         liste.innerHTML = '';
-        attentes.forEach(attente => {
-            const bouton = document.createElement('button');
-            bouton.type = 'button';
-            bouton.className = 'sa-choix';
-            bouton.innerHTML = `${attente.titreChapitre} <small>${attente.question.title}</small>`;
-            bouton.addEventListener('click', () =>
-                this._ouvrir(token, attente.chapitreId, attente.question.id, attente.donnees.codeValidation));
-            liste.appendChild(bouton);
+        questions.forEach(question => {
+            const donnees = progression?.chapters?.[chapitre.id]?.questions?.[question.id];
+            this._choix(liste, `${this._pastille(donnees)} ${question.title || question.id}`,
+                        this._libelleEtatQuestion(question, donnees),
+                        () => this._ouvrir(apprenant.id, chapitre.id, question.id, null));
         });
+    },
+
+    async _chapitres() {
+        const donneesCours = await staticJson.get('/parcours/cours.json');
+        const parcours = donneesCours?.parcours?.find(p => p.slug === this.slug);
+        return parcours?.chapitres || [];
+    },
+
+    _pastille(donnees) {
+        if (!donnees) return '⚪';
+        if (donnees.manualCorrectionStatus === 'corrected' || donnees.arSaisiAt) return '✍️';
+        if (donnees.codeValidation) return '🧾';
+        if (donnees.answered) return '🔵';
+        return '⚪';
+    },
+
+    _libelleEtatQuestion(question, donnees) {
+        const bareme = `${this._nombre(question.points)} pt${question.points > 1 ? 's' : ''}`;
+        if (!donnees || !donnees.answered) return `${bareme} · non répondue`;
+        if (donnees.manualCorrectionStatus === 'corrected') {
+            return `${bareme} · corrigée ${this._nombre(donnees.teacherScore ?? 0)}/${this._nombre(question.points)}`;
+        }
+        if (donnees.codeValidation) return `${bareme} · validation demandée`;
+        if (question.correctionType === 'auto') return `${bareme} · auto-corrigée`;
+        return `${bareme} · répondue, à corriger`;
+    },
+
+    _libelleRendu(statut) {
+        return ({
+            validated: 'corrigé',
+            submitted: 'rendu',
+            late_submitted: 'rendu en retard',
+            returned_for_revision: 'à retoucher',
+            not_submitted: 'en cours'
+        })[statut] || 'en cours';
     },
 
     async _attentes(token) {
@@ -378,42 +650,65 @@ const SuiviAtelier = {
         const parcours = donneesCours?.parcours?.find(p => p.slug === this.slug);
         const chapitre = parcours?.chapitres?.find(c => String(c.id) === String(chapitreId));
         const question = chapitre?.questions?.find(q => q.id === questionId);
-        if (!question) return this._message('msg-code', 'Consigne introuvable dans ce parcours.');
+        if (!question) return this._message('msg-code', 'Question introuvable dans ce parcours.');
 
         const apprenants = await storage.get(`${this.slug}:teacher:users_list`) || [];
         const apprenant = apprenants.find(u => u.id === token);
         const donnees = progression.chapters?.[chapitreId]?.questions?.[questionId] || {};
 
-        this.contexte = { token, chapitreId, questionId, question, code, donnees };
+        // Le rituel de l'AR n'a de sens que sur une consigne d'un chapitre joué en Atelier.
+        // Partout ailleurs on corrige directement, comme depuis le tableau de bord.
+        const estConsigne = question.type === 'ouverte'
+                         && question.correctionType === 'manuel'
+                         && question.rule !== REGLE_HORS_CONSIGNE;
+        const modeAtelier = await this._modeAtelier(progression, chapitreId);
+
+        this.contexte = { token, chapitreId, questionId, question, code, donnees,
+                          estConsigne, modeAtelier };
 
         document.getElementById('eval-apprenant').textContent =
             `${apprenant?.name || token}${apprenant?.class ? ' · ' + apprenant.class : ''}`;
         document.getElementById('eval-chapitre').textContent = chapitre?.title || '';
         document.getElementById('eval-consigne').innerHTML = question.questionTextHtml || question.questionText || '';
 
-        const criteres = document.getElementById('eval-criteres');
-        criteres.innerHTML = question.hintHtml || '';
-        criteres.hidden = !question.hintHtml;
+        // Le titre suivait la visibilité du bloc : « Critères de réussite » s'affichait
+        // au-dessus du vide dès que la question n'en portait pas.
+        document.getElementById('eval-criteres').innerHTML = question.hintHtml || '';
+        document.getElementById('eval-bloc-criteres').hidden = !question.hintHtml;
 
-        document.getElementById('eval-compte-rendu').textContent =
-            donnees.answer || '— aucun compte rendu enregistré —';
+        // « Compte rendu » est le vocabulaire du rituel Atelier ; ailleurs c'est une réponse.
+        const rituel = estConsigne && modeAtelier;
+        document.getElementById('eval-titre-reponse').textContent =
+            rituel ? "Compte rendu de l'apprenant" : "Réponse de l'apprenant";
+        document.getElementById('eval-compte-rendu').textContent = donnees.answer
+            || (rituel ? '— aucun compte rendu enregistré —' : '— aucune réponse enregistrée —');
+        // L'auto-positionnement est un geste du rituel Atelier : hors de ce rituel il
+        // n'existe pas, et afficher « Il s'estime : — » ne ferait qu'encombrer.
+        document.getElementById('eval-bloc-positionnement').hidden = !(estConsigne && modeAtelier);
         document.getElementById('eval-positionnement').textContent =
             this._libelleNiveau(donnees.autoPositionnement);
 
         const points = document.getElementById('champ-points');
         points.max = question.points;
-        points.value = donnees.arPoints ?? question.points;
+        points.value = donnees.teacherScore ?? donnees.arPoints ?? question.points;
         document.getElementById('eval-bareme').textContent = `sur ${this._nombre(question.points)}`;
-        document.getElementById('champ-appreciation').value = donnees.arAppreciation || '';
+        document.getElementById('champ-appreciation').value =
+            donnees.teacherComment || donnees.arAppreciation || '';
+
+        document.getElementById('btn-ar').hidden = !(estConsigne && modeAtelier);
 
         // Réévaluation : le précédent AR cessera de fonctionner dès que le nouveau sera émis.
         const avis = document.getElementById('eval-deja');
-        avis.hidden = !donnees.arHash;
+        avis.hidden = !donnees.arHash && donnees.manualCorrectionStatus !== 'corrected';
         if (donnees.arHash) {
             avis.textContent = donnees.arSaisiAt
                 ? 'Cette consigne a déjà été validée par l\'apprenant. Émettre un nouvel AR remplacera les points.'
                 : 'Un AR a déjà été émis et n\'a pas encore été saisi. En émettre un nouveau annulera le précédent.';
+        } else if (donnees.manualCorrectionStatus === 'corrected') {
+            avis.textContent = this._avisDejaCorrigee(donnees);
         }
+
+        this._chargerCommentaireChapitre(progression, chapitreId);
 
         this._message('msg-eval', '');
         this._ecran('eval');
@@ -453,9 +748,116 @@ const SuiviAtelier = {
      * qui les promeut dans le calcul. Sans ce geste, les points ne comptent nulle
      * part — c'est ce qui rend l'échange obligatoire sans masquer quoi que ce soit.
      */
-    async _emettre() {
+    /**
+     * Mode effectif du chapitre pour cet apprenant. Même résolution que
+     * core/getExamContext.js : le mode figé au premier démarrage prime sur la
+     * configuration courante, sinon le formateur qui change le mode en cours de route
+     * changerait le contrat sous les pieds de ceux qui ont commencé.
+     */
+    async _modeAtelier(progression, chapitreId) {
+        const fige = progression?.chapters?.[chapitreId]?.frozenChapterMode;
+        if (fige) return fige === 'atelier';
+        const config = await storage.get(`${this.slug}:config:chapter_config`);
+        return config?.[chapitreId]?.chapterMode === 'atelier';
+    },
+
+    _avisDejaCorrigee(donnees) {
+        const quand = donnees.correctedAt ? ` le ${this._date(donnees.correctedAt)}` : '';
+        const qui = donnees.correctedBy ? ` par ${donnees.correctedBy}` : '';
+        return `Question déjà corrigée${quand}${qui}.`
+             + ` Enregistrer remplacera la note et l'appréciation.`;
+    },
+
+    // ------------------------------------------------------------------------
+    // CORRECTION DIRECTE — le second chemin, sans rituel
+    // ------------------------------------------------------------------------
+
+    /**
+     * Écrit la note et l'appréciation comme le ferait le tableau de bord après le rendu
+     * d'une copie. Aucun accusé de réception : ce qui est écrit compte immédiatement
+     * dans les totaux.
+     *
+     * C'est silencieux pour l'apprenant, et par construction : recomputeChapterStats
+     * dérive submissionStatus de approvedAt / revisionRequestedAt / submittedAt et de
+     * rien d'autre, donc corriger ne peut pas faire basculer un chapitre en « validated »,
+     * seul état qui lui ouvre le corrigé.
+     */
+    async _enregistrerDirect() {
         if (!this.contexte) return;
         const { token, chapitreId, questionId, question } = this.contexte;
+
+        const points = Number(document.getElementById('champ-points').value);
+        if (Number.isNaN(points) || points < 0 || points > question.points) {
+            return this._message('msg-eval', `Les points doivent être compris entre 0 et ${this._nombre(question.points)}.`);
+        }
+
+        this._message('msg-eval', 'Enregistrement…', 'attente');
+
+        // Même précaution que _emettre : relecture juste avant écriture.
+        const cle = this._cleProgression(token);
+        const progression = await storage.get(cle);
+        const donnees = progression?.chapters?.[chapitreId]?.questions?.[questionId];
+        if (!donnees) return this._message('msg-eval', 'Progression introuvable — réessayez.');
+
+        const appreciation = document.getElementById('champ-appreciation').value.trim();
+
+        // teacherCorrectQuestion pose teacherScore, teacherComment, manualCorrectionStatus
+        // et correctedAt, puis recalcule le chapitre. Sans ce recalcul, pendingCorrectionCount
+        // et correctionStatus resteraient faux et le bouton « Valider » du tableau de bord
+        // resterait bloqué.
+        ProgressManager.teacherCorrectQuestion(
+            progression, chapitreId, questionId, points, appreciation, '', 'corrected');
+        donnees.correctedBy = this.formateur;   // la fonction y met "teacher" en dur
+        ProgressManager.recomputeGlobalStats(progression);
+
+        await storage.set(cle, progression);
+
+        this.contexte.donnees = donnees;
+        document.getElementById('eval-deja').hidden = false;
+        document.getElementById('eval-deja').textContent = this._avisDejaCorrigee(donnees);
+        this._message('msg-eval',
+            `Correction enregistrée : ${this._nombre(points)} / ${this._nombre(question.points)}.`, 'info');
+    },
+
+    // ------------------------------------------------------------------------
+    // COMMENTAIRE GÉNÉRAL DU CHAPITRE
+    // ------------------------------------------------------------------------
+
+    _chargerCommentaireChapitre(progression, chapitreId) {
+        const champ = document.getElementById('champ-commentaire-chapitre');
+        const existant = progression?.chapters?.[chapitreId]?.globalComment || '';
+        champ.value = existant;
+        // Déplié d'office s'il y a déjà quelque chose à lire : on ne cache pas un mot déjà écrit.
+        document.getElementById('bloc-commentaire-chapitre').hidden = !existant;
+        this._message('msg-commentaire-chapitre', '');
+    },
+
+    /** Le champ que le tableau de bord appelle « commentaire GÉNÉRAL sur la prestation ». */
+    async _enregistrerCommentaireChapitre() {
+        if (!this.contexte) return;
+        const { token, chapitreId } = this.contexte;
+
+        this._message('msg-commentaire-chapitre', 'Enregistrement…', 'attente');
+
+        const cle = this._cleProgression(token);
+        const progression = await storage.get(cle);
+        const chapitre = progression?.chapters?.[chapitreId];
+        if (!chapitre) return this._message('msg-commentaire-chapitre', 'Progression introuvable — réessayez.');
+
+        chapitre.globalComment = document.getElementById('champ-commentaire-chapitre').value.trim();
+        chapitre.updatedAt = new Date().toISOString();
+        await storage.set(cle, progression);
+
+        this._message('msg-commentaire-chapitre', 'Commentaire enregistré.', 'info');
+    },
+
+    async _emettre() {
+        if (!this.contexte) return;
+        const { token, chapitreId, questionId, question, estConsigne, modeAtelier } = this.contexte;
+
+        // Le bouton AR est masqué hors rituel, mais la touche Entrée soumet quand même le
+        // formulaire : sans cette garde, une question ordinaire déclencherait un AR.
+        if (!(estConsigne && modeAtelier)) return this._enregistrerDirect();
 
         const points = Number(document.getElementById('champ-points').value);
         if (Number.isNaN(points) || points < 0 || points > question.points) {
@@ -513,6 +915,12 @@ const SuiviAtelier = {
 
     _nombre(valeur) {
         return Number(valeur || 0).toLocaleString('fr-FR');
+    },
+
+    _date(iso) {
+        if (!iso) return '';
+        return new Date(iso).toLocaleDateString('fr-FR',
+            { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
     }
 };
 

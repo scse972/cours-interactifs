@@ -12,25 +12,17 @@
  * Le nom affiché à côté sert à deux choses : identifier de visu l'écran devant lequel on se
  * trouve, et vérifier après le scan qu'on est bien sur le bon apprenant.
  *
- * CE QUE CONTIENT LE QRCODE — format figé
- * ---------------------------------------
+ * CE QUE CONTIENT LE QRCODE
+ * -------------------------
  *      XSQ1|{slug}|{empreinte}|{chapitreId}|{questionId}
+ *
+ * Le format est figé et vit dans `qrCharge.js`, source unique de vérité partagée avec
+ * l'outil formateur qui le lit. Ne pas le réimplémenter ici.
  *
  * Chaîne autoporteuse : contrairement aux tickets du mode Atelier
  * (`{slug}:atelier:code_XXXXXX`), RIEN N'EST ÉCRIT EN BASE. Le scan ne dépend d'aucun
  * aller-retour préalable, ce qui est indispensable pour un affichage présent sur toutes les
  * questions de tous les chapitres.
- *
- *   XSQ1        marqueur et version. L'outil formateur refuse tout ce qui ne commence pas
- *               par là ; le 1 permettra d'en changer plus tard sans ambiguïté.
- *   |           séparateur. Surtout pas « _ » : les identifiants sont des horodatages
- *               préfixés (_1779826730874) qui en contiennent déjà.
- *   empreinte   SHA-256 de « slug:token », tronqué à 12 caractères hexadécimaux — et NON
- *               le token. Le token est l'identifiant de connexion de l'apprenant
- *               (findUserByToken compare à u.id) : le publier en lisible-machine sur tous
- *               les écrans de la salle serait gratuitement imprudent. L'outil formateur le
- *               résout en balayant `{slug}:teacher:users_list`, liste qu'il possède déjà.
- *               12 hex = 48 bits, aucune collision à l'échelle d'un établissement.
  *
  * COMMENT C'EST AFFICHÉ
  * ---------------------
@@ -38,16 +30,13 @@
  * on ne le touche jamais. On décore le DOM après affichage, exactement comme le fait
  * `atelier/atelierQuestion.js`.
  *
- * La vignette du bandeau fait 36 px : trop petite pour être scannée, c'est voulu — le
+ * La vignette du bandeau fait 28 px : trop petite pour être scannée, c'est voulu — le
  * bandeau ne doit pas grossir. Un clic ouvre le QRCode en grand, et c'est celui-là qu'on
  * scanne. La vignette n'est qu'une affordance.
  */
 
 (function () {
     'use strict';
-
-    const PREFIXE_FORMAT = 'XSQ1';
-    const LONGUEUR_EMPREINTE = 12;
 
     const QRQuestion = {
 
@@ -72,14 +61,14 @@
                 const chapitreId = window.ChapterSession?.chapterId;
                 if (!slug || !token || !chapitreId) return;
                 if (token === 'anonymous' || token === '_guest') return;
-                if (typeof window.qrcode !== 'function' || !window.AtelierCodes) return;
+                if (typeof window.qrcode !== 'function' || !window.QRCharge) return;
 
                 const fiche = await this._fiche(token);
                 if (!fiche) return;
                 this.nom = fiche.name;
 
-                const condensat = await AtelierCodes.condensat(`${slug}:${token}`);
-                this.empreinte = condensat.slice(0, LONGUEUR_EMPREINTE);
+                this.empreinte = await QRCharge.empreinte(slug, token);
+                if (!this.empreinte) return;
 
                 document.querySelectorAll('.question-section[data-question-id]')
                     .forEach(section => this._decorer(section, slug, chapitreId));
@@ -115,7 +104,7 @@
         // --------------------------------------------------------------------
 
         charge(slug, chapitreId, questionId) {
-            return [PREFIXE_FORMAT, slug, this.empreinte, chapitreId, questionId].join('|');
+            return QRCharge.construire(slug, this.empreinte, chapitreId, questionId);
         },
 
         /**
@@ -170,8 +159,29 @@
             modale.querySelector('.qr-modale-code').innerHTML = this._svg(charge, 4);
             modale.querySelector('.qr-modale-nom').textContent = this.nom;
             modale.querySelector('.qr-modale-question').textContent = titre;
+            modale.querySelector('.qr-modale-charge').textContent = charge;
+            modale.querySelector('.qr-modale-copier').textContent = '📋 Copier';
             modale.hidden = false;
             modale.querySelector('.qr-modale-fermer').focus();
+        },
+
+        /**
+         * Copie la charge. `navigator.clipboard` exige un contexte sûr et n'est pas toujours
+         * là ; on retombe alors sur la sélection du texte, que l'utilisateur copie lui-même.
+         */
+        async _copier(bouton, modale) {
+            const zone = modale.querySelector('.qr-modale-charge');
+            try {
+                await navigator.clipboard.writeText(zone.textContent);
+                bouton.textContent = '✅ Copié';
+            } catch (e) {
+                const selection = window.getSelection();
+                const plage = document.createRange();
+                plage.selectNodeContents(zone);
+                selection.removeAllRanges();
+                selection.addRange(plage);
+                bouton.textContent = '⌨️ Copiez la sélection';
+            }
         },
 
         _modale() {
@@ -189,8 +199,17 @@
                     <div class="qr-modale-code"></div>
                     <div class="qr-modale-nom"></div>
                     <div class="qr-modale-question"></div>
+                    <!-- Là où la caméra n'est pas disponible — la copie intégrée dans XSpro —
+                         l'outil formateur attend cette chaîne au clavier. Sans elle affichée,
+                         son champ de saisie manuelle réclamerait un texte que personne ne peut
+                         lire. Elle ne contient aucun secret : le token n'y est pas. -->
+                    <code class="qr-modale-charge"></code>
+                    <button type="button" class="qr-modale-copier">📋 Copier</button>
                 </div>`;
             document.body.appendChild(modale);
+
+            modale.querySelector('.qr-modale-copier')
+                  .addEventListener('click', e => this._copier(e.currentTarget, modale));
 
             const fermer = () => { modale.hidden = true; };
             modale.querySelector('.qr-modale-fond').addEventListener('click', fermer);

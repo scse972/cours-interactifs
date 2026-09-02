@@ -24,6 +24,8 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── studentCorrectionModal.js      #   Modale de correction élève
 │   │   ├── studentWorkEditor.js           #   Éditeur de travail élève
 │   │   ├── progressManager.js             #   Gestionnaire de progression
+│   │   ├── qrCharge.js                    #   Format de la charge du QRCode de question —
+│   │   │                                  #   source unique, partagée apprenant/formateur
 │   │   ├── qrQuestion.js                  #   QRCode + nom de l'apprenant dans le bandeau
 │   │   │                                  #   de question (voir "qrcode question.md")
 │   │   ├── getChapterBadgeState.js        #   État des badges chapitre
@@ -46,7 +48,9 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   │   └── chapterUI.js               #   UI chapitre
 │   │   ├── vendor/                        #   Bibliothèques tierces embarquées (jamais de CDN :
 │   │   │   │                              #   le site doit tourner hors-ligne et en Electron)
-│   │   │   └── qrcode-generator.js        #     Générateur de QRCode (K. Arase, MIT)
+│   │   │   ├── qrcode-generator.js        #     Générateur de QRCode (K. Arase, MIT)
+│   │   │   └── jsqr.js                      #     Lecteur de QRCode (jsQR, Apache-2.0),
+│   │   │                                  #     chargé à la demande par l'outil formateur
 │   │   └── core/
 │   │       ├── chapterRepository.js       #   Accès données chapitre
 │   │       ├── chapterRenderer.js         #   Rendu chapitre
@@ -425,9 +429,47 @@ l'apprenant n'est pas identifiable ; il est affiché en simulation apprenant.
 La bibliothèque de génération est **embarquée** dans `src/js/vendor/` : pas de CDN, le site doit
 tourner hors-ligne et en Electron sur `file:`.
 
+### Le pendant formateur
+
+L'outil qui lit cette charge est **« ✍️ Correction en salle »** (`src/html/suiviAtelier.html`), la
+page mobile du mode Atelier AR, enrichie plutôt que doublée — l'ancien libellé « Suivi Atelier »
+décrivait ce qu'elle faisait, pas ce qu'elle fait. Le fichier garde son nom : `XSpro/main.js` teste
+cette URL pour accorder l'accès au stockage à la popup.
+
+On y entre de trois façons :
+
+- **le code de validation** dicté par l'apprenant, comme avant ;
+- **la charge d'un QRCode**, lue par la caméra (hors XSpro) ou collée — la modale d'agrandissement
+  affiche la chaîne en clair avec un bouton « 📋 Copier », sans quoi le champ de saisie réclamerait
+  un texte que personne ne peut lire ;
+- **la liste** : apprenant → chapitre → question, lue depuis `cours.json`, avec une pastille d'état
+  par question. C'est le seul chemin sans QRCode ni caractères à saisir — celui qu'on prend devant
+  un écran en veille, ou depuis son bureau.
+
+L'écran d'évaluation porte **deux boutons**, jamais un bouton qui change de sens :
+
+| Bouton | Quand | Ce qu'il écrit |
+|---|---|---|
+| `Valider et générer l'AR` | seulement sur une consigne d'un chapitre joué en Atelier | les champs d'attente du rituel, inchangé |
+| `Enregistrer la correction` | toujours | `teacherScore`, `teacherComment`, comme depuis le tableau de bord |
+
+S'y ajoute le **commentaire général du chapitre**, avec son propre bouton : on doit pouvoir commenter
+l'activité sans toucher à la note d'une question.
+
+**Rien de tout cela ne change ce que voit l'apprenant.** Les règles de visibilité existantes
+s'appliquent inchangées, et aucune mise à jour n'est poussée sous ses yeux : s'il rouvre son
+chapitre, il retrouve l'état qu'il aurait eu si le formateur avait commencé à corriger sa copie
+depuis le tableau de bord. C'est vrai par construction — corriger une question ne peut pas faire
+basculer un chapitre en `validated`, seul état qui lui ouvre le corrigé.
+
+Deux ajustements ont malgré tout été nécessaires, internes au mode Atelier : un **4ᵉ état de
+consigne** (`corrigee`) pour les consignes notées hors rituel, et le **bilan** qui compte désormais
+les points manuels quand l'apprenant les connaît déjà — il annonçait « ⏳ En attente, +0 » une
+consigne dont le bloc affichait « 8 / 10 » deux écrans plus haut.
+
 **Documentation complète : `qrcode question.md`** (intention, format figé de la charge utile, règles
-d'affichage, ce qui reste à faire côté formateur). Le format de la charge utile est imprimé sur tous
-les écrans : à lire avant d'y toucher.
+d'affichage, outil formateur, ce qui reste à faire). Le format de la charge utile est imprimé sur
+tous les écrans : à lire avant d'y toucher.
 
 ---
 
