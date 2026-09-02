@@ -384,3 +384,74 @@ du bilan. Sommer le premier aurait donné « 0/10 » là où le bilan affiche «
 `progressManager.recomputeChapterStats` et `computeChapterUIStats` gardent leur propre arithmétique
 — la seconde produit même une note **centrée sur 10/20** (`20 × (1 + réussite) / 2`), sans rapport
 avec la formule proportionnelle. Seule leur pénalité d'essais est mutualisée. À traiter à part.
+
+
+## 📤 Le statut de rendu d'un chapitre
+
+> `src/js/progressManager.js` : `setSubmissionStatus()` écrit, `recomputeSubmissionStatus()` relit.
+
+### La règle : les dates font foi, l'étiquette en découle
+
+`chapter.submissionStatus` n'est pas une donnée, c'est un **résumé**. Il est reconstruit à partir de
+trois dates par `recomputeSubmissionStatus()`, appelée à la fin de **chaque** `recomputeChapterStats()`
+— c'est-à-dire à peu près à chaque action de l'apprenant ou du formateur.
+
+| Date | Posée quand | Statut dérivé |
+|---|---|---|
+| `validatedAt` | le formateur valide la copie | `validated` |
+| `revisionRequestedAt` | le formateur la renvoie pour reprise | `returned_for_revision` |
+| `submittedAt` | l'apprenant rend sa copie | `submitted` ou `late_submitted` |
+| *aucune* | — | `not_submitted` |
+
+L'ordre du tableau est l'ordre de priorité : une validation l'emporte sur une demande de reprise, qui
+l'emporte sur un rendu.
+
+**Conséquence** : écrire `submissionStatus` sans poser la date, c'est écrire quelque chose que le
+premier recalcul effacera. Et poser la date ne suffit pas : il faut **effacer celles qui n'ont plus
+cours**, sinon rouvrir une copie validée la ramène à « validé » au recalcul suivant.
+
+C'est pourquoi il n'existe **qu'un seul écrivain** : `setSubmissionStatus(chapter, statut)`. Il pose la
+bonne date, efface les autres, refuse bruyamment un statut inconnu, et termine par la dérivation. Plus
+aucun autre fichier n'affecte `submissionStatus` directement.
+
+### Le bug que cette règle a coûté
+
+La modale de correction posait `submissionStatus = 'validated'` **sans date**. Tant que les seuls
+recalculs venaient de l'apprenant — dont l'interface est verrouillée après le rendu — le défaut
+dormait. L'outil « Correction en salle » lui a donné un chemin praticable, et même naturel :
+
+1. le formateur valide une copie dans la modale → `validated`, sans date ;
+2. plus tard, il retouche une question depuis le téléphone ;
+3. `teacherCorrectQuestion` termine par `recomputeChapterStats`, donc par la dérivation ;
+4. aucune date de validation → le chapitre **retombe en `submitted`**, et c'est persisté.
+
+L'apprenant perdait alors l'accès à son corrigé — les trois vues basculent sur
+`submissionStatus === 'validated'` — pendant que `noteAttribuee`, qui n'est pas recalculée, continuait
+d'afficher sa note côté formateur. Rien ne signalait le désaccord, d'aucun côté.
+
+### `approvedAt` était un doublon de `validatedAt`
+
+C'est le dédoublement qui rendait le défaut possible, et il y en avait **deux paires** :
+
+| Doublon supprimé | Conservé | Ce qui clochait |
+|---|---|---|
+| `approvedAt` | `validatedAt` | Même instant, deux noms. La dérivation ne lisait que `approvedAt` ; l'affichage « Corrigé le… » de l'apprenant ne lisait que `validatedAt`. Une seule fonction écrivait les deux — et elle n'était appelée nulle part. |
+| `returnedAt` | `revisionRequestedAt` | Même instant, deux noms. `returnedAt` avait **deux écrivains et zéro lecteur**. |
+
+Deux champs pour une information, chacun lu par une moitié du code : il suffisait qu'un écrivain
+n'en connaisse qu'un pour que l'autre moitié ignore l'événement. `validatedAt` a été gardé parce que
+son nom correspond au statut `validated` et au geste « Valider » ; `revisionRequestedAt` parce qu'il
+était déjà celui que la dérivation lisait.
+
+### Statuts admis
+
+`not_submitted`, `submitted`, `late_submitted`, `returned_for_revision`, `validated` — et rien d'autre.
+Deux valeurs inventées traînaient dans les vues formateur : `'in_progress'` (rouvrir un chapitre
+terminé) et `'corrected'` (marquer une copie corrigée). Aucun lecteur ne les connaissait ; elles
+« marchaient » par accident, en tombant dans les branches de repli. La première est devenue
+`not_submitted`, la seconde a disparu avec sa méthode — « corrigé » relève de `correctionStatus`,
+pas du statut de rendu.
+
+`late_submitted` est le seul statut que la dérivation ne peut pas retrouver seule : il se distingue de
+`submitted` par la seule étiquette courante. C'est pour cela que `setSubmissionStatus` pose l'étiquette
+**avant** de recalculer.

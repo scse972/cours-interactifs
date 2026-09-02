@@ -506,13 +506,6 @@ class TeacherStudents {
         await this._refreshSubmissionsBadge();
     }
 
-    async markAsCorrected(studentId, chapterId) {
-        if (!await confirm('Marquer cette copie comme corrigée ?')) return;
-        await this.dashboard.updateSubmissionStatus(studentId, chapterId, 'corrected');
-        this.refresh();
-        await this._refreshSubmissionsBadge();
-    }
-
     async validateFinal(studentId, chapterId) {
         if (!await confirm('Valider définitivement cette copie ?')) return;
         await this.dashboard.updateSubmissionStatus(studentId, chapterId, 'validated');
@@ -538,7 +531,9 @@ class TeacherStudents {
         
         if (chapter) {
             delete chapter.correctionStatus;
-            chapter.submissionStatus = 'in_progress';
+            // 'in_progress' n'existe dans aucun lecteur de statut : la copie rouverte
+            // repart de « pas encore rendue », que l'apprenant peut re-rendre.
+            ProgressManager.setSubmissionStatus(chapter, 'not_submitted');
             chapter.updatedAt = new Date().toISOString();
             
             const key = `${slug}:${studentId}:student_${studentId}_progress`;
@@ -560,8 +555,9 @@ class TeacherStudents {
         
         if (chapter) {
             delete chapter.correctionStatus;
-            chapter.submissionStatus = 'returned_for_revision';
-            chapter.returnedAt = new Date().toISOString();
+            // Le setter efface validatedAt : sans cela le chapitre reviendrait à
+            // « validé » au premier recalcul, et la reprise serait sans effet.
+            ProgressManager.setSubmissionStatus(chapter, 'returned_for_revision');
             chapter.updatedAt = new Date().toISOString();
             
             const key = `${slug}:${studentId}:student_${studentId}_progress`;

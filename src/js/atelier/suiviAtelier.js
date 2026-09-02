@@ -875,9 +875,10 @@ const SuiviAtelier = {
      * dans les totaux.
      *
      * C'est silencieux pour l'apprenant, et par construction : recomputeChapterStats
-     * dérive submissionStatus de approvedAt / revisionRequestedAt / submittedAt et de
+     * dérive submissionStatus de validatedAt / revisionRequestedAt / submittedAt et de
      * rien d'autre, donc corriger ne peut pas faire basculer un chapitre en « validated »,
-     * seul état qui lui ouvre le corrigé.
+     * seul état qui lui ouvre le corrigé — ni l'en faire sortir, depuis que la validation
+     * pose sa date (voir setSubmissionStatus dans progressManager).
      */
     async _enregistrerDirect() {
         if (!this.contexte) return;

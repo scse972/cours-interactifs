@@ -938,20 +938,17 @@ class TeacherDashboard {
 
             const chapter = progress.chapters[chapterId];
 
-            // Mettre à jour le statut
-            chapter.submissionStatus = newStatus;
+            // Mettre à jour le statut — par le setter, qui pose ET efface les dates
+            // dont la dérivation se sert. Écrire l'étiquette seule ne tenait pas.
+            if (ProgressManager.setSubmissionStatus(chapter, newStatus) === null) return;
             // ❌ NE PAS METTRE A JOUR updatedAt !
             // Cette date est réservée EXCLUSIVEMENT aux actions de l'apprenant lui-même.
             // Les actions formateur ne doivent pas modifier la date de dernière activité de l'apprenant.
 
             // Ajouter des métadonnées selon le statut
-            if (newStatus === 'submitted' || newStatus === 'late_submitted') {
-                chapter.submittedAt = chapter.submittedAt || new Date().toISOString();
-            } else if (newStatus === 'validated') {
-                chapter.validatedAt = new Date().toISOString();
+            // Les dates sont posées par setSubmissionStatus. Reste ce qui lui est étranger.
+            if (newStatus === 'validated') {
                 chapter.completed = true;
-            } else if (newStatus === 'returned_for_revision') {
-                chapter.returnedAt = new Date().toISOString();
             }
 
             // Sauvegarder les modifications

@@ -391,9 +391,9 @@ class TeacherSubmissions {
             const chapter = progress.chapters[chapterId];
             
             if (chapter) {
-                chapter.revisionRequestedAt = new Date().toISOString();
                 chapter.teacherComment = comment || '';
-                chapter.submissionStatus = 'returned_for_revision';
+                // Le setter pose revisionRequestedAt et efface une validation antérieure.
+                ProgressManager.setSubmissionStatus(chapter, 'returned_for_revision');
 
                 const key = `${slug}:${studentId}:student_${studentId}_progress`;
                 await storage.set(key, progress);

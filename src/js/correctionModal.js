@@ -1255,9 +1255,12 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         chapter.coursePenalty = result.coursePenalty;
 
         chapter.correctionStatus = approve ? 'validated' : 'in_progress';
-        
+
         if (approve) {
-            chapter.submissionStatus = 'validated';
+            // Par le setter, jamais en écrivant l'étiquette : celle-ci est dérivée des
+            // dates, et posée seule elle disparaissait au premier recalcul — c'est-à-dire
+            // dès la correction suivante depuis Correction en salle.
+            ProgressManager.setSubmissionStatus(chapter, 'validated');
         }
     }
 

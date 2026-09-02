@@ -204,11 +204,19 @@ function initChapter(chapterConfig) {
     completedAt: null,
     
     // Nouveaux champs - Rendu
+    //
+    // LES DATES FONT FOI, submissionStatus EN DÉCOULE. Il y en a trois, une par
+    // transition, et recomputeSubmissionStatus() ne lit qu'elles. Ne jamais écrire
+    // submissionStatus directement : passer par setSubmissionStatus().
+    //
+    // `approvedAt` et `returnedAt` ont été supprimés : c'étaient des doublons de
+    // `validatedAt` et `revisionRequestedAt`, porteurs du même instant sous un autre
+    // nom. Chacun n'était lu que par une moitié du code, et c'est précisément ce
+    // dédoublement qui laissait passer des validations sans date.
     submissionStatus: "not_submitted",
-    submittedAt: null,
-    approvedAt: null,
-    returnedAt: null,
-    revisionRequestedAt: null,
+    submittedAt: null,          // l'apprenant a rendu sa copie
+    revisionRequestedAt: null,  // le formateur l'a renvoyée pour reprise
+    // validatedAt est déclaré plus bas, dans la section Correction : le formateur a validé
     submissionDeadline: chapterConfig.submissionDeadline || null,
     
     // Feedback évaluateur
@@ -221,7 +229,7 @@ function initChapter(chapterConfig) {
     correctedQuestionCount: 0,
     manualCorrectionCount: 0,
     correctedAt: null,
-    validatedAt: null,
+    validatedAt: null,   // <- 3e date de rendu : lue par recomputeSubmissionStatus
     correctedBy: null,
     
     // Scores séparés
@@ -519,8 +527,88 @@ function recomputeChapterStats(chapter) {
  * Recalcule le statut de soumission d'un chapitre
  * @param {Object} chapter - Le chapitre à recalculer
  */
+/**
+ * Change le statut de rendu d'un chapitre. PASSER PAR ICI, TOUJOURS.
+ *
+ * ------------------------------------------------------------------------
+ * LE CONTRAT : les dates font foi, l'étiquette en découle.
+ * ------------------------------------------------------------------------
+ * `submissionStatus` n'est pas une donnée, c'est un résumé. Il est reconstruit à
+ * partir des trois dates par `recomputeSubmissionStatus()`, appelée à la fin de
+ * chaque `recomputeChapterStats()` — c'est-à-dire à peu près à chaque action de
+ * l'apprenant ou du formateur.
+ *
+ * Écrire l'étiquette sans poser la date, c'est donc écrire quelque chose que le
+ * premier recalcul effacera. C'était le cas de la validation : la modale de
+ * correction posait `submissionStatus = 'validated'` sans date. Il suffisait ensuite
+ * de corriger une question — depuis Correction en salle, par exemple — pour que le
+ * chapitre retombe en « rendu » : l'apprenant perdait l'accès à son corrigé tandis
+ * que sa note restait affichée côté formateur, sans que rien ne signale le désaccord.
+ *
+ * Poser la date ne suffit pas non plus : il faut EFFACER celles qui n'ont plus cours.
+ * Rouvrir une copie validée sans effacer `validatedAt` la ramène à « validé » au
+ * recalcul suivant. C'est cette symétrie que la fonction centralise.
+ *
+ * @param {string} statut  not_submitted | submitted | late_submitted |
+ *                         returned_for_revision | validated
+ * @returns {string|null}  le statut effectif, ou null si le statut est inconnu
+ */
+function setSubmissionStatus(chapter, statut) {
+    if (!chapter) return null;
+    const now = new Date().toISOString();
+
+    // Posé d'abord : recomputeSubmissionStatus ne distingue `late_submitted` de
+    // `submitted` qu'en relisant l'étiquette courante.
+    chapter.submissionStatus = statut;
+
+    switch (statut) {
+        case 'validated':
+            chapter.validatedAt = chapter.validatedAt || now;
+            chapter.revisionRequestedAt = null;
+            break;
+
+        case 'returned_for_revision':
+            chapter.revisionRequestedAt = now;
+            chapter.validatedAt = null;
+            break;
+
+        case 'submitted':
+        case 'late_submitted':
+            chapter.submittedAt = chapter.submittedAt || now;
+            chapter.validatedAt = null;
+            chapter.revisionRequestedAt = null;
+            break;
+
+        case 'not_submitted':
+            chapter.submittedAt = null;
+            chapter.validatedAt = null;
+            chapter.revisionRequestedAt = null;
+            break;
+
+        default:
+            // L'étiquette a déjà été posée plus haut : on la reconstruit depuis les dates
+            // pour ne laisser aucune valeur inconnue derrière soi.
+            recomputeSubmissionStatus(chapter);
+            console.error(`[progressManager] Statut de rendu inconnu : « ${statut} ». `
+                        + `Aucun changement. Statuts admis : not_submitted, submitted, `
+                        + `late_submitted, returned_for_revision, validated.`);
+            return null;
+    }
+
+    // L'étiquette est toujours reconstruite depuis les dates, y compris ici : si les
+    // deux divergeaient, ce sont les dates qui auraient raison.
+    recomputeSubmissionStatus(chapter);
+    return chapter.submissionStatus;
+}
+
+/**
+ * Reconstruit `submissionStatus` à partir des dates. Ne JAMAIS l'appeler pour
+ * CHANGER un statut — elle ne fait que relire ; c'est `setSubmissionStatus()` qui
+ * décide. L'ordre des tests est l'ordre de priorité : une validation l'emporte sur
+ * une demande de reprise, qui l'emporte sur un rendu.
+ */
 function recomputeSubmissionStatus(chapter) {
-    if (chapter.approvedAt) {
+    if (chapter.validatedAt) {
         chapter.submissionStatus = "validated";
     } else if (chapter.revisionRequestedAt) {
         chapter.submissionStatus = "returned_for_revision";
@@ -769,14 +857,11 @@ function submitChapter(progress, chapterId, submissionDeadline) {
     const now = new Date().toISOString();
     const isLate = submissionDeadline && new Date(now) > new Date(submissionDeadline);
     
-    chapter.submissionStatus = isLate ? "late_submitted" : "submitted";
+    // Le rendu efface la demande de reprise et une éventuelle validation antérieure :
+    // sans cela la dérivation remettrait aussitôt le chapitre dans son ancien état.
+    // setSubmissionStatus s'en charge.
     chapter.submittedAt = now;
-    
-    // ✅ Effacer le flag revisionRequestedAt car l'étudiant a re-rendu son travail.
-    // Ce flag est utilisé par recomputeSubmissionStatus() pour déterminer le statut.
-    // S'il reste présent après le rendu, recomputeSubmissionStatus() réécrira
-    // submissionStatus = "returned_for_revision" et le bouton restera en "Re-rendre".
-    delete chapter.revisionRequestedAt;
+    setSubmissionStatus(chapter, isLate ? "late_submitted" : "submitted");
     
     // Mettre à jour manualCorrectionStatus pour questions nécessitant correction
     Object.values(chapter.questions).forEach(q => {
@@ -853,10 +938,9 @@ function teacherApproveChapter(progress, chapterId) {
     const chapter = progress.chapters[chapterId];
     if (!chapter) return;
     
-    chapter.approvedAt = new Date().toISOString();
-    chapter.validatedAt = chapter.approvedAt;
     chapter.correctedBy = "teacher"; // À remplacer par l'ID réel
-    
+    setSubmissionStatus(chapter, "validated");
+
     recomputeChapterStats(chapter);
 }
 
@@ -870,9 +954,9 @@ function teacherRequestRevision(progress, chapterId, teacherComment) {
     const chapter = progress.chapters[chapterId];
     if (!chapter) return;
     
-    chapter.revisionRequestedAt = new Date().toISOString();
     chapter.teacherComment = teacherComment;
-    
+    setSubmissionStatus(chapter, "returned_for_revision");
+
     recomputeChapterStats(chapter);
 }
 
@@ -1156,6 +1240,7 @@ window.ProgressManager = {
     
     // Recalcul des statistiques
     recomputeChapterStats,
+    setSubmissionStatus,      // le seul écrivain légitime de submissionStatus
     recomputeSubmissionStatus,
     recomputeGlobalStats,
     computeGlobalStats,
