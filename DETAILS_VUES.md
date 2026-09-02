@@ -341,6 +341,24 @@ En revanche, la valeur **discrétionnaire** que le formateur saisit à la correc
 que l'apprenant peut déduire de sa fourchette reste une note **théorique**, le geste du formateur
 lui appartient et n'est annoncé qu'à la validation.
 
+### Le bilan du mode Blind est un écran de décision, pas un bilan
+
+`showBlindBilan()` n'est pas une variante du bilan ordinaire : il s'affiche **au moment de rendre**,
+avec deux boutons — « ✅ Valider définitivement » et « 🔄 Recommencer ». L'apprenant a avancé sans
+aucun retour ; on lui montre la fourchette juste avant qu'il tranche.
+
+Sa règle propre : **en Blind, une question auto ratée ou non répondue vaut 0, jamais −points.** On ne
+punit pas une erreur commise sans retour. Il n'y a donc aucun malus, et par conséquent aucun négatif
+à absorber : le plancher y est posé **par question**, et il n'y a rien à borner ensuite. Ce n'est pas
+un écart avec le bilan ordinaire, c'est ce qui découle de l'absence de malus.
+
+Seules les questions **répondues et en attente de correction manuelle** écartent les deux bornes —
+et pour les semi-auto à seuil de caractères, seulement si le seuil est atteint : en dessous, la
+réponse est fausse à coup sûr.
+
+La pénalité de cours n'y figure pas, délibérément : l'apprenant connaît les règles, c'est à lui d'y
+faire attention.
+
 ### Le bilan s'arrête à la validation
 
 Dès qu'un chapitre passe `validated`, les deux points d'entrée (`chapterUI` et `chapterRenderer`)

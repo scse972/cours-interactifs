@@ -212,13 +212,15 @@ const ChapterSubmission = {
             const result = await this.validateAllQuestions();
             if (result === false) return; // annulé par l'utilisateur
 
-            const { earnedPoints, totalPoints } = result;
+            const { totalPoints } = result;
 
             // Afficher le bilan simplifié dans une modale.
-            // ⚠️ Le 4e argument est la progression du chapitre : sans lui, showBlindBilan
-            //    travaillait sur un objet vide et affichait toujours 0 point, en min
-            //    comme en max — le bilan Blind ne montrait donc jamais rien d'utile.
-            ChapterBilan.showBlindBilan(earnedPoints, totalPoints, chapterConfig, chapter);
+            // ⚠️ Le dernier argument est la progression du chapitre : sans lui,
+            //    showBlindBilan travaillait sur un objet vide et affichait toujours
+            //    0 point, en min comme en max — il ne montrait donc jamais rien d'utile.
+            // Le total du DOM n'est plus qu'un repli : showBlindBilan calcule le sien
+            //    depuis la config, pour que numérateur et dénominateur s'accordent.
+            ChapterBilan.showBlindBilan(totalPoints, chapterConfig, chapter);
             return;
         }
 

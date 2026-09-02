@@ -394,7 +394,7 @@ ${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
     // BILAN SIMPLIFIÉ POUR LE MODE BLIND (modale avec 2 choix)
     // ------------------------------------------------------------------------
 
-    showBlindBilan(earnedPoints, totalPoints, chapterConfig, chapter) {
+    showBlindBilan(totalPointsDOM, chapterConfig, chapter) {
         this._saveFocus();
         // Supprimer toute modale existante
         document.getElementById('auto-correct-details-modal')?.remove();
@@ -405,7 +405,16 @@ ${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
         // (réponse présente ET seuil de caractères atteint si applicable)
         // contribuent à la note maximale.
         const noteMax = APP_CONFIG.MAX_NOTE;
-        const allQuestions = chapterConfig.questions;
+
+        // Mêmes questions que celles affichées à l'apprenant : le rendu écarte les
+        // questions incohérentes (isQuestionValid), et une question jamais montrée n'a
+        // pas à peser dans le barème. Sans ce filtre, le dénominateur — somme des
+        // data-points du DOM — et la boucle ci-dessous ne parlaient pas de la même
+        // liste, et la note maximale annoncée devenait inatteignable.
+        const valide = window.isQuestionValid || (() => true);
+        const allQuestions = (chapterConfig.questions || []).filter(valide);
+        const totalPoints = allQuestions.reduce((somme, q) => somme + (q.points || 0), 0)
+                         || totalPointsDOM || 0;
         const chapterQuestions = (chapter && chapter.questions) ? chapter.questions : {};
 
         let blindMinScore = 0;
@@ -470,16 +479,16 @@ ${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
                             ${blindMinScore !== blindMaxScore ? `
                             <div class="note-item">
                                 <span class="note-label">Note minimale</span>
-                                <span class="note-value min">${blindMinNote.toFixed(1)} / ${noteMax} (${blindMinScore} pt${blindMinScore > 1 ? 's' : ''})</span>
+                                <span class="note-value min">${blindMinNote.toFixed(1)} / ${noteMax} (${this._nombre(blindMinScore)} pt${blindMinScore > 1 ? 's' : ''})</span>
                             </div>
                             <div class="note-item">
                                 <span class="note-label">Note maximale</span>
-                                <span class="note-value max">${blindMaxNote.toFixed(1)} / ${noteMax} (${blindMaxScore} pt${blindMaxScore > 1 ? 's' : ''})</span>
+                                <span class="note-value max">${blindMaxNote.toFixed(1)} / ${noteMax} (${this._nombre(blindMaxScore)} pt${blindMaxScore > 1 ? 's' : ''})</span>
                             </div>
                             ` : `
                             <div class="note-item">
                                 <span class="note-label">Note</span>
-                                <span class="note-value final">${blindMinNote.toFixed(1)} / ${noteMax} (${blindMinScore} pt${blindMinScore > 1 ? 's' : ''})</span>
+                                <span class="note-value final">${blindMinNote.toFixed(1)} / ${noteMax} (${this._nombre(blindMinScore)} pt${blindMinScore > 1 ? 's' : ''})</span>
                             </div>
                             `}
                         </div>

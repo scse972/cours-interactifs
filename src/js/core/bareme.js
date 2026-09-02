@@ -49,8 +49,11 @@
  *
  *   chapterBilan       plancher sur le CUMUL des questions auto, les deux bornes
  *   correctionModal    plancher sur le cumul, par catégorie (auto d'un côté, manuel de l'autre)
- *   showBlindBilan     plancher PAR QUESTION — une question négative y compte 0, elle ne
- *                      retire donc rien aux autres. Écart assumé, pas encore réconcilié.
+ *   showBlindBilan     plancher PAR QUESTION — et ce n'est pas un écart, c'est la
+ *                      conséquence d'une règle propre au mode Blind : une question auto
+ *                      ratée ou non répondue y vaut 0, jamais −points. On n'y punit pas
+ *                      une erreur commise sans aucun retour. Sans malus, il n'y a aucun
+ *                      négatif à absorber, donc aucun plancher cumulatif à poser.
  *
  * Texte destiné au formateur : fiche « bareme » de `src/js/aide.js`.
  */
