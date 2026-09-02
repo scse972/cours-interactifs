@@ -41,7 +41,7 @@ part de ce barème, <strong>d'autant plus grande qu'il y avait peu de choix</str
 deux réponses est facile, deviner entre cinq ne l'est pas.</p>
 <table class="aide-table">
   <tr><th>Choix proposés</th><th>Retiré par tentative ratée</th><th>Sur une question à 5 points</th></tr>
-  <tr><td>2 (vrai / faux)</td><td>2 × le barème</td><td>+5, puis −5</td></tr>
+  <tr><td>2 (vrai / faux)</td><td>2 × le barème</td><td>+5, −5, −10</td></tr>
   <tr><td>3</td><td>le barème</td><td>+5, 0, −5, −10</td></tr>
   <tr><td>4</td><td>⅔ du barème</td><td>+5, +1,67, −1,67, −5</td></tr>
   <tr><td>5</td><td>½ du barème</td><td>+5, +2,5, 0, −2,5, −5</td></tr>
@@ -65,6 +65,10 @@ sur 20</strong> — pas des points de questions. C'est une valeur automatique : 
 corriger, vous pouvez la remplacer par ce que vous voulez, y compris un bonus.</p>
 
 <h4>Ce que votre apprenant voit</h4>
+<p>En tête de chapitre, <strong>⭐ Points obtenus</strong> affiche les points réellement acquis sur
+les exercices auto-corrigés, pénalités comprises — <strong>le même nombre que dans son bilan</strong>.
+À côté, <strong>🎯 Précision</strong> est une échelle de qualité centrée sur 50 %, pas un nombre de
+points : les deux ne se lisent pas de la même façon.</p>
 <p>Tant que sa copie n'est pas corrigée, son bilan lui montre une <strong>fourchette</strong> :
 la note qu'il aurait si tout ce qui reste tournait au pire, et celle qu'il aurait si tout tournait
 au mieux. Chaque question qu'il répond, et chaque question que vous corrigez, resserre cette

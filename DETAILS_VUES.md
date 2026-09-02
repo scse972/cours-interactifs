@@ -341,6 +341,44 @@ En revanche, la valeur **discrétionnaire** que le formateur saisit à la correc
 que l'apprenant peut déduire de sa fourchette reste une note **théorique**, le geste du formateur
 lui appartient et n'est annoncé qu'à la validation.
 
+### Le bilan s'arrête à la validation
+
+Dès qu'un chapitre passe `validated`, les deux points d'entrée (`chapterUI` et `chapterRenderer`)
+basculent le bouton sur « 📄 Voir le corrigé » et ouvrent `studentCorrectionModal` — qui affiche la
+note du formateur, le détail et les commentaires. **Le bilan sert tout ce qui précède ; le corrigé
+prend la main après.**
+
+C'est pour cela qu'il n'y a pas de ligne « Note finale » dans le bilan : elle serait inatteignable.
+Il en existait une, conditionnée à `validated` et lisant de surcroît un champ `noteSur20` que rien
+n'écrit — elle n'a donc jamais pu s'afficher. Elle a été retirée plutôt que rafistolée.
+
+### Le bandeau du chapitre dit le même nombre que le bilan
+
+Le bloc d'indicateurs en tête de chapitre (`computeChapterUIStats` → `chapterUI`) affiche quatre
+choses, dont deux seulement dépendent du barème :
+
+| Indicateur | Source | Sens |
+|---|---|---|
+| 📈 Avancement | `autoEarnedPoints / autoTotalPoints` | part des questions auto réussies, sans égard aux essais |
+| 🥇 1er essai | `firstAttemptSuccessCount / totalSuccessQuestions` | part des réussites obtenues du premier coup |
+| 🎯 Précision | `(reussite + 100) / 2`, échelle **centrée sur 50 %** | qualité des réponses, essais compris |
+| ⭐ Points obtenus | `max(0, Σ points acquis)` | **exactement le total du bilan** |
+
+« Points obtenus » dérivait auparavant de `note`, la note centrée sur 10/20 : une question réussie
+au 2ᵉ essai, qui vaut 0 point, s'affichait « 2,5/5 » au bandeau et « 0 sur 5 » au bilan, à un clic
+l'un de l'autre. Deux nombres de points sur le même écran doivent être le même nombre.
+
+L'alignement demande **deux accumulateurs distincts**, et c'est le piège : `penaltySum` compte une
+question jamais tentée comme ratée — il mesure une position sur une échelle de qualité, et c'est ce
+qu'il faut pour la Précision. `pointsAcquisAuto` la compte à 0 — elle n'a rien coûté, c'est la règle
+du bilan. Sommer le premier aurait donné « 0/10 » là où le bilan affiche « 5 sur 10 ».
+
+`reussite` et `note` restent donc l'échelle de qualité, lue par la seule Précision.
+
+> ⚠️ La Précision compte les questions non tentées comme ratées : sur un chapitre à peine commencé
+> elle est basse, alors qu'elle prétend juger la qualité des réponses. Comportement d'origine,
+> non modifié — mais c'est un mélange de qualité et d'avancement.
+
 ### Ce qui reste incohérent ailleurs
 
 `progressManager.recomputeChapterStats` et `computeChapterUIStats` gardent leur propre arithmétique

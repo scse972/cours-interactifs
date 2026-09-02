@@ -969,7 +969,12 @@ function computeChapterUIStats(chapter, chapterConfig, maxNote = 20) {
 
     let autoTotalPoints = 0;
     let autoEarnedPoints = 0;
+    // penaltySum sert la PRÉCISION : il compte une question jamais tentée comme ratée,
+    // parce qu'il mesure la position de l'apprenant sur une échelle de qualité.
+    // pointsAcquisAuto sert les POINTS : il la compte à 0, parce qu'elle n'a rien coûté
+    // — c'est la règle du bilan, et les deux écrans doivent donner le même nombre.
     let penaltySum = 0;
+    let pointsAcquisAuto = 0;
     let totalSuccessQuestions = 0;
     let firstAttemptSuccessCount = 0;
     let answeredQuestionsAuto = 0;
@@ -981,7 +986,7 @@ function computeChapterUIStats(chapter, chapterConfig, maxNote = 20) {
 
         if (!qData || qData.attempts <= 0) {
             penaltySum -= q.points;
-            return;
+            return;                     // pointsAcquisAuto : rien, la question est intacte
         }
 
         answeredQuestionsAuto++;
@@ -995,9 +1000,12 @@ function computeChapterUIStats(chapter, chapterConfig, maxNote = 20) {
             }
 
             // Barème partagé, voir core/bareme.js
-            penaltySum += Bareme.pointsAuto(q.points, qData.attempts, Bareme.nbOptions(q));
+            const acquis = Bareme.pointsAuto(q.points, qData.attempts, Bareme.nbOptions(q));
+            penaltySum += acquis;
+            pointsAcquisAuto += acquis;
         } else {
             penaltySum -= q.points;
+            pointsAcquisAuto -= q.points;
         }
     });
 
@@ -1024,10 +1032,13 @@ function computeChapterUIStats(chapter, chapterConfig, maxNote = 20) {
 
     const accuracy = Math.round((reussite + 100) / 2);
 
-    // Points obtenus calculés à partir de la note
-    const pointsObtenus = autoTotalPoints > 0
-        ? Math.round(((note / 20) * autoTotalPoints) * 10) / 10
-        : 0;
+    // Points obtenus : la somme réelle des points auto, plancher à 0 comme dans le bilan.
+    //
+    // Auparavant ils dérivaient de `note`, la note centrée sur 10/20 : une question réussie
+    // au 2e essai valant 0 point s'affichait « 2,5/5 » au bandeau et « 0 sur 5 » au bilan,
+    // à un clic l'un de l'autre. Deux nombres de points sur le même écran doivent être le
+    // même nombre. `note` et `reussite` restent l'échelle de qualité, lue par la Précision.
+    const pointsObtenus = Math.round(Math.max(0, pointsAcquisAuto) * 100) / 100;
 
     // =========================
     // Stats pour le bilan détaillé

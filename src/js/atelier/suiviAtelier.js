@@ -40,6 +40,7 @@ const SuiviAtelier = {
     formateur: 'Formateur',
     contexte: null,   // question en cours d'évaluation
     flux: null,       // flux caméra en cours, à couper en quittant l'écran de scan
+    _lectureEnCours: false,   // une charge est en cours de résolution
     _decodeur: null,  // chargement du décodeur de QRCode, à la demande
 
     // ------------------------------------------------------------------------
@@ -126,6 +127,29 @@ const SuiviAtelier = {
         // La caméra ne survit pas au départ de son écran : une lampe témoin qui reste
         // allumée dans une salle de classe est un problème en soi.
         if (nom !== 'scan') this._couperCamera();
+    },
+
+    /**
+     * Zone de message de l'écran ACTUELLEMENT visible.
+     *
+     * `_ouvrir()` est atteint depuis six endroits — le code dicté, le code direct, le
+     * scan, le collage, la liste, et les autres consignes d'un même apprenant. Elle
+     * écrivait ses erreurs dans `msg-code`, qui vit sur le seul écran du code : cinq fois
+     * sur six le message tombait dans une section masquée. Le pire cas était le scan —
+     * la caméra se coupait, le champ se vidait, et rien ne s'affichait.
+     */
+    _zoneMessage() {
+        const visible = [...document.querySelectorAll('.ecran')]
+            .find(bloc => !bloc.hidden)?.dataset.ecran;
+        return ({
+            acces:    'msg-acces',
+            code:     'msg-code',
+            parcours: 'msg-code-direct',
+            scan:     'msg-scan',
+            repli:    'msg-repli',
+            eval:     'msg-eval',
+            ar:       'msg-eval'
+        })[visible] || 'msg-code';
     },
 
     _message(id, texte, type = 'erreur') {
@@ -227,10 +251,14 @@ const SuiviAtelier = {
     },
 
     /**
-     * Titre lisible d'un parcours pour l'en-tête — jamais mis en cache ici (contrairement
-     * à une factorisation qui toucherait aussi _attentes()/_ouvrir()) : ceux-là lisent des
-     * points et des énoncés au moment de noter, une republication en cours d'atelier doit
-     * s'y voir tout de suite. Le titre de l'en-tête n'a pas cet enjeu.
+     * Titre lisible d'un parcours pour l'en-tête.
+     *
+     * ⚠️ Ce commentaire affirmait qu'une republication en cours d'atelier « se voit tout
+     * de suite » parce que cours.json ne serait pas mis en cache ici. C'est faux :
+     * staticJson.get() met en cache POUR TOUTE LA SESSION (voir storage.js), et les cinq
+     * lecteurs de cours.json de ce fichier partagent le même objet. Une republication ne
+     * se voit qu'après rechargement de la page — pour tout le monde, y compris au moment
+     * de noter. À garder en tête si l'on retouche un parcours pendant un atelier.
      */
     async _libelleParcours(slug) {
         const donnees = await staticJson.get('/parcours/cours.json');
@@ -337,6 +365,7 @@ const SuiviAtelier = {
         const camera = document.getElementById('scan-camera');
         camera.hidden = !this._cameraDisponible();
         this._message('msg-scan', '');
+        this._message('msg-scan-camera', '');   // sinon on revient sur le message du passage précédent
         this._ecran('scan');
         if (camera.hidden) document.getElementById('champ-charge').focus();
     },
@@ -357,7 +386,12 @@ const SuiviAtelier = {
             const balise = document.createElement('script');
             balise.src = `${window.BASE || ''}/src/js/vendor/jsqr.js`;
             balise.onload = () => resolve(typeof window.jsQR === 'function');
-            balise.onerror = () => resolve(false);
+            balise.onerror = () => {
+                // Ne pas mémoriser l'échec : un chargement raté (réseau, chemin) rendrait
+                // le bouton définitivement inerte pour toute la session.
+                this._decodeur = null;
+                resolve(false);
+            };
             document.head.appendChild(balise);
         });
         return this._decodeur;
@@ -374,7 +408,8 @@ const SuiviAtelier = {
     async _ouvrirCharge(chaine) {
         const charge = window.QRCharge?.lire(chaine);
         if (!charge) {
-            return this._message('msg-scan', "Ce n'est pas un QRCode de question.");
+            this._message('msg-scan', "Ce n'est pas un QRCode de question.");
+            return false;
         }
 
         if (charge.slug !== this.slug) {
@@ -387,17 +422,34 @@ const SuiviAtelier = {
         const apprenants = await storage.get(`${this.slug}:teacher:users_list`) || [];
         const token = await QRCharge.resoudre(this.slug, charge.empreinte, apprenants);
         if (!token) {
-            return this._message('msg-scan', 'Apprenant introuvable dans ce parcours.');
+            // Le message va dans la zone de la caméra quand elle tourne : celle du
+            // formulaire de collage est sous la vidéo, souvent hors écran sur un téléphone.
+            this._message(this.flux ? 'msg-scan-camera' : 'msg-scan',
+                          'Apprenant introuvable dans ce parcours.');
+            return false;
         }
+
+        // On ne coupe la caméra qu'une fois la question réellement ouverte : si _ouvrir
+        // échoue, il faut pouvoir viser un autre écran sans rien relancer.
+        const ouvert = await this._ouvrir(token, charge.chapitreId, charge.questionId, null);
+        if (!ouvert) return false;
 
         this._couperCamera();
         this._message('msg-scan', '');
         document.getElementById('champ-charge').value = '';
-        await this._ouvrir(token, charge.chapitreId, charge.questionId, null);
+        return true;
     },
 
-    /** Boucle de lecture caméra : on s'arrête à la première charge valide. */
+    /**
+     * Boucle de lecture caméra. Elle ne s'arrête QUE si une question s'est réellement
+     * ouverte : lire une charge ne suffit pas, encore faut-il qu'elle désigne quelqu'un.
+     * Sans cette distinction, un scan dont l'apprenant est introuvable laissait la vidéo
+     * tourner sans plus rien décoder — image vivante, lecteur mort, aucun signe.
+     */
     async _demarrerCamera() {
+        if (this.flux) return;      // déjà en marche : un second flux fuiterait le premier
+
+        const bouton = document.getElementById('btn-scan-demarrer');
         this._message('msg-scan-camera', 'Préparation…', 'attente');
         if (!await this._chargerDecodeur()) {
             return this._message('msg-scan-camera', 'Lecteur de QRCode indisponible.');
@@ -411,24 +463,35 @@ const SuiviAtelier = {
             this.flux = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'environment' }
             });
+            video.srcObject = this.flux;
+            await video.play();
         } catch (e) {
+            this._couperCamera();   // un play() refusé laisserait la caméra allumée
             return this._message('msg-scan-camera', "Caméra indisponible : " + e.message);
         }
 
-        video.srcObject = this.flux;
-        await video.play();
+        if (bouton) bouton.disabled = true;
         this._message('msg-scan-camera', 'Visez le QRCode de la question.', 'info');
 
         const lire = () => {
             if (!this.flux) return;                       // écran quitté
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (!this._lectureEnCours && video.readyState === video.HAVE_ENOUGH_DATA) {
                 toile.width = video.videoWidth;
                 toile.height = video.videoHeight;
                 contexte.drawImage(video, 0, 0, toile.width, toile.height);
                 const image = contexte.getImageData(0, 0, toile.width, toile.height);
                 const lu = jsQR(image.data, image.width, image.height);
                 if (lu?.data && window.QRCharge?.lire(lu.data)) {
-                    return this._ouvrirCharge(lu.data);
+                    // Une résolution à la fois : sans ce drapeau, les images suivantes
+                    // relanceraient la même charge pendant que la première est en vol.
+                    this._lectureEnCours = true;
+                    this._ouvrirCharge(lu.data)
+                        .catch(() => false)
+                        .then(ouvert => {
+                            this._lectureEnCours = false;
+                            if (!ouvert && this.flux) requestAnimationFrame(lire);
+                        });
+                    return;
                 }
             }
             requestAnimationFrame(lire);
@@ -437,6 +500,9 @@ const SuiviAtelier = {
     },
 
     _couperCamera() {
+        this._lectureEnCours = false;
+        const bouton = document.getElementById('btn-scan-demarrer');
+        if (bouton) bouton.disabled = false;
         if (!this.flux) return;
         this.flux.getTracks().forEach(piste => piste.stop());
         this.flux = null;
@@ -644,13 +710,20 @@ const SuiviAtelier = {
 
     async _ouvrir(token, chapitreId, questionId, code) {
         const progression = await storage.get(this._cleProgression(token));
-        if (!progression) return this._message('msg-code', 'Progression de cet apprenant introuvable.');
+        const zone = this._zoneMessage();
+        if (!progression) {
+            this._message(zone, 'Progression de cet apprenant introuvable.');
+            return false;
+        }
 
         const donneesCours = await staticJson.get('/parcours/cours.json');
         const parcours = donneesCours?.parcours?.find(p => p.slug === this.slug);
         const chapitre = parcours?.chapitres?.find(c => String(c.id) === String(chapitreId));
         const question = chapitre?.questions?.find(q => q.id === questionId);
-        if (!question) return this._message('msg-code', 'Question introuvable dans ce parcours.');
+        if (!question) {
+            this._message(zone, 'Question introuvable dans ce parcours.');
+            return false;
+        }
 
         const apprenants = await storage.get(`${this.slug}:teacher:users_list`) || [];
         const apprenant = apprenants.find(u => u.id === token);
@@ -713,6 +786,7 @@ const SuiviAtelier = {
         this._message('msg-eval', '');
         this._ecran('eval');
         await this._autresAttentes(token, questionId);
+        return true;   // la boucle caméra s'en sert pour savoir si elle peut s'arrêter
     },
 
     /** Un seul passage doit suffire : on montre les autres consignes prêtes du même apprenant. */
@@ -761,6 +835,29 @@ const SuiviAtelier = {
         return config?.[chapitreId]?.chapterMode === 'atelier';
     },
 
+    /**
+     * Points saisis, ou null si la saisie n'est pas exploitable.
+     *
+     * `Number('')` vaut **0**, pas NaN : un champ vidé passait donc toutes les gardes et
+     * la question partait à 0, marquée corrigée, sans un mot. Le `required` du champ ne
+     * protège que la soumission du formulaire — le bouton d'enregistrement direct est un
+     * `type="button"`, il la contourne. La vérification vit donc ici, pour les deux chemins.
+     */
+    _lirePoints(bareme) {
+        const brut = String(document.getElementById('champ-points').value || '').trim();
+        if (brut === '') {
+            this._message('msg-eval', 'Indiquez un nombre de points.');
+            return null;
+        }
+        const points = Number(brut);
+        if (Number.isNaN(points) || points < 0 || points > bareme) {
+            this._message('msg-eval',
+                `Les points doivent être compris entre 0 et ${this._nombre(bareme)}.`);
+            return null;
+        }
+        return points;
+    },
+
     _avisDejaCorrigee(donnees) {
         const quand = donnees.correctedAt ? ` le ${this._date(donnees.correctedAt)}` : '';
         const qui = donnees.correctedBy ? ` par ${donnees.correctedBy}` : '';
@@ -786,10 +883,8 @@ const SuiviAtelier = {
         if (!this.contexte) return;
         const { token, chapitreId, questionId, question } = this.contexte;
 
-        const points = Number(document.getElementById('champ-points').value);
-        if (Number.isNaN(points) || points < 0 || points > question.points) {
-            return this._message('msg-eval', `Les points doivent être compris entre 0 et ${this._nombre(question.points)}.`);
-        }
+        const points = this._lirePoints(question.points);
+        if (points === null) return;
 
         this._message('msg-eval', 'Enregistrement…', 'attente');
 
@@ -859,10 +954,8 @@ const SuiviAtelier = {
         // formulaire : sans cette garde, une question ordinaire déclencherait un AR.
         if (!(estConsigne && modeAtelier)) return this._enregistrerDirect();
 
-        const points = Number(document.getElementById('champ-points').value);
-        if (Number.isNaN(points) || points < 0 || points > question.points) {
-            return this._message('msg-eval', `Les points doivent être compris entre 0 et ${this._nombre(question.points)}.`);
-        }
+        const points = this._lirePoints(question.points);
+        if (points === null) return;
         if (points > AtelierCodes.POINTS_MAX) {
             return this._message('msg-eval', `Le format d'AR ne porte que ${AtelierCodes.POINTS_MAX} points au maximum.`);
         }

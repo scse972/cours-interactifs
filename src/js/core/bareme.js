@@ -44,8 +44,13 @@
  * ------------------------------
  * Le plancher du CUMUL. Une question peut valoir des points négatifs, mais le total des
  * questions auto ne descend jamais sous 0 — un mauvais résultat sur les QCM ne vient
- * pas manger les points gagnés ailleurs. Cette règle appartient à celui qui somme :
- * `chapterBilan`, `correctionModal` et `showBlindBilan` l'appliquent chacun chez eux.
+ * pas manger les points gagnés ailleurs. Cette règle appartient à celui qui somme, et
+ * tous ne l'appliquent pas de la même façon :
+ *
+ *   chapterBilan       plancher sur le CUMUL des questions auto, les deux bornes
+ *   correctionModal    plancher sur le cumul, par catégorie (auto d'un côté, manuel de l'autre)
+ *   showBlindBilan     plancher PAR QUESTION — une question négative y compte 0, elle ne
+ *                      retire donc rien aux autres. Écart assumé, pas encore réconcilié.
  *
  * Texte destiné au formateur : fiche « bareme » de `src/js/aide.js`.
  */

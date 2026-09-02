@@ -357,7 +357,7 @@ const ChapterUI = {
                     }
 
                     indicateurs.push(`
-                            <div class="stat-item" title="Points obtenus à partir de la note calculée sur les exercices auto-corrigés.">
+                            <div class="stat-item" title="Points réellement acquis sur les exercices auto-corrigés, pénalités d'essais comprises. Le même nombre que dans le bilan.">
                                 <span>⭐ Points obtenus</span>
                                 <strong>${stats.pointsObtenus}/${stats.autoMaxPossible}</strong>
                             </div>`);

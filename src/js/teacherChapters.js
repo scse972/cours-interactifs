@@ -106,9 +106,15 @@ class TeacherChapters {
                     </div>
 
                     <div class="control-actions" style="margin-top: 1rem;">
-                        <label class="date-limit-toggle" style="flex-direction: column; align-items: flex-start; gap: 0.3rem;">
+                        ${'' /* Le `for` est indispensable : sans lui, ce <label> s'associe à son
+                             premier descendant labelable — c'est-à-dire au <button> de l'icône
+                             d'aide, qui précède le <select>. Cliquer le texte ouvrirait alors
+                             l'aide, et le menu n'aurait plus de nom accessible. */}
+                        <label class="date-limit-toggle" for="mode-chapitre-${chapter.id}"
+                               style="flex-direction: column; align-items: flex-start; gap: 0.3rem;">
                             <span>🎯 Mode du chapitre ${window.Aide ? Aide.icone('modes') : ''}</span>
-                            <select onchange="dashboard.modules.chapters.toggleChapterMode('${chapter.id}', this.value)" 
+                            <select id="mode-chapitre-${chapter.id}"
+                                    onchange="dashboard.modules.chapters.toggleChapterMode('${chapter.id}', this.value)" 
                                     style="padding:0.3rem 0.5rem; border-radius:6px; border:1px solid #ccc; font-size:0.9rem; cursor:pointer;">
                                 <option value="normal" ${chapterMode === 'normal' ? 'selected' : ''}>Découverte</option>
                                 <option value="exam" ${chapterMode === 'exam' ? 'selected' : ''}>Examen</option>

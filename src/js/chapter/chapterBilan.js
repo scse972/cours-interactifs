@@ -299,21 +299,20 @@ const ChapterBilan = {
                         <button class="modal-close" onclick="ChapterBilan.closeAutoCorrectDetails(event)">×</button>
                     </div>
                     <div class="modal-body">
-${'' /* noteAttribuee, et non noteSur20 qui n'est écrit nulle part : la ligne
-                              ne s'affichait donc jamais. Elle devient atteignable sur un chapitre
-                              corrigé puis renvoyé pour retouche. */}
-                        ${submissionStatus === 'validated' && typeof chapter.noteAttribuee === 'number' ? `
-                            <div class="note-item">
-                                <span class="note-label">Note finale</span>
-                                <span class="note-value final">${chapter.noteAttribuee} sur ${noteMax}</span>
-                            </div>
-                        ` : ''}
+${'' /* Pas de « Note finale » ici, et ce n'est pas un oubli : LE BILAN S'ARRÊTE À LA
+                             VALIDATION. Dès qu'un chapitre est `validated`, les deux points d'entrée
+                             (chapterUI et chapterRenderer) basculent le bouton sur « 📄 Voir le
+                             corrigé » et ouvrent studentCorrectionModal, qui affiche la note du
+                             formateur, le détail et les commentaires. Le bilan sert tout ce qui
+                             précède ; le corrigé prend la main après. Une ligne de note définitive
+                             ici serait inatteignable — c'est ce qu'était l'ancienne, qui lisait de
+                             surcroît un champ `noteSur20` que rien n'écrit. */}
                         <div class="section-title">📋 Résumé</div>
                         <div class="note-range">
                             ${autoMaxPossible > 0 ? `
                             <div class="note-item">
                                 <span class="note-label">Points auto-corrigés</span>
-                                <span class="note-value current">${autoAcquis} sur ${autoMaxPossible}</span>
+                                <span class="note-value current">${this._nombre(autoAcquis)} sur ${autoMaxPossible}</span>
                             </div>
                             ${autoRamene > 0 ? `
                             <div class="note-item note-item-mention">
@@ -325,7 +324,7 @@ ${'' /* noteAttribuee, et non noteSur20 qui n'est écrit nulle part : la ligne
                             ${(totalPossiblePoints - autoMaxPossible) > 0 ? `
                             <div class="note-item">
                                 <span class="note-label">Points semi/manuels validés</span>
-                                <span class="note-value current">${manuelAcquis} sur ${totalPossiblePoints - autoMaxPossible}</span>
+                                <span class="note-value current">${this._nombre(manuelAcquis)} sur ${totalPossiblePoints - autoMaxPossible}</span>
                             </div>
                             ` : ''}
                             <div class="note-item">

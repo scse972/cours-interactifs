@@ -303,7 +303,21 @@ média n'est accordée, et rien n'a été ajouté à `XSpro/main.js` pour en acc
 charge reste disponible partout, y compris là.
 
 Le flux est coupé dès qu'on quitte l'écran de scan (`_ecran()` s'en charge) : une lampe témoin qui
-reste allumée dans une salle de classe est un problème en soi.
+reste allumée dans une salle de classe est un problème en soi. Un second appui sur « Démarrer la
+caméra » ne fait rien tant qu'un flux est vif — sans cette garde, la référence au premier flux était
+écrasée et ses pistes n'étaient plus jamais coupées.
+
+**La boucle ne s'arrête que si une question s'est réellement ouverte.** Lire une charge ne suffit
+pas : encore faut-il qu'elle désigne un apprenant connu et une question existante. `_ouvrirCharge()`
+et `_ouvrir()` renvoient donc un booléen que la boucle interroge. Sans cela — c'était le cas au
+départ — un scan dont l'apprenant était introuvable laissait la vidéo tourner sans plus rien
+décoder : image vivante, lecteur mort, et aucun signe à l'écran.
+
+**Les messages d'erreur suivent l'écran visible.** `_ouvrir()` est atteint depuis six endroits et
+n'en écrivait qu'un seul : `msg-code`, sur l'écran du code. Cinq fois sur six l'erreur tombait dans
+une section masquée — le pire cas étant justement le scan, où la caméra se coupait et le champ se
+vidait sans un mot. `_zoneMessage()` rend l'identifiant de la zone de l'écran effectivement affiché,
+et la correspondance vit à un seul endroit.
 
 ### 5.4 bis  Là où il n'y a pas de caméra : la charge en clair
 
