@@ -24,6 +24,8 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── studentCorrectionModal.js      #   Modale de correction élève
 │   │   ├── studentWorkEditor.js           #   Éditeur de travail élève
 │   │   ├── progressManager.js             #   Gestionnaire de progression
+│   │   ├── qrQuestion.js                  #   QRCode + nom de l'apprenant dans le bandeau
+│   │   │                                  #   de question (voir "qrcode question.md")
 │   │   ├── getChapterBadgeState.js        #   État des badges chapitre
 │   │   ├── simulation.js                  #   Simulation apprenant (identité isolée + purge)
 │   │   ├── teacherDashboard.js            #   Tableau de bord formateur
@@ -42,6 +44,9 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   │   ├── chapterPagination.js       #   Affichage question par question (Examen, Blind)
 │   │   │   ├── chapterSubmission.js       #   Soumission de chapitre
 │   │   │   └── chapterUI.js               #   UI chapitre
+│   │   ├── vendor/                        #   Bibliothèques tierces embarquées (jamais de CDN :
+│   │   │   │                              #   le site doit tourner hors-ligne et en Electron)
+│   │   │   └── qrcode-generator.js        #     Générateur de QRCode (K. Arase, MIT)
 │   │   └── core/
 │   │       ├── chapterRepository.js       #   Accès données chapitre
 │   │       ├── chapterRenderer.js         #   Rendu chapitre
@@ -97,6 +102,7 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 ├── DETAILS_VUES.md                        # Documentation vues
 ├── principe flux.md                       # Documentation flux de données
 ├── mode atelier AR.md                     # Mode Atelier AR : intention, codes, modèle de données
+├── qrcode question.md                     # QRCode de question : intention, format figé de la charge utile
 │
 └── .gitignore
 ```
@@ -388,6 +394,40 @@ une consigne se juge en présence, pas au compteur de caractères. Attention, «
 **Documentation complète : `mode atelier AR.md`** (intention, format des codes, modèle de données,
 limites assumées). À lire avant toute modification : plusieurs choix y sont contre-intuitifs et
 protègent la fonction du dispositif.
+
+---
+
+# 🔳 QRCode de question
+
+Le bandeau de **chaque question**, dans tous les modes, porte une petite vignette QRCode et le **nom
+de l'apprenant**. Le nom identifie de visu l'écran devant lequel on se trouve ; le QRCode, scanné
+depuis l'outil formateur, désignera exactement une question d'un apprenant et y ouvrira la saisie
+d'un commentaire de question, d'un commentaire général de chapitre et de points.
+
+C'est le même service que le mode Atelier AR, **sans son rituel** : là-bas la dictée d'un code à
+6 caractères est lente à dessein, ici on veut aller au plus court.
+
+La charge utile est **autoporteuse** — rien n'est écrit en base, contrairement aux tickets Atelier :
+
+```text
+XSQ1|{slug}|{empreinte}|{chapitreId}|{questionId}
+```
+
+L'`empreinte` est un SHA-256 de `slug:token` tronqué à 12 caractères, **et non le token** : celui-ci
+est l'identifiant de connexion de l'apprenant, on ne le publie pas en lisible-machine sur tous les
+écrans de la salle. L'outil formateur le résout via `{slug}:teacher:users_list`.
+
+La vignette fait la hauteur exacte de la pastille de points — **le bandeau ne grandit pas** — et
+n'est donc pas scannable à cette taille : c'est une affordance, un clic ouvre le QRCode en grand et
+c'est celui-là qu'on scanne. Le QRCode est masqué en vue formateur, à l'impression, et dès que
+l'apprenant n'est pas identifiable ; il est affiché en simulation apprenant.
+
+La bibliothèque de génération est **embarquée** dans `src/js/vendor/` : pas de CDN, le site doit
+tourner hors-ligne et en Electron sur `file:`.
+
+**Documentation complète : `qrcode question.md`** (intention, format figé de la charge utile, règles
+d'affichage, ce qui reste à faire côté formateur). Le format de la charge utile est imprimé sur tous
+les écrans : à lire avant d'y toucher.
 
 ---
 

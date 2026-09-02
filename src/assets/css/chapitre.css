@@ -832,3 +832,121 @@
 .bandeau-simulation button:hover {
     background: rgba(255,255,255,0.32);
 }
+
+/* ============================================
+   QRCODE DE QUESTION (voir qrQuestion.js)
+   Le bandeau ne doit pas grossir : la vignette fait la hauteur de .points-badge.
+   Trop petite pour être scannée — c'est voulu, le clic ouvre la version scannable.
+   ============================================ */
+.qr-badge {
+    padding: 1px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    line-height: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qr-badge:hover,
+.qr-badge:focus-visible {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+/* 28px + 1px de marge intérieure + 1px de bordure = 32px, soit très exactement la hauteur
+   de .points-badge : le bandeau garde la hauteur qu'il avait. */
+.qr-badge svg {
+    display: block;
+    width: 28px;
+    height: 28px;
+}
+
+.qr-nom {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #475569;
+    max-width: 12ch;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Le bandeau passe déjà en colonne sous 768px (style.css) : sous 480px on retire le nom
+   plutôt que de laisser la ligne se casser — la vignette suffit à désigner la question. */
+@media (max-width: 480px) {
+    .qr-nom { display: none; }
+}
+
+@media print {
+    .qr-badge, .qr-nom, .qr-modale { display: none !important; }
+}
+
+/* ── Agrandissement : c'est cette image-là qui se scanne ────────────────── */
+.qr-modale {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.qr-modale[hidden] { display: none; }
+
+.qr-modale-fond {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+}
+
+.qr-modale-boite {
+    position: relative;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem 1.5rem 1.25rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    max-width: 340px;
+}
+
+.qr-modale-fermer {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.qr-modale-fermer:hover { background: #cbd5e1; }
+
+.qr-modale-code svg {
+    display: block;
+    width: 280px;
+    height: 280px;
+    max-width: 70vw;
+    max-height: 70vw;
+    margin: 0 auto;
+}
+
+.qr-modale-nom {
+    margin-top: 1rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.qr-modale-question {
+    margin-top: 0.15rem;
+    font-size: 0.9rem;
+    color: #64748b;
+}

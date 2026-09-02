@@ -350,3 +350,25 @@ republier un cours pour changer de mode.
 Ce qui a disparu en route, et qu'il ne faut pas réintroduire sans raison : la réconciliation entre deux sources de
 vérité, la cryptographie partagée entre deux applications, la grille à parser, le masquage des scores, la
 normalisation préalable des statuts de correction, et le second format de code pour le hors-ligne.
+
+---
+
+## 10. Ne pas confondre avec le QRCode de question
+
+Le bandeau de chaque question porte, depuis, **un QRCode** qui rend un service voisin : désigner d'un
+geste une question d'un apprenant pour y déposer un commentaire (voir `qrcode question.md`). Il
+réutilise `AtelierCodes.condensat()`, et rien d'autre.
+
+Ce sont **deux dispositifs distincts, et il ne faut pas les fusionner** :
+
+| | Atelier AR | QRCode de question |
+|---|---|---|
+| Ce que ça sert | forcer un échange en présence | supprimer une recherche |
+| La lenteur | **voulue** — « ne jamais optimiser le rituel » | à supprimer |
+| Périmètre | les consignes d'un chapitre en mode Atelier | toutes les questions, tous les modes |
+| Trace en base | un ticket écrit quand l'apprenant se déclare prêt | **aucune** — la charge utile est autoporteuse |
+| Ce qui est écrit | `arPoints` / `arAppreciation`, champs d'attente promus par la saisie de l'AR | `teacherScore` / `teacherComment` / `globalComment`, immédiatement |
+| Accusé de réception | oui, c'est tout l'objet | non |
+
+Remplacer la dictée du code de validation par un scan reviendrait à démonter le mode Atelier AR : la
+dictée **est** le dispositif pédagogique, pas son coût d'usage.

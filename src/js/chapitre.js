@@ -215,6 +215,7 @@ async function initChapterPage() {
             ChapterUI.restoreAllAnswers();
             ChapterUI.updateAllProgressIndicators();
             window.AtelierQuestion?.init();
+            window.QRQuestion?.init();
         }, 500);
         return;
     }
@@ -299,6 +300,7 @@ async function initChapterPage() {
         //    de saisie d'AR doit survivre au verrouillage d'un chapitre déjà rendu
         //    (l'AR arrive souvent après le rendu — cf. "mode atelier AR.md" §3.1).
         window.AtelierQuestion?.init();
+        window.QRQuestion?.init();
     }, 500);
 }
 
