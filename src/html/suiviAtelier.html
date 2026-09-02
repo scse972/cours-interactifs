@@ -15,6 +15,8 @@
     <script src="../../src/js/storage.js"></script>
     <script src="../../src/js/atelier/atelierCodes.js"></script>
     <script src="../../src/js/qrCharge.js"></script>
+    <script src="../../src/js/aide.js"></script>
+    <script src="../../src/js/core/bareme.js"></script>
     <script src="../../src/js/progressManager.js"></script>
     <script src="../../src/js/atelier/suiviAtelier.js"></script>
     <style>
@@ -195,6 +197,8 @@
 
         <div class="sa-carte">
             <form id="form-eval">
+                <button type="button" class="aide-icone" data-aide="correctionEnSalle"
+                        title="Les deux façons de corriger" style="float:right;">ⓘ</button>
                 <label class="sa-label" for="champ-points">Points attribués</label>
                 <div class="sa-points-ligne">
                     <input type="number" id="champ-points" class="sa-champ" min="0" step="0.25" required>

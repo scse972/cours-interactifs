@@ -24,6 +24,8 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── studentCorrectionModal.js      #   Modale de correction élève
 │   │   ├── studentWorkEditor.js           #   Éditeur de travail élève
 │   │   ├── progressManager.js             #   Gestionnaire de progression
+│   │   ├── aide.js                        #   Fiches d'aide formateur — version rédigée des
+│   │   │                                  #   règles de barème et de notation
 │   │   ├── qrCharge.js                    #   Format de la charge du QRCode de question —
 │   │   │                                  #   source unique, partagée apprenant/formateur
 │   │   ├── qrQuestion.js                  #   QRCode + nom de l'apprenant dans le bandeau
@@ -56,6 +58,7 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │       ├── chapterRenderer.js         #   Rendu chapitre
 │   │       ├── chapterSession.js          #   Session chapitre
 │   │       ├── chapterState.js            #   État chapitre
+│   │       ├── bareme.js                  #   Barème des questions auto (pénalité d'essais)
 │   │       ├── getExamContext.js          #   Contexte examen
 │   │       └── utils.js                   #   Utilitaires
 │   │
@@ -316,6 +319,31 @@ Le tableau de bord permet :
 * dates limites,
 * gestion des utilisateurs,
 * import/export CSV.
+
+---
+
+# ⭐ Barème et bilan
+
+La **pénalité d'essais** dissuade la réponse au hasard : une bonne réponse du premier coup rapporte
+tout le barème, chaque tentative ratée en retire une part — d'autant plus grande qu'il y avait peu de
+choix. La pénalité vaut `2 × barème / (options − 1)`, ce qui ramène à **zéro l'espérance d'un
+apprenant qui répond entièrement au hasard**, quel que soit le nombre de choix. Une question peut
+donc valoir des points négatifs, mais **le total des questions auto ne descend jamais sous zéro** :
+un mauvais résultat sur les QCM ne vient pas manger les points gagnés ailleurs. Source unique :
+`src/js/core/bareme.js`.
+
+Le **bilan** répond à une seule question : entre quelles bornes la note va-t-elle finir ? Chaque
+question apporte un intervalle de points — une question corrigée apporte une valeur fixe, une
+question en attente apporte « entre zéro et son barème » — et on somme. Les bornes **se resserrent
+d'elles-mêmes** à mesure que l'apprenant répond et que le formateur corrige ; quand tout est corrigé,
+elles se rejoignent et le bilan n'affiche plus qu'une note.
+
+La fourchette intègre la pénalité automatique de cours non lu, mais **jamais le bonus ou le malus que
+le formateur saisit lui-même** : ce que l'apprenant peut déduire reste une note théorique.
+
+Ces règles sont rédigées en français dans `src/js/aide.js`, atteignables par les icônes ⓘ du tableau
+de bord — c'est là qu'il faut aller avant de lire le code. **Documentation technique complète :
+`DETAILS_VUES.md`**, sections « Barème des questions auto-corrigées » et « Le bilan de chapitre ».
 
 ---
 

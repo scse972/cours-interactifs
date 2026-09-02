@@ -64,9 +64,9 @@ class CorrectionModal {
         }
 
         if (effectiveIsCorrect === true) {
-            let pointsEarned = q.points - ((attempts - 1) * q.points);
-            const maxPenalty = q.points * 2;
-            return Math.max(-maxPenalty, pointsEarned);
+            // Barème partagé : la pénalité dépend du nombre d'options, voir core/bareme.js
+            // et la fiche « bareme » de aide.js.
+            return Bareme.pointsAuto(q.points, attempts, Bareme.nbOptions(q));
         }
 
         if (effectiveIsCorrect === false) {
@@ -397,7 +397,7 @@ class CorrectionModal {
         return `
             <div class="modal-header">
                 <div>
-                    <h3>Correction - ${this.escapeHtml(chapterConfig.title)}</h3>
+                    <h3>Correction - ${this.escapeHtml(chapterConfig.title)} ${window.Aide ? Aide.icone('notation') : ''}</h3>
                     <div class="correction-header-info">
                         <span>👤 ${this.escapeHtml(student.name)} (${this.escapeHtml(student.class || 'Non spécifié')}) | 📝 Note: ${Math.round(noteSur20*10)/10}/20</span>
                     </div>
@@ -790,8 +790,12 @@ ${question.theoreticalScore < 0 ? `
 <br>❌ Réponse incorrecte
 ` : ''}
 
-${question.theoreticalScore > 0 && (question.attempts || 0) > 1 ? `
-<br>⚠️ Score réduit à cause des tentatives
+${(question.attempts || 0) > 1 ? `
+<br>⚠️ ${Bareme.penaliteParEssai(maxPoints, Bareme.nbOptions(question))} pt(s) retiré(s) par tentative ratée${Bareme.nbOptions(question) ? ` (${Bareme.nbOptions(question)} choix proposés)` : ''}
+` : ''}
+
+${question.theoreticalScore < 0 ? `
+<br>ℹ️ Le total des questions auto ne descend pas sous 0
 ` : ''}
 
 ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) && question.teacherScore !== question.theoreticalScore) ? `

@@ -333,6 +333,20 @@ Conséquence sur la règle des 0 points (§5) : `consignesNonValidees()` ne filt
 `pointsAffiches()`, qui couvre les deux états aboutis. Une consigne corrigée directement ne doit évidemment pas être
 annoncée « comptera pour 0 point » au moment du rendu.
 
+### Le bandeau de feedback, dans les états aboutis
+
+`chapterUI.handleNormalMode()` écrit « ⏳ Réponse enregistrée — En attente de vérification » sur toute question
+ouverte répondue, et il tourne **avant** nous : `chapitre.js` appelle `restoreAllAnswers()` puis
+`AtelierQuestion.init()`. Une consigne aboutie affichait donc un « en attente » posé juste au-dessus de son
+« 8 / 10 points ».
+
+`_bandeau()` efface ce bandeau quand `pointsAffiches()` est vrai — donc en `validee` et en `corrigee`, et nulle part
+ailleurs. On efface plutôt que de réécrire : le bloc dit déjà tout. Les états `brouillon` et `demandee` le gardent, il
+n'y contredit rien — la réponse y est bien enregistrée et en attente.
+
+Le défaut existait depuis le premier jour du mode Atelier. La correction directe rendant l'état abouti beaucoup plus
+fréquent, il devenait voyant.
+
 ---
 
 ## 8. Plan d'implémentation

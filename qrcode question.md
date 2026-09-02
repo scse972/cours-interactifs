@@ -249,8 +249,8 @@ C'est vrai **par construction**, et pas par précaution : `recomputeChapterStats
 `submittedAt` **et de rien d'autre**. Corriger une question ne peut donc pas faire basculer un
 chapitre en `validated`, seul état qui ouvre le corrigé à l'apprenant.
 
-Deux ajustements ont malgré tout été nécessaires, tous deux internes au mode Atelier — où le contrat
-du mode est justement le retour immédiat.
+Trois ajustements ont malgré tout été nécessaires, tous internes au mode Atelier — où le contrat du
+mode est justement le retour immédiat.
 
 **Un 4ᵉ état de consigne, `corrigee`.** Sans lui, une consigne notée directement continuait
 d'afficher « Je me déclare prêt » et l'avertissement au rendu continuait d'annoncer « comptera pour
@@ -268,11 +268,25 @@ déjà tranché.
 
 **Le bilan cesse de se contredire.** `chapterBilan.js` comptait les questions manuelles sur
 `isCorrect` seul : une consigne validée par AR affichant « 8 / 10 » dans son bloc apparaissait
-« ⏳ En attente, +0 » deux écrans plus bas. Le défaut existait déjà. Il compte désormais
-`teacherScore` **exactement quand l'apprenant connaît déjà cette note** — corrigé ouvert
-(`submissionStatus === 'validated'`), ou bloc Atelier qui l'affiche. Le prédicat est exposé là où il
-est déjà vrai, `AtelierQuestion.pointsAffiches()`, plutôt que dupliqué. Hors de ces cas, rien ne
-change : une question manuelle notée en direct dans un chapitre Découverte reste « ⏳ En attente ».
+« ⏳ En attente, +0 » deux écrans plus bas. Le défaut existait déjà. Il a d'abord compté
+`teacherScore` **exactement quand l'apprenant connaissait déjà cette note** — corrigé ouvert, ou
+bloc Atelier qui l'affiche — via le prédicat `AtelierQuestion.pointsAffiches()`.
+
+> ⚠️ **Cette règle a été abandonnée depuis**, à la refonte du bilan : **toute question corrigée
+> compte désormais dans la fourchette**, quel que soit le mode, et `pointsAffiches()` n'est plus
+> consulté par le bilan. Une prévision qui ignore les corrections déjà faites devient fausse au
+> moment même où elle servirait le plus.
+>
+> Le retour assumé : l'apprenant peut déduire sa note **théorique** sur une question corrigée, mais
+> pas sa note finale — le bonus ou le malus global du formateur n'entre pas dans la fourchette.
+> `pointsAffiches()` reste utilisé par `consignesNonValidees()` et `_bandeau()`.
+> Le modèle actuel est décrit dans `DETAILS_VUES.md`, section « Le bilan de chapitre ».
+
+**Le bandeau de feedback s'efface dans les états aboutis.** `handleNormalMode()` écrit « ⏳ Réponse
+enregistrée — En attente de vérification » sur toute question ouverte répondue, et il tourne avant la
+décoration Atelier : une consigne aboutie portait donc un « en attente » juste au-dessus de son
+« 8 / 10 points ». `AtelierQuestion._bandeau()` l'efface quand `pointsAffiches()` est vrai, et
+seulement là. Défaut d'origine du mode Atelier, que la correction directe rendait voyant.
 
 Le compteur « ⭐ Points obtenus » du bandeau n'est **pas** touché : `computeChapterUIStats()` ne
 parcourt que les questions auto et son titre l'annonce (« Exercices auto-corrigés »).

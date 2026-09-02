@@ -17,6 +17,12 @@ const ChapterBilan = {
         this._previousFocus = document.activeElement;
     },
 
+    /** Affichage d'un nombre de points : entier quand il l'est, sinon deux décimales. */
+    _nombre(valeur) {
+        const n = Number(valeur) || 0;
+        return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, '');
+    },
+
     _restoreFocus() {
         const el = this._previousFocus;
         // Petit délai pour laisser le navigateur finir le cleanup du modal
@@ -26,6 +32,89 @@ const ChapterBilan = {
             }
             this._previousFocus = null;
         }, 100);
+    },
+
+    /**
+     * L'intervalle de points que cette question apporte au chapitre.
+     *
+     * C'est LA règle du bilan, et elle tient en une phrase : chaque question apporte un
+     * intervalle `[min, max]`, et on somme. Le reste — fourchette de notes, convergence
+     * vers la note définitive — en découle sans cas particulier. Quand tout est répondu
+     * et corrigé, tous les intervalles sont fermés, `min` égale `max`, et le bilan
+     * n'affiche plus qu'une note.
+     *
+     * Trois valeurs, pas deux :
+     *   min     ce qui est garanti si tout ce qui reste tourne au pire
+     *   max     ce qui est atteignable si tout tourne au mieux
+     *   acquis  ce qui est déjà en poche — diffère de `min` sur une question auto pas
+     *           encore tentée : elle N'A PAS encore coûté ses points, mais elle le peut.
+     *
+     * Les questions auto sont les seules à pouvoir retirer des points. Voir aussi le
+     * plancher du cumul, appliqué par l'appelant, et la fiche « bareme » de aide.js.
+     */
+    _intervalle(question, donnees, chapitreOuvert) {
+        const points = question.points || 0;
+        const rien = { min: 0, max: 0, acquis: 0, statut: 'unanswered' };
+
+        // « Répondue » au sens large : un 0 ou un tableau sont des réponses légitimes,
+        // on ne peut pas se contenter de tester la véracité de `answer`.
+        const repondue = !!donnees && (
+            donnees.answered === true ||
+            (typeof donnees.answer === 'string' && donnees.answer.trim() !== '') ||
+            (Array.isArray(donnees.answer) && donnees.answer.length > 0)
+        );
+
+        if (question.correctionType === 'auto') {
+            if (!donnees) {
+                return chapitreOuvert
+                    ? { min: -points, max: points, acquis: 0, statut: 'unanswered' }
+                    : rien;
+            }
+            // Des essais sans réponse enregistrée : la question a été ratée.
+            const rate = donnees.isCorrect === false
+                      || (donnees.attempts > 0 && !repondue);
+
+            if (donnees.isCorrect === true) {
+                const pts = Bareme.pointsAuto(points, donnees.attempts, Bareme.nbOptions(question));
+                return { min: pts, max: pts, acquis: pts, statut: 'correct' };
+            }
+            if (rate) {
+                return { min: -points, max: -points, acquis: -points, statut: 'incorrect' };
+            }
+            // Ni réussie ni ratée : encore à tenter. C'est ce cas qui manquait — une auto
+            // répondue sans verdict et sans essai comptabilisé ne tombait dans aucune
+            // branche, et la note maximale annoncée était inférieure à la vérité.
+            return chapitreOuvert
+                ? { min: -points, max: points, acquis: 0, statut: 'unanswered' }
+                : rien;
+        }
+
+        // Semi-auto et manuelles. L'ordre compte : la correction du formateur passe AVANT
+        // la reconnaissance automatique — sur une semi validée d'office, un teacherScore
+        // saisi ensuite l'emporte, le dernier mot est au formateur.
+        if (!donnees) {
+            return chapitreOuvert
+                ? { min: 0, max: points, acquis: 0, statut: 'unanswered' }
+                : rien;
+        }
+        if (donnees.manualCorrectionStatus === 'corrected'
+            && typeof donnees.teacherScore === 'number' && !isNaN(donnees.teacherScore)) {
+            const t = donnees.teacherScore;
+            return { min: t, max: t, acquis: t, statut: 'corrected' };
+        }
+        if (donnees.isCorrect === true) {
+            return { min: points, max: points, acquis: points, statut: 'correct' };
+        }
+        if (donnees.isCorrect === false) {
+            // Réponse rejetée par la règle (« Texte non vide » trop court, par exemple).
+            return { min: 0, max: 0, acquis: 0, statut: 'incorrect' };
+        }
+        if (repondue) {
+            return { min: 0, max: points, acquis: 0, statut: 'pending' };
+        }
+        return chapitreOuvert
+            ? { min: 0, max: points, acquis: 0, statut: 'unanswered' }
+            : rien;
     },
 
     async showDetailsBilanChapter(chapterIdParam = null, progressDataParam = null) {
@@ -64,102 +153,35 @@ const ChapterBilan = {
             return;
         }
 
-        const allQuestions = chapterConfig.questions;
-        const totalPossiblePoints = chapterConfig.maxPoints || allQuestions.reduce((sum, q) => sum + q.points, 0);
+        const allQuestions = finalConfig.questions || [];
+        const totalPossiblePoints = finalConfig.maxPoints
+            || allQuestions.reduce((sum, q) => sum + q.points, 0);
+        const noteMax = APP_CONFIG.MAX_NOTE;
 
-        let autoScore = 0;
-        let autoMaxPossible = 0;
-        let autoRemainingRisk = 0;
-        let manualCurrentScore = 0;
-        let manualRemainingMax = 0;
+        // Le chapitre peut-il encore recevoir des réponses ? Ce qui n'a pas été fait vaut
+        // zéro définitif une fois la copie rendue, alors qu'avant le rendu c'est encore
+        // un enjeu — dans les deux sens pour une question auto, qui peut retirer des points.
+        const chapitreOuvert = submissionStatus === 'not_submitted'
+                            || submissionStatus === 'returned_for_revision';
+
+        let autoMin = 0, autoMax = 0, autoAcquis = 0, autoMaxPossible = 0;
+        let manuelMin = 0, manuelMax = 0, manuelAcquis = 0;
 
         const questionDetails = [];
 
         allQuestions.forEach(q => {
             const qData = chapter.questions[q.id];
-            let status = 'unanswered';
-            let pointsEarned = 0;
+            const bornes = this._intervalle(q, qData, chapitreOuvert);
 
-            if (q.correctionType === 'auto') autoMaxPossible += q.points;
-
-            const wasAnswered =
-                qData &&
-                (qData.answered === true ||
-                (typeof qData.answer === 'string' && qData.answer.trim() !== '') ||
-                (Array.isArray(qData.answer) && qData.answer.length > 0) ||
-                (qData.answer !== null && qData.answer !== undefined && qData.answer !== ''));
-
-            let effectiveIsCorrect = qData ? qData.isCorrect : null;
-            let effectiveWasAnswered = wasAnswered;
-
-            if (q.correctionType === 'auto' && qData && qData.attempts > 0 && !wasAnswered) {
-                effectiveIsCorrect = false;
-                effectiveWasAnswered = true;
-            }
-
-            // Une question manuelle notée reste `isCorrect === null` : sans ce cas, le bilan
-            // annoncerait « en attente, +0 » une consigne dont le bloc affiche « 8 / 10 »
-            // deux écrans plus haut. On ne compte QUE ce que l'apprenant connaît déjà —
-            // le corrigé ouvert, ou une consigne Atelier qui montre sa note. Une correction
-            // faite en direct sur un chapitre non validé reste, elle, en attente.
-            const noteConnue = qData
-                && q.correctionType !== 'auto'
-                && typeof qData.teacherScore === 'number'
-                && (submissionStatus === 'validated'
-                    || window.AtelierQuestion?.pointsAffiches?.(q.id) === true);
-
-            if (noteConnue) {
-                status = 'corrected';
-                pointsEarned = qData.teacherScore;
-                manualCurrentScore += pointsEarned;
-            } else if (qData) {
-                if (effectiveIsCorrect === true) {
-                    status = 'correct';
-                    pointsEarned = q.points;
-                    if (q.correctionType === 'auto') {
-                        pointsEarned = q.points - ((qData.attempts - 1) * q.points);
-                        const maxPenalty = q.points * 2;
-                        pointsEarned = Math.max(-maxPenalty, pointsEarned);
-                        autoScore += pointsEarned;
-                    } else {
-                        manualCurrentScore += pointsEarned;
-                    }
-                } else if (effectiveIsCorrect === false) {
-                    status = 'incorrect';
-                    if (q.correctionType === 'auto') {
-                        pointsEarned = -q.points;
-                        autoScore += pointsEarned;
-                    } else {
-                        pointsEarned = 0;
-                    }
-                } else if (effectiveIsCorrect === null && q.correctionType !== 'auto') {
-                    if (effectiveWasAnswered) {
-                        status = 'pending';
-                        manualRemainingMax += q.points;
-                    } else {
-                        status = 'unanswered';
-                        if (submissionStatus === 'not_submitted' || submissionStatus === 'returned_for_revision')
-                            manualRemainingMax += q.points;
-                    }
-                    pointsEarned = 0;
-                } else if (
-                    q.correctionType === 'auto' &&
-                    !effectiveWasAnswered &&
-                    (submissionStatus === 'not_submitted' || submissionStatus === 'returned_for_revision')
-                ) {
-                    autoRemainingRisk += q.points;
-                }
+            if (q.correctionType === 'auto') {
+                autoMaxPossible += q.points;
+                autoMin += bornes.min;
+                autoMax += bornes.max;
+                autoAcquis += bornes.acquis;
             } else {
-                status = 'unanswered';
-                pointsEarned = 0;
-                if (
-                    q.correctionType === 'auto' &&
-                    (submissionStatus === 'not_submitted' || submissionStatus === 'returned_for_revision')
-                ) {
-                    autoRemainingRisk += q.points;
-                } else if (submissionStatus === 'not_submitted' || submissionStatus === 'returned_for_revision') {
-                    manualRemainingMax += q.points;
-                }
+                manuelMin += bornes.min;
+                manuelMax += bornes.max;
+                manuelAcquis += bornes.acquis;
             }
 
             questionDetails.push({
@@ -167,25 +189,47 @@ const ChapterBilan = {
                 title: q.title,
                 type: q.correctionType,
                 points: q.points,
-                status,
-                attempts: qData ? qData.attempts : 0,
-                pointsEarned
+                status: bornes.statut,
+                attempts: qData ? (qData.attempts || 0) : 0,
+                pointsEarned: bornes.acquis
             });
         });
 
-        const noteMax = APP_CONFIG.MAX_NOTE;
-        const minAutoScore = Math.max(0, autoScore - autoRemainingRisk);
-        const autoProjectedScore = Math.max(0, autoScore);
-        const minScore = minAutoScore + manualCurrentScore;
-        const currentScore = autoProjectedScore + manualCurrentScore;
-        const maxScorePossible = autoProjectedScore + autoRemainingRisk + manualCurrentScore + manualRemainingMax;
-        const minNote = totalPossiblePoints > 0 ? (minScore / totalPossiblePoints) * noteMax : 0;
-        const maxNote = totalPossiblePoints > 0 ? (maxScorePossible / totalPossiblePoints) * noteMax : 0;
+        // Le cumul auto ne descend jamais sous 0 : un mauvais résultat sur les QCM ne
+        // vient pas manger les points gagnés ailleurs. Les blocs semi et manuel ne
+        // peuvent pas devenir négatifs par construction, il n'y a rien à y plancher.
+        const autoBrutAcquis = autoAcquis;
+        autoMin = Math.max(0, autoMin);
+        autoMax = Math.max(0, autoMax);
+        autoAcquis = Math.max(0, autoAcquis);
+        // Ce qui a été ramené à 0, pour l'expliquer : sans cela l'apprenant additionne le
+        // détail et ne retrouve pas le total.
+        const autoRamene = autoAcquis - autoBrutAcquis;
 
-        let coursePenalty = 0;
-        const totalCourses = chapterConfig.courseValidationCount;
-        const validatedCourses = chapter.answeredCourses || 0;
-        if (validatedCourses < totalCourses) coursePenalty = 2;
+        const minScore = autoMin + manuelMin;
+        const maxScorePossible = autoMax + manuelMax;
+        const currentScore = autoAcquis + manuelAcquis;
+
+        // Pénalité de cours : l'AUTOMATIQUE seule, jamais la valeur discrétionnaire que le
+        // formateur peut saisir à la correction (chapter.coursePenalty, bonus compris).
+        // La fourchette reste ainsi une note THÉORIQUE : le geste du formateur lui
+        // appartient et n'est annoncé qu'à la validation.
+        // Même critère que correctionModal : un cours déclaré obligatoire et non validé.
+        const coursObligatoireManquant = (finalConfig.courses || []).some(cours => {
+            if (!cours.requiresValidation) return false;
+            return chapter.questions?.[`course_${cours.index}`]?.isCorrect !== true;
+        });
+        const coursePenalty = coursObligatoireManquant ? -2 : 0;
+
+        // Convention alignée sur le formateur : la pénalité est négative et s'AJOUTE à la
+        // note, après le rapport au barème. Le clamp final est celui de calculateNoteSur20.
+        const enNote = (points) => {
+            if (!(totalPossiblePoints > 0)) return 0;
+            const brute = (points / totalPossiblePoints) * noteMax + coursePenalty;
+            return Math.min(noteMax, Math.max(0, brute));
+        };
+        const minNote = enNote(minScore);
+        const maxNote = enNote(maxScorePossible);
 
         let questionsHtml = '';
         questionDetails.forEach(q => {
@@ -193,7 +237,9 @@ const ChapterBilan = {
             let statusText = '';
             let statusClass = '';
 
-            if (q.status === 'corrected' || q.manualCorrectionStatus === 'corrected') {
+            // `manualCorrectionStatus` ne figure pas dans questionDetails : le statut de
+            // l'intervalle est le seul discriminant.
+            if (q.status === 'corrected') {
                 if (q.pointsEarned >= q.points) {
                     statusIcon = '✅'; statusClass = 'correct';
                 } else if (q.pointsEarned > 0) {
@@ -240,7 +286,7 @@ const ChapterBilan = {
                             ? `Nombre d'essais: ${q.attempts}`
                             : ''
                     }</span>
-                    <span class="detail-points">${q.pointsEarned > 0 ? '+' : ''}${q.pointsEarned}/${q.points}</span>
+                    <span class="detail-points">${q.pointsEarned > 0 ? '+' : ''}${this._nombre(q.pointsEarned)}/${q.points}</span>
                 </div>
             `;
         });
@@ -253,10 +299,13 @@ const ChapterBilan = {
                         <button class="modal-close" onclick="ChapterBilan.closeAutoCorrectDetails(event)">×</button>
                     </div>
                     <div class="modal-body">
-                        ${submissionStatus === 'validated' && typeof chapter.noteSur20 !== 'undefined' ? `
+${'' /* noteAttribuee, et non noteSur20 qui n'est écrit nulle part : la ligne
+                              ne s'affichait donc jamais. Elle devient atteignable sur un chapitre
+                              corrigé puis renvoyé pour retouche. */}
+                        ${submissionStatus === 'validated' && typeof chapter.noteAttribuee === 'number' ? `
                             <div class="note-item">
                                 <span class="note-label">Note finale</span>
-                                <span class="note-value final">${chapter.noteSur20} sur 20</span>
+                                <span class="note-value final">${chapter.noteAttribuee} sur ${noteMax}</span>
                             </div>
                         ` : ''}
                         <div class="section-title">📋 Résumé</div>
@@ -264,50 +313,58 @@ const ChapterBilan = {
                             ${autoMaxPossible > 0 ? `
                             <div class="note-item">
                                 <span class="note-label">Points auto-corrigés</span>
-                                <span class="note-value current">${autoProjectedScore} sur ${autoMaxPossible}</span>
+                                <span class="note-value current">${autoAcquis} sur ${autoMaxPossible}</span>
                             </div>
+                            ${autoRamene > 0 ? `
+                            <div class="note-item note-item-mention">
+                                <span class="note-label">dont ${this._nombre(-autoRamene)} ramené${autoRamene > 1 ? 's' : ''} à 0</span>
+                                <span class="note-value">le total des questions auto ne descend pas sous 0</span>
+                            </div>
+                            ` : ''}
                             ` : ''}
                             ${(totalPossiblePoints - autoMaxPossible) > 0 ? `
                             <div class="note-item">
                                 <span class="note-label">Points semi/manuels validés</span>
-                                <span class="note-value current">${manualCurrentScore} sur ${totalPossiblePoints - autoMaxPossible}</span>
+                                <span class="note-value current">${manuelAcquis} sur ${totalPossiblePoints - autoMaxPossible}</span>
                             </div>
                             ` : ''}
                             <div class="note-item">
                                 <span class="note-label">Total acquis actuellement</span>
-                                <span class="note-value current">${currentScore} sur ${totalPossiblePoints}</span>
+                                <span class="note-value current">${this._nombre(currentScore)} sur ${totalPossiblePoints}</span>
                             </div>
+${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
+                              ferment. Quand il ne reste plus rien d'incertain, une seule note. */}
                             ${minScore !== maxScorePossible ? `
                             <div class="note-item">
                                 <span class="note-label">Total minimal possible</span>
-                                <span class="note-value min">${minScore} sur ${totalPossiblePoints}</span>
+                                <span class="note-value min">${this._nombre(minScore)} sur ${totalPossiblePoints}</span>
                             </div>
                             <div class="note-item">
                                 <span class="note-label">Note minimale possible</span>
-                                <span class="note-value min">${minNote.toFixed(1)} sur 20</span>
+                                <span class="note-value min">${minNote.toFixed(1)} sur ${noteMax}</span>
                             </div>
                             <div class="note-item">
                                 <span class="note-label">Note maximale possible</span>
-                                <span class="note-value max">${maxNote.toFixed(1)} sur 20</span>
+                                <span class="note-value max">${maxNote.toFixed(1)} sur ${noteMax}</span>
                             </div>
                             ` : `
                             <div class="note-item">
                                 <span class="note-label">Note</span>
-                                <span class="note-value final">${minNote.toFixed(1)} sur 20</span>
+                                <span class="note-value final">${minNote.toFixed(1)} sur ${noteMax}</span>
                             </div>
                             `}
                         </div>
-                        ${chapterConfig.courseValidationCount > 0 ? `
+                        ${finalConfig.courseValidationCount > 0 ? `
                         <div class="section-title">📚 Cours validés</div>
                         <div class="note-range">
                             <div class="note-item">
                                 <span class="note-label">Cours marqués comme lus</span>
-                                <span class="note-value current">${chapter.answeredCourses || 0} sur ${chapterConfig.courseValidationCount}</span>
+                                <span class="note-value current">${chapter.answeredCourses || 0} sur ${finalConfig.courseValidationCount}</span>
                             </div>
-                            ${coursePenalty > 0 ? `
+                            ${coursePenalty !== 0 ? `
                             <div class="note-item">
-                                <span class="note-label">Pénalité appliquée sur la note sur 20</span>
-                                <span class="note-value min">-${coursePenalty}</span>
+                                <span class="note-label">Pénalité pour cours obligatoire non validé</span>
+                                <span class="note-value min">${coursePenalty} sur la note</span>
                             </div>
                             ` : ''}
                         </div>
@@ -363,8 +420,10 @@ const ChapterBilan = {
             if (q.correctionType === 'auto') {
                 // Auto : on ne compte que ce qui est déjà acquis (isCorrect === true)
                 if (qData && qData.isCorrect === true) {
-                    const penalty = (qData.attempts - 1) * q.points;
-                    const pts = Math.max(-q.points * 2, q.points - penalty);
+                    // Barème partagé (core/bareme.js). Le Math.max(0, …) est propre au bilan
+                    // Blind, qui plafonne question par question : décision d'affichage, pas
+                    // de barème.
+                    const pts = Bareme.pointsAuto(q.points, qData.attempts, Bareme.nbOptions(q));
                     blindMinScore += Math.max(0, pts);
                     blindMaxScore += Math.max(0, pts);
                 }

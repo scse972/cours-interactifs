@@ -247,3 +247,102 @@ prétend qu'une tentative est enregistrée ou signalée — ce serait faux.
 ---
 
 > ✅ Ce document est la référence officielle. Tout comportement qui ne correspond pas à ce tableau est un bug à corriger immédiatement.
+
+## ⭐ Barème des questions auto-corrigées
+
+> Source unique : `src/js/core/bareme.js`. Version rédigée pour le formateur : fiche
+> « bareme » de `src/js/aide.js`, atteignable par l'icône ⓘ de « Gestion des Chapitres ».
+
+La pénalité d'essais existe pour **dissuader la réponse au hasard**. Sans elle, un apprenant qui
+coche n'importe quoi et réessaie finit par tomber juste, et repart avec des points qu'il n'a pas
+gagnés.
+
+```
+points d'une question réussie = barème − (essais − 1) × pénalité
+pénalité par essai raté    = 2 × barème / (options − 1)
+plancher                    = −2 × barème
+```
+
+**La pénalité dépend du nombre de choix**, et c'est ce qui la rend juste : deviner entre deux
+réponses est facile, deviner entre cinq ne l'est pas.
+
+| Options | Pénalité / essai | Sur une question à 5 points | Espérance au hasard |
+|---|---|---|---|
+| 2 | 2 × barème | +5, −5 | 0 |
+| **3** | **barème** | **+5, 0, −5, −10** | 0 |
+| 4 | ⅔ barème | +5, +1,67, −1,67, −5 | 0 |
+| 5 | ½ barème | +5, +2,5, 0, −2,5, −5 | 0 |
+
+Un apprenant qui répond entièrement au hasard obtient donc **zéro en moyenne**, quel que soit le
+nombre de choix. La formule antérieure appliquait la ligne « 3 » à tout : elle était juste sur les
+questions à trois choix, et laissait exactement **la moitié des points au hasard sur un vrai/faux**
+— le cas le plus courant. Le module actuel généralise, il ne remplace pas : à trois options les
+valeurs sont rigoureusement identiques.
+
+Deux réserves assumées : le calcul suppose que l'apprenant ne réessaie pas une réponse déjà
+rejetée ; et sur un QCM à réponses multiples, deviner est bien plus difficile que `1/options`, la
+pénalité y est donc trop douce — dans le sens qui protège l'apprenant. Une question sans options
+(texte court auto ou semi) prend la calibration à trois choix.
+
+### Le plancher du cumul
+
+Une question peut valoir des points négatifs, mais **le total des questions auto ne descend jamais
+sous 0**. Un mauvais résultat sur les QCM ne vient pas manger les points gagnés ailleurs. Cette
+règle n'appartient pas au barème mais à celui qui somme : `chapterBilan`, `correctionModal` et
+`showBlindBilan` l'appliquent chacun chez eux. Quand elle joue, le bilan de l'apprenant l'annonce
+(« −5 ramenés à 0 ») — sans quoi le total contredirait le détail affiché juste en dessous.
+
+---
+
+## 📊 Le bilan de chapitre — un intervalle par question
+
+> `src/js/chapter/chapterBilan.js`, fonction `_intervalle()`.
+
+Le bilan répond à une seule question : *entre quelles bornes ma note va-t-elle finir ?* La règle
+tient en une phrase — **chaque question apporte un intervalle `[min, max]` de points, et on somme.**
+
+Trois valeurs par question, pas deux : `min` (garanti si tout ce qui reste tourne au pire), `max`
+(atteignable si tout tourne au mieux) et `acquis` (déjà en poche). `acquis` diffère de `min` sur une
+auto pas encore tentée : elle n'a pas encore coûté ses points, mais elle le peut.
+
+« Chapitre ouvert » = `submissionStatus ∈ {not_submitted, returned_for_revision}`.
+
+| Type | État | min | max | acquis |
+|---|---|---|---|---|
+| auto | réussie | barème après pénalité | idem | idem |
+| auto | ratée | −points | −points | −points |
+| auto | à tenter, chapitre ouvert | −points | +points | 0 |
+| auto | à tenter, copie rendue | 0 | 0 | 0 |
+| semi / manuel | **corrigée par le formateur** | `teacherScore` | idem | idem |
+| semi | reconnue automatiquement | points | points | points |
+| semi / manuel | **répondue, en attente** | **0** | **points** | 0 |
+| semi / manuel | rejetée par la règle | 0 | 0 | 0 |
+| semi / manuel | pas répondue, chapitre ouvert | 0 | points | 0 |
+| semi / manuel | pas répondue, copie rendue | 0 | 0 | 0 |
+
+**L'ordre de priorité compte** pour les questions non-auto : correction du formateur, puis
+`isCorrect === true`, puis `isCorrect === false`, puis répondue, puis non répondue. La correction
+passe **avant** la reconnaissance automatique : sur une semi validée d'office, un `teacherScore`
+saisi ensuite l'emporte — le dernier mot est au formateur.
+
+**La convergence est automatique.** À mesure que l'apprenant répond et que le formateur corrige, les
+intervalles se referment un par un. Quand tout est répondu et corrigé, `min = max` et le bilan
+n'affiche plus qu'une note. Aucun cas particulier n'est écrit pour cela.
+
+### La pénalité de cours dans le bilan
+
+−2 sur la note dès qu'un cours **obligatoire** n'est pas validé — même critère que le formateur
+(`requiresValidation`), convention de signe alignée sur la sienne. Elle est retranchée des **deux**
+bornes ; auparavant elle était affichée sans jamais être comptée, sous un libellé qui prétendait le
+contraire.
+
+En revanche, la valeur **discrétionnaire** que le formateur saisit à la correction
+(`chapter.coursePenalty`, ±10, bonus compris) **n'est jamais lue par le bilan**. C'est délibéré : ce
+que l'apprenant peut déduire de sa fourchette reste une note **théorique**, le geste du formateur
+lui appartient et n'est annoncé qu'à la validation.
+
+### Ce qui reste incohérent ailleurs
+
+`progressManager.recomputeChapterStats` et `computeChapterUIStats` gardent leur propre arithmétique
+— la seconde produit même une note **centrée sur 10/20** (`20 × (1 + réussite) / 2`), sans rapport
+avec la formule proportionnelle. Seule leur pénalité d'essais est mutualisée. À traiter à part.

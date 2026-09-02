@@ -22,7 +22,7 @@ class TeacherChapters {
         const chapters = this.dashboard.chapters;
         let html = `
             <div class="section-header">
-                <h2>📚 Gestion des Chapitres</h2>
+                <h2>📚 Gestion des Chapitres ${window.Aide ? Aide.icone('bareme') : ''}</h2>
                 <p>Configurez les paramètres de chaque chapitre</p>
             </div>
             <div class="controls-grid">
@@ -107,7 +107,7 @@ class TeacherChapters {
 
                     <div class="control-actions" style="margin-top: 1rem;">
                         <label class="date-limit-toggle" style="flex-direction: column; align-items: flex-start; gap: 0.3rem;">
-                            <span>🎯 Mode du chapitre</span>
+                            <span>🎯 Mode du chapitre ${window.Aide ? Aide.icone('modes') : ''}</span>
                             <select onchange="dashboard.modules.chapters.toggleChapterMode('${chapter.id}', this.value)" 
                                     style="padding:0.3rem 0.5rem; border-radius:6px; border:1px solid #ccc; font-size:0.9rem; cursor:pointer;">
                                 <option value="normal" ${chapterMode === 'normal' ? 'selected' : ''}>Découverte</option>

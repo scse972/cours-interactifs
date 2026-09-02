@@ -236,6 +236,7 @@ const AtelierQuestion = {
         bloc.innerHTML = this._html(consigne, etat);
         this._brancher(bloc, consigne, etat);
         this._verrouiller(question, etat);
+        this._bandeau(consigne.id);
     },
 
     _html(consigne, etat) {
@@ -343,6 +344,29 @@ const AtelierQuestion = {
      * l'apprenant, et la référence de l'échange. Il peut annuler s'il s'est déclaré
      * prêt trop vite — sinon il resterait bloqué si le formateur ne vient pas.
      */
+    /**
+     * Effacer le bandeau de feedback quand le bloc affiche déjà le résultat.
+     *
+     * `handleNormalMode` écrit « ⏳ Réponse enregistrée — En attente de vérification » sur
+     * toute question ouverte répondue, et il tourne AVANT nous (chapitre.js appelle
+     * restoreAllAnswers() puis AtelierQuestion.init()). Sur une consigne aboutie, cela
+     * donnait un « en attente » posé juste au-dessus d'un « 8 / 10 points ».
+     *
+     * On efface plutôt que de réécrire : le bloc dit déjà tout, et deux fois la même chose
+     * n'en dit pas plus. Les états brouillon et demandee gardent leur bandeau, qui ne
+     * contredit rien — la réponse y est bien enregistrée et en attente.
+     */
+    _bandeau(questionId) {
+        if (!this.pointsAffiches(questionId)) return;
+        // getElementById plutôt qu'un sélecteur : les identifiants de question sont des
+        // horodatages préfixés, un sélecteur CSS demanderait de les échapper.
+        const feedback = document.getElementById(`feedback_${questionId}`);
+        if (!feedback) return;
+        feedback.innerHTML = '';
+        feedback.className = 'feedback';
+        feedback.style.display = 'none';
+    },
+
     _verrouiller(question, etat) {
         const fige = etat !== 'brouillon';
         question.querySelectorAll('.answer-area textarea').forEach(champ => {

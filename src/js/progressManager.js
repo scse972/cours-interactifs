@@ -994,11 +994,8 @@ function computeChapterUIStats(chapter, chapterConfig, maxNote = 20) {
                 firstAttemptSuccessCount++;
             }
 
-            let pointsAfterPenalty = q.points - ((qData.attempts - 1) * q.points);
-            const maxPenalty = q.points * 2;
-            pointsAfterPenalty = Math.max(-maxPenalty, pointsAfterPenalty);
-
-            penaltySum += pointsAfterPenalty;
+            // Barème partagé, voir core/bareme.js
+            penaltySum += Bareme.pointsAuto(q.points, qData.attempts, Bareme.nbOptions(q));
         } else {
             penaltySum -= q.points;
         }
