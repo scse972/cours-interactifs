@@ -121,6 +121,7 @@ class TeacherChapters {
                                 <option value="blind" ${chapterMode === 'blind' ? 'selected' : ''}>Blind</option>
                                 <option value="millionnaire" ${chapterMode === 'millionnaire' ? 'selected' : ''}>Millionnaire</option>
                                 <option value="atelier" ${chapterMode === 'atelier' ? 'selected' : ''}>Atelier AR</option>
+                                <option value="consigne" ${chapterMode === 'consigne' ? 'selected' : ''}>📋 Consigne</option>
                             </select>
                         </label>
                         ${ordreProposable ? `

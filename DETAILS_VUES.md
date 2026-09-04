@@ -111,6 +111,18 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 > `AtelierQuestion` ne modifie **jamais** le tableau de vérité : une consigne est une question `manuel`,
 > donc `isCorrect` reste `null` et les points ne viennent que du formateur. Voir `mode atelier AR.md`.
 
+### 📋 Mode Consigne
+| Action | Comportement |
+|---|---|
+| Toutes les questions, tous les types | **Identique au mode Découverte** — aucun levier propre côté élève |
+| Feuille de travail | Imprimable par le formateur, nominative, un QRCode par question |
+| Accès à la correction | Ouverte **même sans rendu** : l'apprenant a composé sur papier, pas dans l'application |
+| Question sans réponse | Affichée « ⏳ À corriger » et non 0 — le formateur saisit le score depuis la copie papier |
+| Pénalité de cours | Défaut à **0** au lieu de −2 : un cours validé sur papier ne passe pas par la validation in-app |
+
+> À ne pas confondre avec les **consignes** de l'Atelier AR, qui se valident en main propre *dans
+> l'application*. Ici la copie est physique, et l'application ne sert qu'à la correction.
+
 > La règle « Texte non vide » (`texte(10)`) est le discriminant assumé (`AtelierQuestion.REGLE_HORS_CONSIGNE`) :
 > elle existe pour les questions ouvertes passées en correction manuelle dans le seul but d'autoriser le collé.
 > L'exclusion est écrite en négatif — sans règle renseignée, la question reste une consigne.

@@ -450,7 +450,7 @@ body {
 }
 
 /* ============================================================================
-   BADGE DU MODE DE CHAPITRE (exam, blind, millionnaire, atelier, normal → Découverte)
+   BADGE DU MODE DE CHAPITRE (exam, blind, millionnaire, atelier, consigne, normal → Découverte)
    Badge centré en haut de la carte
    ============================================================================ */
 
@@ -489,6 +489,15 @@ body {
     background: #d6eaf8;
     color: #1b4f72;
     border: 1px solid #85c1e9;
+}
+
+/* Tons papier : le chapitre est travaillé sur feuille, pas dans l'application.
+   Mêmes teintes que la pastille status-consigne de XSpro
+   (formulaireProgressionApprenant.html), pour que les deux applications se ressemblent. */
+.chapter-mode-badge.mode-consigne {
+    background: #f6f1e7;
+    color: #7a5c1e;
+    border: 1px solid #d9c9a3;
 }
 
 .chapter-mode-badge.mode-normal {

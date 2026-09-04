@@ -106,7 +106,7 @@ export class ChapterRenderer {
             }
         }
 
-        // ── Badge du mode de chapitre (exam, blind, millionnaire, atelier, normal → Découverte) ─────
+        // ── Badge du mode de chapitre (exam, blind, millionnaire, atelier, consigne, normal → Découverte) ─────
         const modeBadge = document.getElementById(`chapter-mode-${chapterId}`);
         if (modeBadge) {
             const mode = state.chapterMode || 'normal';
@@ -115,6 +115,7 @@ export class ChapterRenderer {
                 blind:        { icon: '🥽', label: 'Blind' },
                 millionnaire: { icon: '💰', label: 'Millionnaire' },
                 atelier:      { icon: '🧾', label: 'Atelier AR' },
+                consigne:     { icon: '📋', label: 'Consigne' },
                 normal:       { icon: '📖', label: 'Découverte' },
             };
             const config = modeConfig[mode] || modeConfig.normal;

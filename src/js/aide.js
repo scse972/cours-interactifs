@@ -93,7 +93,8 @@ republier le parcours.</p>
   <tr><td>📝 Examen</td><td>Aucun retour, enregistrement en temps réel, tout se verrouille au rendu.</td></tr>
   <tr><td>🥽 Blind</td><td>Saisie silencieuse, bilan minimal / maximal à la validation.</td></tr>
   <tr><td>💰 Millionnaire</td><td>Une erreur réinitialise les questions auto-corrigées. Pas de reprise : revenir sur le chapitre repart d'une tentative neuve.</td></tr>
-  <tr><td>🧾 Atelier AR</td><td>Les consignes se valident en main propre, par échange de codes.</td></tr>
+  <tr><td>🧾 Atelier AR</td><td>Les questions ouvertes se valident en main propre, par échange de codes — dans l'application.</td></tr>
+  <tr><td>📋 Consigne</td><td>Travail sur papier : vous imprimez une feuille nominative avec un QRCode par question. L'application reste consultable comme en Découverte, et vous corrigez même sans rendu.</td></tr>
 </table>
 <p><strong>Le mode est figé au premier démarrage de chaque apprenant.</strong> Si vous en changez
 ensuite, cela ne concerne que ceux qui n'ont pas commencé — on ne change pas les règles sous les

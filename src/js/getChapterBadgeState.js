@@ -9,16 +9,19 @@ function getChapterBadgeState(chapter, chapterConfig = {}, globalContext = {}) {
         : examContext.isBlindMode ? 'blind'
         : examContext.isMillionnaireMode ? 'millionnaire'
         : examContext.isAtelierMode ? 'atelier'
+        : examContext.isConsigneMode ? 'consigne'
         : 'normal';
 
     // Icône de MODE — toujours affichée en fonction du mode, jamais du statut. Le statut,
     // lui, s'exprime uniquement par le libellé (+ sa propre icône pour les statuts de rendu,
     // universels et déjà indépendants du mode). Convention alignée sur chapterRenderer.js
-    // (page d'accueil élève) : 📖 Découverte, 📝 Examen, 🥽 Blind, 💰 Millionnaire, 🧾 Atelier AR.
+    // (page d'accueil élève) : 📖 Découverte, 📝 Examen, 🥽 Blind, 💰 Millionnaire, 🧾 Atelier AR,
+    // 📋 Consigne.
     const modeIcon = mode === 'exam' ? '📝'
         : mode === 'blind' ? '🥽'
         : mode === 'millionnaire' ? '💰'
         : mode === 'atelier' ? '🧾'
+        : mode === 'consigne' ? '📋'
         : '📖';
 
     const hasAnyAnswer = Object.values(chapter.questions || {}).some(q =>

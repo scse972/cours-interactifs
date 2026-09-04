@@ -63,6 +63,12 @@ function getExamContext(chapter, chapterConfig = null, globalContext = {}) {
         isBlindMode:       mode === 'blind',
         isMillionnaireMode: mode === 'millionnaire',
         isAtelierMode:     mode === 'atelier',
+        // Consigne : c'est aussi un mode Découverte, et lui non plus n'a AUCUN levier propre
+        // côté élève — le chapitre est travaillé sur papier, mais celui qui ouvre quand même
+        // l'application y trouve exactement Découverte. Ce drapeau ne sert qu'à la posture de
+        // CORRECTION côté formateur : accessible sans rendu, champs vides normaux, pénalité de
+        // cours neutre. Ne pas le tester dans le code de la vue élève.
+        isConsigneMode:    mode === 'consigne',
         isNormalMode:      mode === 'normal',
 
         // état progression

@@ -315,7 +315,7 @@ Le tableau de bord permet :
 * statistiques globales,
 * correction des réponses ouvertes,
 * verrouillage des chapitres,
-* mode du chapitre (Découverte, Examen, Blind, Millionnaire, Atelier AR),
+* mode du chapitre (Découverte, Examen, Blind, Millionnaire, Atelier AR, Consigne),
 * dates limites,
 * gestion des utilisateurs,
 * import/export CSV.
@@ -360,7 +360,8 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 | Examen | 📝 | Pas de feedback, enregistrement en temps réel, tout se verrouille au rendu |
 | Blind | 🥽 | Saisie silencieuse, bilan min/max à la validation |
 | Millionnaire | 💰 | Une erreur réinitialise les questions auto-corrigées. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
-| Atelier AR | 🧾 | Les consignes se valident **en main propre**, par échange de codes |
+| Atelier AR | 🧾 | Les questions ouvertes se valident **en main propre**, par échange de codes — dans l'application |
+| Consigne | 📋 | Travail **sur papier** : feuille nominative imprimable avec un QRCode par question. Côté élève, rien ne change (comportement Découverte) ; côté formateur la correction est accessible **même sans rendu**, les champs vides étant normaux |
 
 ## 🎲 Option « ordre aléatoire »
 
