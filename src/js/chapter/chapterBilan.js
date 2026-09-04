@@ -145,7 +145,7 @@ const ChapterBilan = {
             ...(storageConfig[chapterId] || {})
         };
 
-        const examContext = getExamContext(chapter, finalConfig, window.globalContext);
+        const examContext = getExamContext(chapter, finalConfig);
         const isAllowed = !examContext.isExamMode || submissionStatus === 'validated';
 
         if (!isAllowed) {

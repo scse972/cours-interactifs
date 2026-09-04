@@ -20,8 +20,7 @@ function getProgressManager() {
 
 // ✅ SINGLETON CONTEXTE EXAMEN
 window.initChapterExamContext = function(chapter) {
-    const globalContext = window.globalContext || window.APP_CONTEXT || {};
-    window.currentExamContext = getExamContext(chapter, window.currentChapterConfig, globalContext);
+    window.currentExamContext = getExamContext(chapter, window.currentChapterConfig);
     return window.currentExamContext;
 };
 

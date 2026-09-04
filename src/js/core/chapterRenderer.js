@@ -1,6 +1,6 @@
 export class ChapterRenderer {
 
-    async render(chapters, progress, computeState, globalContext = {}) {
+    async render(chapters, progress, computeState) {
         const container = document.querySelector('.chapters');
 
         container.innerHTML = chapters.map(c =>
@@ -23,7 +23,7 @@ export class ChapterRenderer {
                 ...(storageConfig[chapter.id] || {})
             };
             
-            const state = computeState(chapterProgress, finalConfig, globalContext);
+            const state = computeState(chapterProgress, finalConfig);
 
             this.updateChapterCard(chapter.id, state, chapterProgress, finalConfig);
         }

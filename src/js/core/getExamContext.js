@@ -4,10 +4,9 @@
  * 
  * @param {Object} chapter - Objet chapitre
  * @param {Object|null} chapterConfig - Configuration du chapitre
- * @param {Object} globalContext - Contexte global (overrides)
  * @returns {Object} Contexte d'examen normalisé
  */
-function getExamContext(chapter, chapterConfig = null, globalContext = {}) {
+function getExamContext(chapter, chapterConfig = null) {
 
     // Correction : détecter correctement les objets vides pour éviter la désynchronisation vue professeur
     const config = (chapterConfig && Object.keys(chapterConfig).length > 0) 
@@ -38,12 +37,9 @@ function getExamContext(chapter, chapterConfig = null, globalContext = {}) {
         ? chapter.frozenEndDate
         : (config?.endDate || null);
 
-    // 2. override global (ex: mode examen externe, test, admin)
-    const globalExamMode = Boolean(globalContext?.examMode);
+    const mode = effectiveChapterMode;
 
-    const mode = globalExamMode ? 'exam' : effectiveChapterMode;
-
-    // 3. Verrouillage formateur : SEUL le verrou manuel ("🔒 Verrouiller", toujours en direct,
+    // 2. Verrouillage formateur : SEUL le verrou manuel ("🔒 Verrouiller", toujours en direct,
     //    jamais figé, global — pas d'exception individuelle) bloque le chapitre. La date limite
     //    figée pour cet élève ne bloque rien : elle sert uniquement à marquer son rendu comme
     //    "en retard" au moment où il rend sa copie (voir chapterSubmission.js / submitChapter()).
@@ -85,7 +81,6 @@ function getExamContext(chapter, chapterConfig = null, globalContext = {}) {
         // debug utile
         _debug: {
             chapterMode: mode,
-            globalExamMode,
             submissionStatus,
             started,
             isManuallyLocked,

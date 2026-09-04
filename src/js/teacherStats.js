@@ -187,7 +187,7 @@ class TeacherStats {
             }
 
             const chapterData = student.progress.chapters[chapter.id] || {};
-            const state = getChapterBadgeState(chapterData, chapterConfig, window.globalContext);
+            const state = getChapterBadgeState(chapterData, chapterConfig);
 
             studentsHtml += `
                 <div class="stats-student-row">
@@ -252,7 +252,7 @@ class TeacherStats {
             const chapterConfig = await this.dashboard.getChapterConfig(chapterId);
             filtered = filtered.filter(student => {
                 const chapterData = student.progress.chapters[chapterId] || {};
-                const state = getChapterBadgeState(chapterData, chapterConfig, window.globalContext);
+                const state = getChapterBadgeState(chapterData, chapterConfig);
                 return matchesStatus(state, this.selectedStatus);
             });
         }
@@ -277,7 +277,7 @@ class TeacherStats {
             
             const data = students.map(student => {
                 const chapterData = student.progress.chapters[chapter.id] || {};
-                const state = getChapterBadgeState(chapterData, chapterConfig, window.globalContext);
+                const state = getChapterBadgeState(chapterData, chapterConfig);
                 return {
                     'Nom': student.name,
                     'Classe': student.class || '',

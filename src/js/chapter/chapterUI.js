@@ -294,7 +294,7 @@ const ChapterUI = {
         const statsDiv = document.getElementById('auto-correct-stats');
 
         if (statsDiv) {
-            const examContext = getExamContext(chapter, chapterConfig, window.globalContext);
+            const examContext = getExamContext(chapter, chapterConfig);
             const submissionStatus = chapter.submissionStatus || 'not_submitted';
             const isDisabled = (examContext.isExamMode || examContext.isBlindMode) && submissionStatus === 'not_submitted';
 

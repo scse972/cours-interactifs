@@ -230,7 +230,7 @@ class TeacherStudents {
                 if (selectedChapterId !== 'all' && chapter.id !== selectedChapterId) return false;
                 if (selectedStatus !== 'all') {
                     const chapterData = progress.chapters[chapter.id] || { completed: false, score: 0 };
-                    const state = getChapterBadgeState(chapterData, chapter, window.globalContext);
+                    const state = getChapterBadgeState(chapterData, chapter);
                     if (!matchesStatus(state, selectedStatus)) return false;
                 }
                 return true;
@@ -256,7 +256,7 @@ class TeacherStudents {
             
             for (const chapter of visibleChapters) {
                 const chapterData = progress.chapters[chapter.id] || { completed: false, score: 0 };
-                const state = getChapterBadgeState(chapterData, chapter, window.globalContext);
+                const state = getChapterBadgeState(chapterData, chapter);
                 const hasStarted = state.status !== 'not_started';
                 const percent = chapterData.completionPercent || 0;
                 const titleEscaped = this.escapeHtml(chapter.title);
@@ -376,7 +376,7 @@ class TeacherStudents {
                     if (chapterFilter !== 'all') {
                         const chapterConfig = this.dashboard.chapters.find(c => c.id === chapterFilter);
                         const chapterData = progress.chapters[chapterFilter] || {};
-                        const state = getChapterBadgeState(chapterData, chapterConfig, window.globalContext);
+                        const state = getChapterBadgeState(chapterData, chapterConfig);
 
                         const match = statusFilter === 'all' || matchesStatus(state, statusFilter);
                         if (!match) filtered.splice(i, 1);
@@ -385,7 +385,7 @@ class TeacherStudents {
                     } else {
                         const hasAtLeastOneMatch = this.dashboard.chapters.some(chapter => {
                             const chapterData = progress.chapters[chapter.id] || {};
-                            const state = getChapterBadgeState(chapterData, chapter, window.globalContext);
+                            const state = getChapterBadgeState(chapterData, chapter);
                             return matchesStatus(state, statusFilter);
                         });
 
@@ -424,7 +424,7 @@ class TeacherStudents {
         const chapterData = progress.chapters[chapterId] || {};
         const chapterConfig = this.dashboard.chapters.find(c => c.id === chapterId);
 
-        const state = getChapterBadgeState(chapterData, chapterConfig, window.globalContext);
+        const state = getChapterBadgeState(chapterData, chapterConfig);
 
         let html = '';
 

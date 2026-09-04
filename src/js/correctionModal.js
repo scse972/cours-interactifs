@@ -325,22 +325,7 @@ class CorrectionModal {
             )
         ).length;
 
-        // ✅ Total questions manuelles/semi à évaluer
-        const totalManualQuestions = questions.filter(q => 
-            !q.isCourse && (
-                q.correctionType === 'manuel' ||
-                (q.correctionType === 'semi' && q.theoreticalScore === null)
-            )
-        ).length;
-        const correctedManual = totalManualQuestions - itemsToCorrect;
-
-        
-        // ✅ On plafonne la progression à 100% maximum
-        const progression = totalManualQuestions > 0 
-            ? Math.min(100, Math.round((correctedManual / totalManualQuestions) * 100)) 
-            : 100;
-
-        return { total, corrected, correctedManual, pending, manual, itemsToCorrect, progression, auto: total - manual, totalCourses: courses };
+        return { total, corrected, pending, manual, itemsToCorrect, auto: total - manual, totalCourses: courses };
     }
 
     /**
@@ -384,15 +369,12 @@ class CorrectionModal {
      */
     renderHeader() {
         const { student, chapterConfig } = this.context;
-        const { stats, scoring } = this.viewModel;
+        const { scoring } = this.viewModel;
 
         // ✅ Utiliser DIRECTEMENT le calcul officiel depuis calculateDetailedScore
         // Plus aucun recalcul à la main, plus aucun écart
         const noteSur20 = scoring.noteSur20;
         const maxTotalScore = scoring.maxTotalScore;
-
-        // ✅ Vérifier si toutes les questions manuelles sont corrigées
-        const canApprove = stats.correctedManual >= stats.itemsToCorrect;
 
         return `
             <div class="modal-header">
@@ -412,8 +394,8 @@ class CorrectionModal {
                     </button>
                     <button class="correction-header-btn btn-success" 
                             id="correction-btn-approve" 
-                            title="${canApprove ? 'Valider définitivement ce chapitre' : 'Corriger toutes les questions manuelles d\'abord'}"
-                            ${canApprove ? '' : 'disabled style="opacity: 0.5; cursor: not-allowed;"'}>
+                            title="Valider définitivement ce chapitre"
+                            >
                         ✅ Valider
                     </button>
                     <button class="close-btn" id="correction-btn-close">&times;</button>

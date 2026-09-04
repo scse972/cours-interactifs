@@ -1,10 +1,10 @@
-export function computeChapterState(progress = {}, chapterConfig = {}, globalContext = {}) {
+export function computeChapterState(progress = {}, chapterConfig = {}) {
 
     const submissionStatus = progress.submissionStatus || 'not_submitted';
     const percent = progress.completionPercent ?? 0;
     const note = progress.noteSur20 ?? progress.noteAttribuee ?? null;
 
-    const examContext = getExamContext(progress, chapterConfig, globalContext);
+    const examContext = getExamContext(progress, chapterConfig);
     const isExamMode = examContext.isExamMode;
     const chapterMode = examContext._debug?.chapterMode || 'normal';
     // Verrou manuel (direct) OU date limite figée dépassée pour cet élève, sauf exception accordée

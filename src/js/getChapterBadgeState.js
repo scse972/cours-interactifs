@@ -1,6 +1,6 @@
-function getChapterBadgeState(chapter, chapterConfig = {}, globalContext = {}) {
+function getChapterBadgeState(chapter, chapterConfig = {}) {
 
-    const examContext = getExamContext(chapter, chapterConfig, globalContext);
+    const examContext = getExamContext(chapter, chapterConfig);
 
     // Mode effectif (figé pour l'élève une fois démarré) — indépendant du statut/avancement,
     // sert au filtre "Mode examen"/"Mode blind" (matche peu importe l'étape : non commencé,
