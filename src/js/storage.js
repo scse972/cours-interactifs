@@ -407,8 +407,25 @@ async function loadProvider() {
             providerName = config.storage || 'electron';
             console.log('[storage] Environnement: Electron | config.storage:', config.storage || '(absent) → forcé "electron"');
         } else if (window.IS_GITHUB_PAGES) {
-            providerName = config.storage || 'supabase';
-            console.log('[storage] Environnement: GitHub Pages | config.storage:', config.storage || '(absent) → forcé "supabase"');
+            // Sur un hébergement statique, seuls supabase et appwrite ont un sens :
+            // sqlite interroge une API locale (apiBaseUrl vaut http://localhost:3000/api
+            // dans la configuration de développement — soit, une fois déployé, la
+            // machine de l'élève) et electron passe par IPC. Une valeur de
+            // développement est donc IGNORÉE ici, elle n'est pas obéie.
+            //
+            // Ce n'est pas de la prudence gratuite : storage/config.json est
+            // versionné ET réécrit à chaque « npm run dev » par le script
+            // config:local. Le committer distraitement suffisait à envoyer le site
+            // des élèves vers localhost. Une règle dans le code vaut mieux que la
+            // discipline sur un fichier qu'un script modifie tout seul.
+            const demande = config.storage;
+            providerName = (demande === 'supabase' || demande === 'appwrite') ? demande : 'supabase';
+            if (demande && demande !== providerName) {
+                console.warn('[storage] Environnement: GitHub Pages — config.storage="' + demande +
+                             '" ignoré (impossible sur un hébergement statique) → "' + providerName + '"');
+            } else {
+                console.log('[storage] Environnement: GitHub Pages | config.storage:', demande || '(absent)', '→', providerName);
+            }
         } else {
             providerName = config.storage || window.STORAGE_PROVIDER || 'supabase';
             console.log('[storage] Environnement: Standalone | config.storage:', config.storage || '(absent)', '| window.STORAGE_PROVIDER:', window.STORAGE_PROVIDER || '(absent)', '→ provider retenu:', providerName);
