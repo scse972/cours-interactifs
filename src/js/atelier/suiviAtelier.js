@@ -1020,3 +1020,11 @@ const SuiviAtelier = {
 
 window.SuiviAtelier = SuiviAtelier;
 document.addEventListener('DOMContentLoaded', () => SuiviAtelier.init());
+
+// Installé sur un écran d'accueil, l'outil a une sortie que le navigateur n'offrait pas :
+// passer en arrière-plan. Quitter l'écran de scan n'est donc plus le seul chemin, et le
+// flux survivrait à l'application réduite. Même raison qu'en _ecran() — une lampe témoin
+// qui reste allumée dans une salle de classe est un problème en soi.
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) SuiviAtelier._couperCamera();
+});

@@ -62,3 +62,6 @@ jspm_packages/
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Réglages locaux de Claude Code
+**/.claude/settings.local.json
+**/.claude/launch.json

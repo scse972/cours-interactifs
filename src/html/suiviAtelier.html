@@ -8,6 +8,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Correction en salle</title>
     <link rel="icon" href="data:,">
+
+    <!-- Application installable (PWA). Le service worker est à /sw.js, À LA RACINE DU
+         DÉPÔT : sa portée doit couvrir /src/html/, or un worker ne contrôle que ce qui
+         est sous son propre chemin. Enregistrement en fin de <body>, où window.BASE est
+         connu. Le manifeste et les icônes vivent dans mobile/, qui n'est pas repris par
+         syncCoursInteractifs — sous XSpro ce lien sera donc un 404 silencieux, sans
+         conséquence. Tout est documenté dans mobile/CLAUDE.md. -->
+    <link rel="manifest" href="../../mobile/manifest.webmanifest">
+    <meta name="theme-color" content="#1b4f72">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- default, et non black-translucent : le contenu passerait sous la barre d'état. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Correction">
+    <link rel="apple-touch-icon" href="../../mobile/icones/apple-touch-icon-180.png">
+
     <script>window._ELECTRON_DEPTH = 2;</script>
     <script src="../../src/js/config.js"></script>
     <link rel="stylesheet" href="../../src/assets/css/style.css">
@@ -81,7 +97,14 @@
 <body>
 <div class="sa-page">
 
-    <div class="sa-titre">✍️ Correction en salle</div>
+    <div class="sa-titre">
+        ✍️ Correction en salle
+        <!-- Fiche « applicationTelephone » de aide.js : installation, scan, hors-ligne. -->
+        <button type="button" class="aide-icone" data-aide="applicationTelephone"
+                style="margin-left:auto;"
+                title="Installer et utiliser en salle"
+                aria-label="Installer et utiliser en salle">?</button>
+    </div>
 
     <div class="sa-barre" id="barre-formateur" hidden>
         <span>👤 <strong id="nom-formateur">—</strong> · 📚 <span id="nom-parcours">—</span>
@@ -253,5 +276,38 @@
     </section>
 
 </div>
+
+<script>
+    // Enregistrement du service worker — voir /sw.js, et mobile/CLAUDE.md.
+    //
+    // Inline, et non dans un fichier de mobile/ : ce dossier n'est pas repris par
+    // syncCoursInteractifs, un <script src> y serait donc introuvable sous XSpro. Ici,
+    // le bloc est simplement inerte.
+    //
+    // Trois gardes, chacune pour un contexte réel :
+    //   IS_ELECTRON      — sous XSpro navigator.serviceWorker EXISTE (c'est Chromium),
+    //                      mais register() rejette en file: et polluerait la console ;
+    //   isSecureContext  — faux sur http://192.168…, vrai sur localhost et en HTTPS ;
+    //   'serviceWorker'  — navigateurs anciens.
+    (function () {
+        if (window.IS_ELECTRON || !window.isSecureContext) return;
+        if (!('serviceWorker' in navigator)) return;
+
+        var base = (window.BASE || '').replace(/\/$/, '');
+        navigator.serviceWorker.register(base + '/sw.js', {
+            scope: base + '/',
+            // Sans ceci, sw.js lui-même se figerait dans le cache HTTP de GitHub Pages
+            // pendant dix minutes — et le coupe-circuit mettrait d'autant à agir.
+            updateViaCache: 'none'
+        }).then(function (reg) {
+            return reg.update();
+        }).catch(function (e) {
+            console.info('[PWA] service worker non enregistré :', e.message);
+        });
+
+        // Évite que le navigateur évince la coquille sous pression de stockage.
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+    })();
+</script>
 </body>
 </html>

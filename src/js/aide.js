@@ -167,6 +167,53 @@ sa page ne se rafraîchit pas.</p>
       points — ce mode promet un retour immédiat, on le tient.</li>
 </ul>
 `
+        },
+
+        // Appliquée par : sw.js (le service worker), mobile/manifest.webmanifest, et
+        // atelier/suiviAtelier.js (_cameraDisponible, _couperCamera). Documentation
+        // complète : mobile/CLAUDE.md.
+        applicationTelephone: {
+            titre: '📱 Installer et utiliser en salle',
+            html: `
+<h4>Installer l'outil sur le téléphone</h4>
+<p>Ouvrez cette page dans le navigateur du téléphone, <strong>à l'adresse publiée</strong>. Sur
+Android, Chrome propose « Installer l'application » ; à défaut, le menu du navigateur le propose.
+Sur iPhone, il n'y a jamais de proposition : passez par <strong>Partager → Sur l'écran
+d'accueil</strong>.</p>
+<p>Une icône apparaît alors sur l'écran d'accueil, et l'outil s'ouvre en plein écran sans barre
+d'adresse. C'est la même page : rien ne vient d'un magasin d'applications.</p>
+
+<h4>⚠️ Le scan du QRCode exige la base distante</h4>
+<p><strong>Le scan ne fonctionne que depuis le site publié</strong>, en HTTPS. Ni depuis une adresse
+locale du réseau (<code>http://192.168…</code>), ni dans XSpro.</p>
+<p>Et ce n'est pas la caméra qui est en cause, ou pas seulement. Le QRCode ne porte pas l'identité
+de l'apprenant en clair, mais une <strong>empreinte chiffrée</strong> ; la fonction qui permet de
+la recalculer n'existe pas dans un navigateur servi sans HTTPS. Scanner avec l'application photo du
+téléphone puis coller le contenu échoue donc exactement au même endroit.</p>
+<p>Sur une adresse locale il vous reste le <strong>code de validation dicté</strong> et la
+<strong>navigation par liste</strong>, qui ne calculent aucune empreinte. L'AR, lui, exige aussi
+l'adresse publiée.</p>
+
+<h4>Quand le réseau tombe</h4>
+<p>L'outil continue de s'ouvrir et de fonctionner : ses fichiers sont gardés sur le téléphone. Les
+corrections que vous saisissez sont <strong>mises en attente et repartent toutes seules</strong>
+dès que le réseau revient — un bandeau indique combien attendent.</p>
+<p><strong>Ouvrez l'application une fois en ligne en début de séance.</strong> La liste des
+apprenants doit avoir été lue au moins une fois pour qu'un QRCode puisse être rattaché à quelqu'un ;
+sans cela, hors ligne, le scan ne trouvera personne.</p>
+
+<h4>La caméra</h4>
+<p>Elle s'éteint dès que vous quittez l'écran de scan, <strong>et dès que vous passez l'application
+en arrière-plan</strong>. Au retour, il faut ré-appuyer sur « Démarrer la caméra » : un voyant qui
+reste allumé dans une salle de classe est un problème en soi.</p>
+<p>Visez le QRCode <strong>agrandi</strong> — un clic sur la vignette du bandeau de l'apprenant
+l'ouvre en grand. La vignette elle-même est trop petite pour être lue, c'est voulu.</p>
+
+<h4>Sur iPhone, une réserve</h4>
+<p>L'application installée a un <strong>stockage propre, séparé de Safari</strong> : vous devrez
+vous y reconnecter, et des corrections en attente dans Safari ne partiront pas depuis
+l'application. Travaillez dans l'une ou dans l'autre, pas dans les deux.</p>
+`
         }
     };
 
