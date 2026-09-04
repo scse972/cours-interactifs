@@ -302,12 +302,10 @@ class CorrectionModal {
             });
         }
 
-        const stats = this.calculateCorrectionStats(allQuestions);
         const scoring = this.calculateDetailedScore(allQuestions);
         
         return { 
             questions: allQuestions, 
-            stats, 
             scoring,
             activeFilter: 'all' 
         };
@@ -391,30 +389,6 @@ class CorrectionModal {
             key: 'pending',
             label: '⏳ À corriger'
         };
-    }
-
-    /**
-     * Calcule les statistiques de progression de la correction
-     */
-    calculateCorrectionStats(questions) {
-        const total = questions.length;
-        const corrected = questions.filter(q => q.status === 'corrected').length;
-        const pending = questions.filter(q => q.status === 'pending').length;
-        const manual = questions.filter(q => q.isManual).length;
-        const courses = questions.filter(q => q.isCourse).length;
-        
-        // ✅ CORRECTION: utiliser la même logique que le filtre "À corriger"
-        // Une question est "à corriger" si correctionType === 'semi' et theoreticalScore === null
-        // (pas de score système, le prof doit évaluer)
-        // On inclut aussi 'manuel' et 'semi' sans theoreticalScore
-        const itemsToCorrect = questions.filter(q => 
-            !q.isCourse && (
-                (q.correctionType === 'semi' && q.theoreticalScore === null) ||
-                q.correctionType === 'manuel'
-            )
-        ).length;
-
-        return { total, corrected, pending, manual, itemsToCorrect, auto: total - manual, totalCourses: courses };
     }
 
     /**
