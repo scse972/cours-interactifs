@@ -115,7 +115,12 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Action | Comportement |
 |---|---|
 | Toutes les questions, tous les types | **Identique au mode Découverte** — aucun levier propre côté élève |
-| Feuille de travail | Imprimable par le formateur, nominative, un QRCode par question |
+| Feuille de travail | Bouton « 🖨️ Feuille de consignes » sur la carte du chapitre (`teacherConsignePrint.js`) : un jeu de pages par apprenant, nominatif, un QRCode par question |
+| Rappel du nom | Écrit en vertical à gauche de **chaque** QRCode, un mot par colonne. Sert au récolement (savoir à qui est la feuille sans revenir à la page de garde), dissuade l'échange discret de feuilles, et signifie que la feuille est personnelle. Un mot trop long est tronqué par le CSS, jamais coupé en deux |
+| Repérage des feuilles | Chaque question porte son rang **et le total** (« 2 sur 12 »). Pas de numérotation des pages : elle exigerait les boîtes de marge `@page`, que Firefox n'implémente pas, et `counter(pages)` compterait les pages du document (« 7 sur 36 » sur une impression de classe) sans pouvoir repartir de 1 par apprenant — `counter-reset: page` est ignoré. Le rang plus le nom à côté de chaque QRCode suffisent à repérer une feuille détachée ou manquante, sans aucune dépendance |
+| QRCodes optionnels | Case « Imprimer les QRCodes », **cochée par défaut**. Décochée : plus de QRCode ni de nom accolé, le reste de la feuille est identique, et la correction se fait par les voies habituelles. Sans QRCode, l'impression n'appelle ni le générateur ni `crypto.subtle` |
+| Contexte requis pour les QRCodes | **HTTPS ou `localhost`** — l'empreinte passe par `crypto.subtle`. Hors contexte sûr, la case est décochée et verrouillée avec l'explication ; **la feuille d'énoncés s'imprime quand même**. Seuls les QRCodes manquent |
+| Écriture en base à l'impression | **Oui, et c'est le seul moyen** : l'entrée `progress.chapters[id]` est créée par `ProgressManager.initChapter()` pour les apprenants qui n'ont pas ouvert le chapitre. Sans elle, la liste des rendus saute le couple, le modal refuse de s'ouvrir et XSpro n'affiche pas d'onglet. Le QRCode lui-même n'écrit rien — sa charge est autoporteuse |
 | Accès à la correction | Ouverte **même sans rendu** : l'apprenant a composé sur papier, pas dans l'application |
 | Question sans réponse | Affichée « ⏳ À corriger » et non 0 — le formateur saisit le score depuis la copie papier |
 | Pénalité de cours | Défaut à **0** au lieu de −2 : un cours validé sur papier ne passe pas par la validation in-app |

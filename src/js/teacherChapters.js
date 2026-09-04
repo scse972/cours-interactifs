@@ -124,6 +124,16 @@ class TeacherChapters {
                                 <option value="consigne" ${chapterMode === 'consigne' ? 'selected' : ''}>📋 Consigne</option>
                             </select>
                         </label>
+                        ${chapterMode === 'consigne' ? `
+                        ${'' /* Réservé au mode consigne : c'est le seul où l'apprenant répond
+                             ailleurs que dans l'application. Le bouton reste visible même hors
+                             HTTPS — le module explique alors pourquoi il ne peut pas imprimer,
+                             plutôt que de disparaître sans dire pourquoi. */}
+                        <button class="control-btn" style="margin-top:0.6rem;"
+                                title="Imprimer les énoncés et un QRCode par question, pour chaque apprenant"
+                                onclick="dashboard.modules.chapters.imprimerConsignes('${chapter.id}')">
+                            🖨️ Feuille de consignes
+                        </button>` : ''}
                         ${ordreProposable ? `
                         <label class="date-limit-toggle" style="margin-top:0.5rem;"
                                title="Les questions sont présentées dans un ordre tiré au sort, propre à chaque apprenant. Les questions déjà répondues restent regroupées en tête.">
@@ -193,6 +203,19 @@ class TeacherChapters {
             locked: !config.locked
         });
         this.render();
+    }
+
+    /**
+     * Feuille de consignes imprimable — mode consigne uniquement. Le module vit à part
+     * (teacherConsignePrint.js) : il fabrique un document A4 complet, ce qui n'a rien à
+     * voir avec les réglages de chapitre gérés ici.
+     */
+    imprimerConsignes(chapterId) {
+        if (!window.TeacherConsignePrint) {
+            alert("Le module d'impression n'est pas chargé.");
+            return;
+        }
+        TeacherConsignePrint.ouvrir(chapterId, this.dashboard);
     }
 
     async toggleChapterMode(chapterId, mode) {        

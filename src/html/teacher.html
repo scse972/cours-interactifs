@@ -187,6 +187,15 @@
     
     <!-- Modules du tableau de bord -->
     <script src="../../src/js/correctionModal.js"></script>
+
+    <!-- Feuille de consignes imprimable (mode Consigne) : le condensat SHA-256, le format
+         de la charge du QRCode, puis le générateur SVG. Cet ordre est imposé —
+         qrCharge appelle AtelierCodes.condensat, et le module d'impression les deux. -->
+    <script src="../../src/js/atelier/atelierCodes.js"></script>
+    <script src="../../src/js/qrCharge.js"></script>
+    <script src="../../src/js/vendor/qrcode-generator.js"></script>
+    <script src="../../src/js/teacherConsignePrint.js"></script>
+
     <script src="../../src/js/teacherChapters.js"></script>
     <script src="../../src/js/teacherUsers.js"></script>
     <script src="../../src/js/teacherSubmissions.js"></script>

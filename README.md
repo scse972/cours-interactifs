@@ -363,6 +363,42 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 | Atelier AR | 🧾 | Les questions ouvertes se valident **en main propre**, par échange de codes — dans l'application |
 | Consigne | 📋 | Travail **sur papier** : feuille nominative imprimable avec un QRCode par question. Côté élève, rien ne change (comportement Découverte) ; côté formateur la correction est accessible **même sans rendu**, les champs vides étant normaux |
 
+## 📋 Le mode Consigne et sa feuille imprimable
+
+Chapitre travaillé **sur papier**. Côté élève, rien ne change : comme Atelier AR, le mode
+obtient le comportement Découverte par absence des autres drapeaux, et aucun fichier de la
+vue élève ne le teste. Tout se joue côté formateur, en trois points.
+
+**La correction est accessible sans rendu.** L'apprenant n'a pas composé dans
+l'application, donc il ne rend rien. Le filtre de « 📬 Rendus à corriger » s'ouvre au mode,
+et ces copies sont regroupées dans le filtre dédié « 📋 Consignes (papier) » — elles ne
+comptent pas dans le badge de l'onglet, sans quoi elles y figureraient en permanence.
+
+**Les champs vides sont normaux.** Une question sans réponse vaut `null` (« ⏳ À corriger »)
+au lieu de 0, quel que soit son type ; chaque question reçoit une case « Traité », décochée
+tant que rien n'a été relevé ; et la pénalité de cours part de **0** au lieu de −2, puisque
+le cours a été validé sur papier. Le formateur garde la main via le champ Bonus/Pénalité.
+
+**La feuille est nominative et imprimable** (`src/js/teacherConsignePrint.js`) : un jeu de
+pages par apprenant, un QRCode par question, à scanner depuis « ✍️ Correction en salle ».
+Le nom est rappelé **en vertical à gauche de chaque QRCode**, un mot par colonne : le
+formateur sait à qui est la feuille sans revenir à la page de garde, deux apprenants ne
+peuvent plus échanger discrètement, et la feuille se lit comme personnelle.
+Deux choses à savoir :
+
+* **Les QRCodes sont optionnels** : la case « Imprimer les QRCodes » est cochée par défaut
+  et se décoche. Sans eux, la feuille reste nominative par sa page de garde, le nom accolé
+  disparaît avec les QRCodes, et la correction passe par les voies habituelles. Le mode
+  garde donc tout son intérêt pour qui ne veut pas du scan — et dans ce cas l'impression
+  ne dépend plus d'HTTPS.
+* **À imprimer en HTTPS** (ou `localhost`) : l'empreinte des QRCodes passe par
+  `crypto.subtle`, indisponible sur une adresse LAN en `http://192.168.…`. Le bouton reste
+  visible et explique le refus plutôt que de sortir une feuille inutilisable.
+* **Imprimer crée le suivi** des apprenants qui n'ont pas ouvert le chapitre, via
+  `ProgressManager.initChapter()` — donc avec `frozenAt` et `frozenChapterMode` posés
+  ensemble. C'est indispensable : sans cette entrée, la copie papier n'est visible d'aucune
+  des deux applications. Le QRCode, lui, n'écrit rien : sa charge est autoporteuse.
+
 ## 🎲 Option « ordre aléatoire »
 
 Proposée aux modes **Examen, Blind et Millionnaire**, et seulement pour les chapitres **entièrement

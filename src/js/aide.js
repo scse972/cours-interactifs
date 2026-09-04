@@ -100,6 +100,31 @@ republier le parcours.</p>
 ensuite, cela ne concerne que ceux qui n'ont pas commencé — on ne change pas les règles sous les
 pieds de quelqu'un qui joue.</p>
 
+<h4>🖨️ Feuille de consignes (mode Consigne)</h4>
+<p>En mode 📋 Consigne, la carte du chapitre porte un bouton <strong>« 🖨️ Feuille de
+consignes »</strong> : un jeu de pages par apprenant, avec les énoncés, la place pour écrire
+et un QRCode par question — celui que vous scannerez depuis « ✍️ Correction en salle » pour
+noter la question sans chercher l'apprenant dans vos listes. La feuille est
+<strong>nominative</strong> : chaque QRCode ne vaut que pour son apprenant, et le nom est
+rappelé en vertical à côté de chacun d'eux — de quoi savoir à qui est une feuille ramassée
+sans revenir à la page de garde, et de quoi dissuader les échanges discrets.</p>
+<p>Imprimer <strong>ouvre aussi le suivi de correction</strong> des apprenants qui n'ont pas
+encore ouvert le chapitre. C'est nécessaire : sans cette ligne, une copie faite entièrement
+sur papier n'apparaîtrait ni dans « 📬 Rendus à corriger » ni dans XSpro, et resterait donc
+incorrigeable. Distribuer la feuille et ouvrir le suivi sont le même geste.</p>
+<p><strong>Les QRCodes sont optionnels.</strong> La case « Imprimer les QRCodes » est cochée
+par défaut, mais vous pouvez la décocher : vous obtenez alors une feuille d'énoncés nue —
+le nom accolé aux QRCodes disparaît avec eux — et vous corrigez ensuite par les voies
+habituelles, depuis « 📬 Rendus à corriger » ou depuis XSpro. Tout le reste du mode ne
+change pas : la page de garde reste nominative, et le suivi de correction s'ouvre pareil.</p>
+<p>⚠️ <strong>Pour les QRCodes, imprimez depuis le site publié, en HTTPS.</strong> L'empreinte portée par les
+QRCodes est calculée par <code>crypto.subtle</code>, que le navigateur ne fournit qu'en
+contexte sûr (HTTPS ou <code>localhost</code>). Depuis une adresse réseau en
+<code>http://192.168.…</code>, aucune empreinte n'est calculable : la case est alors
+décochée et verrouillée, avec l'explication — la <strong>feuille d'énoncés s'imprime
+normalement</strong>, seuls les QRCodes manquent. C'est la même contrainte que le
+scan, décrite dans la fiche « 📱 Application téléphone ».</p>
+
 <h4>🎲 Ordre aléatoire</h4>
 <p>Proposé en Examen, Blind et Millionnaire, et seulement sur les chapitres
 <strong>entièrement auto-corrigés</strong> : mélanger des questions dont certaines attendent une
