@@ -161,6 +161,15 @@ class DataStorage {
         sessionStorage.removeItem(this.SESSION_KEY);
         sessionStorage.removeItem('teacher_authenticated');
         sessionStorage.removeItem('parcours:' + Parcours.slug + ':token');
+
+        // Session formateur du mode Web (Phase 2) : sans cet oubli réparé, le
+        // jeton persisté resterait lisible après un « Se déconnecter » et le
+        // provider continuerait de filtrer sur l'owner_id d'un formateur
+        // déconnecté. Appel défensif : dataStorage sert aussi les pages élève,
+        // où storage.clearOwnerSession n'a rien à faire mais ne coûte rien.
+        if (typeof storage !== 'undefined' && typeof storage.clearOwnerSession === 'function') {
+            storage.clearOwnerSession();
+        }
     }
 
     // ── Progression élève ────────────────────────────────────────

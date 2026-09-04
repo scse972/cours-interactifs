@@ -337,6 +337,67 @@ async function loadConfig() {
     return config;
 }
 
+// ── Persistance de la session formateur (Phase 2 du plan multi-formateur) ──
+//
+// setOwnerSession() ne posait le jeton et l'owner_id QUE sur les instances de
+// provider, en mémoire. Or teacher-login.html enchaîne aussitôt sur
+// window.location.replace(... teacher.html) : la navigation détruisait la
+// session à l'instant même où elle venait d'être créée. Le formateur arrivait
+// sur le tableau de bord marqué « authentifié » dans sessionStorage, mais sans
+// jeton ni owner_id sur le provider — la RLS de la base commune refusant alors
+// jusqu'à la lecture, le flux de connexion GitHub ne pouvait pas aboutir. Ce
+// n'était donc pas seulement « la session ne survit pas à un rechargement » :
+// elle ne survivait pas à la redirection qui suit la connexion.
+//
+// sessionStorage et non localStorage, pour deux raisons :
+//   - les drapeaux teacher_authenticated / teacher_role / teacher_name y sont
+//     déjà. Poser le jeton ailleurs les ferait expirer à des moments
+//     différents, et l'on se retrouverait « authentifié » sans session, ou
+//     l'inverse — deux états incohérents que rien ne rattraperait ;
+//   - le site s'ouvre sur des postes partagés. Un jeton de formateur qui
+//     survit à la fermeture du navigateur y est un risque que rien n'impose de
+//     prendre, alors qu'une navigation et un rechargement restent couverts.
+const CLE_SESSION_JETON = 'formateur_access_token';
+const CLE_SESSION_OWNER = 'formateur_owner_id';
+
+function _persisterSession(accessToken, ownerId) {
+    try {
+        if (accessToken && ownerId) {
+            sessionStorage.setItem(CLE_SESSION_JETON, accessToken);
+            sessionStorage.setItem(CLE_SESSION_OWNER, ownerId);
+        } else {
+            sessionStorage.removeItem(CLE_SESSION_JETON);
+            sessionStorage.removeItem(CLE_SESSION_OWNER);
+        }
+    } catch (e) {
+        // sessionStorage peut être refusé (navigation privée stricte, stockage
+        // bloqué). La session reste alors valable pour la page en cours, ce qui
+        // vaut mieux que d'échouer : on prévient et on continue.
+        console.warn('[storage] Session formateur non persistée :', e && e.message);
+    }
+}
+
+function _lireSessionPersistee() {
+    try {
+        const jeton = sessionStorage.getItem(CLE_SESSION_JETON);
+        const owner = sessionStorage.getItem(CLE_SESSION_OWNER);
+        return (jeton && owner) ? { accessToken: jeton, ownerId: owner } : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Les deux providers doivent recevoir la même session : app_data et
+// parcours_data sont deux instances distinctes, filtrées chacune par owner_id.
+function _poserSessionSurProviders(provider, accessToken, ownerId) {
+    if (provider && typeof provider.setSession === 'function') {
+        provider.setSession(accessToken, ownerId);
+    }
+    if (window._parcoursProvider && typeof window._parcoursProvider.setSession === 'function') {
+        window._parcoursProvider.setSession(accessToken, ownerId);
+    }
+}
+
 async function loadProvider() {
     try {
         const config = await loadConfig();
@@ -489,6 +550,18 @@ const storage = {
             .then(p => {
                 this._provider = p;
                 this._initPromise = null;
+
+                // Restaure la session formateur d'une page précédente, s'il y en
+                // a une. loadProvider() n'a que cet appelant : la restauration
+                // est donc systématique, quelle que soit la page d'entrée.
+                //
+                // Le cache n'est PAS vidé ici, contrairement à
+                // setOwnerSession() : c'est le même formateur qui poursuit sa
+                // navigation, ses données en cache sont les siennes.
+                const sessionRestauree = _lireSessionPersistee();
+                if (sessionRestauree) {
+                    _poserSessionSurProviders(p, sessionRestauree.accessToken, sessionRestauree.ownerId);
+                }
                 // ── Désactiver le cache localStorage pour les providers locaux ──
                 // En mode Electron ou SQLite, le provider est toujours disponible
                 // et fiable — le cache localStorage ne fait que créer des données
@@ -521,15 +594,26 @@ const storage = {
      */
     async setOwnerSession(accessToken, ownerId) {
         if (!this._provider) await this.init();
-        if (this._provider && typeof this._provider.setSession === 'function') {
-            this._provider.setSession(accessToken, ownerId);
-        }
-        if (window._parcoursProvider && typeof window._parcoursProvider.setSession === 'function') {
-            window._parcoursProvider.setSession(accessToken, ownerId);
-        }
+        _poserSessionSurProviders(this._provider, accessToken, ownerId);
+
+        // Persistée pour survivre à la redirection qui suit immédiatement la
+        // connexion (cf. le commentaire de _persisterSession).
+        _persisterSession(accessToken, ownerId);
+
         // Le cache local mélangerait les données du formateur précédent (mode
         // personnel) avec celles, isolées par owner_id, du formateur qui vient de
         // se connecter — on le vide pour repartir propre.
+        Cache.keys().forEach(k => Cache.remove(k));
+    },
+
+    /**
+     * Symétrique de setOwnerSession(), à appeler à la déconnexion : sans elle,
+     * le jeton persisté resterait lisible et le provider continuerait de
+     * filtrer sur l'owner_id d'un formateur déconnecté.
+     */
+    async clearOwnerSession() {
+        _poserSessionSurProviders(this._provider, null, null);
+        _persisterSession(null, null);
         Cache.keys().forEach(k => Cache.remove(k));
     },
 
