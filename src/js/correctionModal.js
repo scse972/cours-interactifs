@@ -264,7 +264,6 @@ class CorrectionModal {
                 status: this.getQuestionStatus(questionData, questionConfig),
                 theoreticalScore,
                 teacherScore: questionData.teacherScore,
-                isManual: questionConfig.correctionType === 'semi',
                 isCourse: false
             };
 
@@ -296,7 +295,6 @@ class CorrectionModal {
                 index: i,
                 ...courseData,
                 status: courseData.isCorrect === true ? 'corrected' : 'pending',
-                isManual: false,
                 isCourse: true,
                 isRequired: isRequired, // ❗ SEULEMENT les X premiers cours sont obligatoires
             });
@@ -689,7 +687,7 @@ class CorrectionModal {
             const isRead = question.isCorrect === true;
             
             return `
-                <div class="question-correction ${isRead ? 'question-corrected' : 'question-pending'}" data-question-id="${question.id}" data-status="${question.status}" data-is-course="${question.isCourse}">
+                <div class="question-correction ${isRead ? 'question-corrected' : 'question-pending'}" data-question-id="${question.id}" data-is-course="${question.isCourse}">
                     <div class="question-correction-header">
                         <h6>📚 ${this.escapeHtml(question.title || question.id)}</h6>
                         <span class="status-badge status-pending" style="font-size: 0.7em;">OBLIGATOIRE</span>
@@ -785,7 +783,6 @@ class CorrectionModal {
         return `
             <div class="question-correction question-${question.status} ${needsAttention ? 'needs-attention' : ''}" 
                  data-question-id="${question.id}" 
-                 data-status="${question.status}" 
                  data-is-course="${question.isCourse}"
                  data-category="${tabCategory}">
                 <div class="question-correction-header">
