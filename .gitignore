@@ -65,3 +65,9 @@ Thumbs.db
 # Réglages locaux de Claude Code
 **/.claude/settings.local.json
 **/.claude/launch.json
+
+# Fichiers temporaires SQLite du backend local (journal WAL et mémoire
+# partagée). Ils accompagnent data.db le temps qu'il est ouvert, changent à
+# chaque requête et n'ont aucun sens hors de cette machine.
+backend/data.db-shm
+backend/data.db-wal
