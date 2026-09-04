@@ -37,17 +37,40 @@ function AppwriteProvider(config) {
     this._databaseId   = config.databaseId;
     this._collectionId = config.collectionId || 'app_data';
     this._timeout       = config.timeout || 10000; // 10s par défaut
+    // Isolation multi-formateur (mode Web) : tant qu'aucune session n'est posée via
+    // setSession(), ownerId/jwt restent null et ce provider se comporte EXACTEMENT
+    // comme avant (mode personnel, une seule base) — non-régression garantie.
+    this._ownerId = config.ownerId || null;
+    this._jwt     = config.jwt || null;
 }
+
+/**
+ * Attache une session formateur (posée après connexion GitHub, Phase 2) à ce
+ * provider déjà instancié.
+ * @param {string|null} jwt     — JWT de session Appwrite (`account.createJWT()`)
+ * @param {string|null} ownerId — user.$id Appwrite, utilisé pour étiqueter/adresser les documents
+ */
+AppwriteProvider.prototype.setSession = function (jwt, ownerId) {
+    this._jwt     = jwt || null;
+    this._ownerId = ownerId || null;
+};
 
 /**
  * Hash déterministe (FNV-1a, 32 bits) → ID de document valide pour Appwrite.
  * Toujours préfixé par une lettre pour respecter la contrainte "ne peut pas
  * commencer par un caractère spécial".
+ *
+ * En mode Web (ownerId posé), l'ID intègre l'owner : sans ça, deux formateurs
+ * choisissant la même `key` logique (ex. deux parcours nommés "cours.json")
+ * produiraient le même ID de document et s'écraseraient mutuellement — Appwrite
+ * n'a pas ici de clé composite (owner_id, key) comme la contrainte SQL de
+ * Supabase, l'unicité doit donc être fabriquée dans l'ID lui-même.
  */
 AppwriteProvider.prototype._docId = function (key) {
+    const seed = this._ownerId ? (this._ownerId + '::' + key) : key;
     let hash = 0x811c9dc5;
-    for (let i = 0; i < key.length; i++) {
-        hash ^= key.charCodeAt(i);
+    for (let i = 0; i < seed.length; i++) {
+        hash ^= seed.charCodeAt(i);
         hash = Math.imul(hash, 0x01000193);
     }
     return 'k' + (hash >>> 0).toString(16);
@@ -65,6 +88,11 @@ AppwriteProvider.prototype._fetch = async function (method, path, body) {
         'Content-Type':       'application/json',
         'Accept':             'application/json'
     };
+    // JWT de session (posé après connexion GitHub, Phase 2) : permet aux règles de
+    // permission par document (Role.user(ownerId), Phase 3) de reconnaître
+    // l'utilisateur courant. Sans JWT (mode personnel, ou avant connexion), la
+    // clé de projet seule suffit, comme avant.
+    if (this._jwt) headers['X-Appwrite-JWT'] = this._jwt;
 
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), this._timeout);
@@ -132,12 +160,27 @@ AppwriteProvider.prototype.get = async function (key) {
 AppwriteProvider.prototype.set = async function (key, value) {
     const docId = this._docId(key);
     const data = { key, value: JSON.stringify(value), updated_at: new Date().toISOString() };
+    if (this._ownerId) data.owner_id = this._ownerId;
 
     try {
         await this._fetch('PATCH', this._documentsPath('/' + docId), { data });
     } catch (e) {
         if (e.status !== 404) throw e;
-        await this._fetch('POST', this._documentsPath(), { documentId: docId, data });
+        // Permissions par document (nécessite "Document Security" activé sur la
+        // collection, Phase 3) : seul ce formateur peut relire/modifier/supprimer
+        // ce document — l'équivalent Appwrite de la policy RLS Supabase.
+        // En mode personnel (pas de ownerId), pas de permissions posées : la
+        // permission de collection existante ("any") continue de s'appliquer,
+        // comportement inchangé.
+        const body = { documentId: docId, data };
+        if (this._ownerId) {
+            body.permissions = [
+                'read("user:' + this._ownerId + '")',
+                'update("user:' + this._ownerId + '")',
+                'delete("user:' + this._ownerId + '")'
+            ];
+        }
+        await this._fetch('POST', this._documentsPath(), body);
     }
 };
 
@@ -155,7 +198,9 @@ AppwriteProvider.prototype.remove = async function (key) {
 };
 
 /**
- * Retourne toutes les clés présentes dans la collection.
+ * Retourne toutes les clés présentes dans la collection (celles du formateur
+ * connecté seulement, si une session est posée — sans quoi deux formateurs
+ * verraient les clés l'un de l'autre malgré des documents déjà bien isolés).
  * Pagine automatiquement au-delà de la limite de page Appwrite (100).
  * Lève une exception si le réseau est indisponible.
  */
@@ -169,6 +214,7 @@ AppwriteProvider.prototype.keys = async function () {
             JSON.stringify({ method: 'limit', values: [pageSize] }),
             JSON.stringify({ method: 'select', values: ['key'] })
         ];
+        if (this._ownerId) queries.push(JSON.stringify({ method: 'equal', values: ['owner_id', [this._ownerId]] }));
         if (cursor) queries.push(JSON.stringify({ method: 'cursorAfter', values: [cursor] }));
 
         const qs = queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&');

@@ -66,6 +66,27 @@
             <p>Suivi de la progression et des performances de vos apprenants</p>
         </div>
 
+        <!-- Zone superadmin (Phase 2bis / 4bis du plan multi-formateur) — masquée par
+             défaut : ne s'affiche que pour le rôle "admin" (RECOVERY_TOKEN) ET un backend
+             cloud (supabase/appwrite). En mode personnel ou pour un formateur ordinaire,
+             cette zone reste invisible et rien ne change. -->
+        <div id="superadmin-zone" class="danger-zone" style="display:none; margin: 1rem 0;">
+            <h3>🛡️ Zone Superadmin</h3>
+            <p style="color:#666; font-size:0.9rem;">
+                Connecté à : <code id="superadmin-provider-info">…</code>
+            </p>
+            <p><a href="admin-formateurs.html">👥 Gérer les formateurs (approbation, révocation, purge)</a></p>
+            <div style="margin: 1rem 0;">
+                <button class="btn btn-secondary" id="superadmin-toggle-platform-mode-btn"></button>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <label for="superadmin-notification-email" style="font-weight:600;">Email de notification (nouvelles inscriptions) :</label>
+                <input type="email" id="superadmin-notification-email" placeholder="admin@exemple.fr" style="padding:0.4rem 0.6rem; border:2px solid #ddd; border-radius:6px; min-width:260px;">
+                <button class="btn btn-secondary" id="superadmin-save-email-btn">💾 Enregistrer</button>
+            </div>
+            <p id="superadmin-email-status" class="help-text" style="margin-top:0.5rem;"></p>
+        </div>
+
         <!-- Navigation par onglets -->
         <div class="tabs-navigation">
             <button class="tab-btn active" data-tab="chapters">
@@ -306,6 +327,136 @@
                 window.location.reload();
             });
         }
+    })();
+
+    // ════════════════════════════════════════════════════════════════════
+    // ZONE SUPERADMIN (Phase 2bis / 4 / 4bis du plan multi-formateur)
+    // Bascule platform_mode, réglage de l'adresse email de notification —
+    // uniquement pour le rôle admin (RECOVERY_TOKEN) sur un backend cloud
+    // (supabase/appwrite). En mode personnel (electron/sqlite) ou pour un
+    // formateur ordinaire, cette fonction sort immédiatement et la zone
+    // reste masquée.
+    //
+    // Passe entièrement par la fonction serveur "superadmin" (Phase 4) — pas
+    // par storage.get/set : depuis que la RLS est fermée (Phase 3/4), un
+    // accès table direct sans session GitHub (le cas du superadmin, qui n'en
+    // a pas) serait de toute façon refusé. Seule cette fonction, avec la clé
+    // service_role, peut lire/écrire ces réglages globaux (owner_id NULL) et
+    // la table formateurs.
+    // ════════════════════════════════════════════════════════════════════
+    (async function initSuperadminZone() {
+        const role = sessionStorage.getItem('teacher_role') || 'formateur';
+        if (role !== 'admin') return;
+
+        const superadminToken = sessionStorage.getItem('superadmin_token');
+        if (!superadminToken) return; // connecté par mot de passe personnalisé, pas par RECOVERY_TOKEN
+
+        try { await storage.init(); } catch (_) { return; }
+        const backend = window._storageBackend;
+        if (backend !== 'supabase' && backend !== 'appwrite') return;
+
+        const zone = document.getElementById('superadmin-zone');
+        zone.style.display = 'block';
+
+        // ── Visuel de contrôle : ce à quoi ce déploiement est connecté (lecture
+        //    seule — pour changer de projet, on repasse par XSpro puis un
+        //    redéploiement, cf. Phase 5c du plan) ──
+        const p = window._storageProvider;
+        const infoEl = document.getElementById('superadmin-provider-info');
+        if (backend === 'supabase') {
+            const key = p._key || '';
+            infoEl.textContent = 'Supabase — ' + (p._url || '?') + ' — clé ' + (key ? ('...' + key.slice(-6)) : '?');
+        } else {
+            const proj = p._project || '';
+            infoEl.textContent = 'Appwrite — ' + (p._endpoint || '?') + ' — projet ' + (proj ? ('...' + proj.slice(-6)) : '?');
+        }
+
+        // ── Appel de la fonction serveur "superadmin" ──
+        // ⚠️ Jamais encore exécuté contre une fonction réelle (aucun projet de
+        // test) — à valider dès qu'un projet Supabase/Appwrite existe.
+        async function callSuperadmin(op, extra) {
+            const url = (backend === 'supabase')
+                ? p._url + '/functions/v1/superadmin'
+                : p._endpoint + '/functions/superadmin/executions';
+            const payload = Object.assign({ recoveryToken: superadminToken, op }, extra || {});
+
+            if (backend === 'supabase') {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'apikey': p._key, 'Authorization': 'Bearer ' + p._key, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+                return data;
+            }
+            // Appwrite : exécution synchrone de fonction
+            const resp = await fetch(url, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'X-Appwrite-Project': p._project, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body: JSON.stringify(payload), async: false })
+            });
+            const execution = await resp.json();
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            return JSON.parse(execution.responseBody || '{}');
+        }
+
+        let settings;
+        try {
+            settings = await callSuperadmin('get_settings');
+        } catch (e) {
+            infoEl.textContent += ' — ⚠️ fonction "superadmin" injoignable (' + e.message + ')';
+            return;
+        }
+
+        // ── Bascule platform_mode ──
+        const toggleBtn = document.getElementById('superadmin-toggle-platform-mode-btn');
+        let currentMode = settings.platform_mode;
+
+        function renderToggleLabel() {
+            toggleBtn.textContent = (currentMode === 'web')
+                ? '⬅️ Repasser ce site en mode Personnel'
+                : '🌐 Passer ce site en mode Web';
+        }
+        renderToggleLabel();
+
+        toggleBtn.addEventListener('click', async () => {
+            if (currentMode === 'web') {
+                // Garde-fou réel (Phase 4bis) : le retour en mode Personnel exposerait
+                // les données de tous les formateurs restants derrière un simple mot
+                // de passe partagé — on le bloque tant qu'il en reste plus d'un.
+                const { count } = await callSuperadmin('count_active_formateurs');
+                if (count > 1) {
+                    alert('⛔ Retour en mode Personnel impossible : ' + count + ' formateurs actifs (pending/approved). Désinscrivez-les (révocation puis purge) jusqu\'à n\'en garder qu\'un seul avant de revenir en arrière.');
+                    return;
+                }
+                if (!confirm('Repasser ce site en mode Personnel ?')) return;
+                await callSuperadmin('set_platform_mode', { mode: null });
+                currentMode = null;
+            } else {
+                if (!confirm('Passer ce site en mode Web ? Tous les formateurs devront désormais se connecter avec GitHub.')) return;
+                await callSuperadmin('set_platform_mode', { mode: 'web' });
+                currentMode = 'web';
+            }
+            renderToggleLabel();
+        });
+
+        // ── Adresse email de notification ──
+        const emailInput  = document.getElementById('superadmin-notification-email');
+        const emailStatus = document.getElementById('superadmin-email-status');
+        emailInput.value = settings.admin_notification_email || '';
+        if (!settings.admin_notification_email) {
+            emailStatus.textContent = '⚠️ Aucune adresse configurée : les demandes d\'inscription ne seront pas notifiées.';
+        }
+
+        document.getElementById('superadmin-save-email-btn').addEventListener('click', async () => {
+            const value = emailInput.value.trim();
+            await callSuperadmin('set_notification_email', { email: value || null });
+            emailStatus.textContent = value
+                ? '✅ Adresse enregistrée.'
+                : '⚠️ Aucune adresse configurée : les demandes d\'inscription ne seront pas notifiées.';
+        });
     })();
     </script>
 </body>

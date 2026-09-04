@@ -73,16 +73,31 @@
 
             <div class="error-message" id="error-message"></div>
 
-            <form id="teacher-login-form" class="teacher-form">
-                <input type="hidden" name="username" value="teacher" autocomplete="username">
-                <div class="form-group">
-                    <label for="teacher-password">Mot de passe formateur :</label>
-                    <input type="password" id="teacher-password" name="password" placeholder="Entrez le mot de passe" autocomplete="current-password" required>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.2rem; padding: 1rem;">
-                    Acceder au Tableau de Bord
+            <!-- Mode Web (Phase 2/2bis du plan multi-formateur) : connexion GitHub native.
+                 Masqué par défaut — n'apparaît que si le backend est cloud (supabase/appwrite)
+                 ET que le superadmin a basculé platform_mode sur "web" (cf. initWebModeIfNeeded).
+                 En mode personnel, cette section reste invisible et rien ne change. -->
+            <div id="github-login-section" style="display:none;">
+                <button type="button" id="btn-github-login" class="btn btn-primary" style="width: 100%; font-size: 1.2rem; padding: 1rem;">
+                    🔗 Se connecter avec GitHub
                 </button>
-            </form>
+                <p class="help-text" style="margin-top: 1rem; text-align: center;">
+                    <a href="#" id="toggle-superadmin-link">Connexion superadmin</a>
+                </p>
+            </div>
+
+            <div id="password-login-section">
+                <form id="teacher-login-form" class="teacher-form">
+                    <input type="hidden" name="username" value="teacher" autocomplete="username">
+                    <div class="form-group">
+                        <label for="teacher-password">Mot de passe formateur :</label>
+                        <input type="password" id="teacher-password" name="password" placeholder="Entrez le mot de passe" autocomplete="current-password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.2rem; padding: 1rem;">
+                        Acceder au Tableau de Bord
+                    </button>
+                </form>
+            </div>
 
             <div class="teacher-info">
                 <h4 style="margin: 0.5rem 0 0.5rem 0; color: #333;">A propos du tableau de bord</h4>
@@ -118,6 +133,139 @@
 
         function hideError() {
             errorBox.style.display = 'none';
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        // MODE WEB (Phase 2 / 2bis du plan multi-formateur) — connexion GitHub
+        // native, jamais en mode personnel. Ne concerne que les backends cloud
+        // (supabase/appwrite) : en electron/sqlite, initWebModeIfNeeded() sort
+        // immédiatement et rien n'est modifié à l'écran ni au comportement.
+        //
+        // ⚠️ Écrit contre la documentation publique de Supabase Auth / Appwrite
+        // Account (flux OAuth2 en REST pur, sans SDK — cohérent avec le reste de
+        // ce fichier), mais jamais encore exécuté contre un vrai projet : à
+        // valider dès qu'un projet Supabase/Appwrite de test existe (cf. plan,
+        // Phase 6 côté prérequis externes).
+        // ════════════════════════════════════════════════════════════════════
+
+        function startGithubOAuth(backend) {
+            const p = window._storageProvider;
+            const redirectUrl = window.location.href.split('#')[0];
+
+            if (backend === 'supabase') {
+                window.location.href = p._url + '/auth/v1/authorize?provider=github&redirect_to=' + encodeURIComponent(redirectUrl);
+            } else if (backend === 'appwrite') {
+                window.location.href = p._endpoint + '/account/sessions/oauth2/github'
+                    + '?project=' + encodeURIComponent(p._project)
+                    + '&success=' + encodeURIComponent(redirectUrl)
+                    + '&failure=' + encodeURIComponent(redirectUrl);
+            }
+        }
+
+        /**
+         * Traite un éventuel retour d'authentification GitHub.
+         * Retourne true si une session a été établie (et la redirection vers
+         * teacher.html déjà déclenchée) — l'appelant ne doit alors rien faire
+         * de plus. Retourne false pour un chargement de page normal.
+         */
+        async function handleOAuthCallback(backend) {
+            const p = window._storageProvider;
+
+            if (backend === 'supabase') {
+                // Flux implicite Supabase : le jeton revient dans le FRAGMENT
+                // d'URL (#access_token=...), jamais envoyé au serveur — donc
+                // jamais loggé côté Supabase/hébergeur.
+                const hash = window.location.hash;
+                if (!hash || hash.indexOf('access_token=') === -1) return false;
+
+                const params = new URLSearchParams(hash.slice(1));
+                const accessToken = params.get('access_token');
+                if (!accessToken) return false;
+
+                try {
+                    const resp = await fetch(p._url + '/auth/v1/user', {
+                        headers: { 'apikey': p._key, 'Authorization': 'Bearer ' + accessToken }
+                    });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const user = await resp.json();
+
+                    await storage.setOwnerSession(accessToken, user.id);
+                    sessionStorage.setItem('teacher_authenticated', 'true');
+                    sessionStorage.setItem('teacher_role', 'formateur');
+                    sessionStorage.setItem('teacher_name',
+                        (user.user_metadata && (user.user_metadata.user_name || user.user_metadata.full_name)) || 'Formateur');
+                    window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+                    return true;
+                } catch (e) {
+                    showError('❌ Connexion GitHub échouée : ' + e.message);
+                    return false;
+                }
+            }
+
+            if (backend === 'appwrite') {
+                // Pas de fragment ici : Appwrite pose un cookie de session sur son
+                // propre domaine après le redirect OAuth2. On tente silencieusement
+                // d'échanger ce cookie contre un JWT — échoue proprement (retourne
+                // false) si aucune session n'est active, ce qui est le cas normal
+                // à chaque chargement de page qui n'est pas un retour d'OAuth.
+                try {
+                    const jwtResp = await fetch(p._endpoint + '/account/jwt', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'X-Appwrite-Project': p._project }
+                    });
+                    if (!jwtResp.ok) return false;
+                    const { jwt } = await jwtResp.json();
+
+                    const userResp = await fetch(p._endpoint + '/account', {
+                        credentials: 'include',
+                        headers: { 'X-Appwrite-Project': p._project, 'X-Appwrite-JWT': jwt }
+                    });
+                    if (!userResp.ok) return false;
+                    const user = await userResp.json();
+
+                    await storage.setOwnerSession(jwt, user.$id);
+                    sessionStorage.setItem('teacher_authenticated', 'true');
+                    sessionStorage.setItem('teacher_role', 'formateur');
+                    sessionStorage.setItem('teacher_name', user.name || 'Formateur');
+                    window.location.replace((window.BASE || '') + '/src/html/teacher.html');
+                    return true;
+                } catch (e) {
+                    return false; // pas de session Appwrite active : chargement de page normal
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * Bascule l'écran en mode connexion GitHub si le backend est cloud ET
+         * que le superadmin a activé platform_mode="web" (Phase 2bis). Sans
+         * appel à cette fonction ou si l'une des deux conditions manque, l'écran
+         * reste le formulaire mot de passe habituel — comportement inchangé.
+         */
+        async function initWebModeIfNeeded() {
+            try { await storage.init(); } catch (_) { return; }
+
+            const backend = window._storageBackend;
+            if (backend !== 'supabase' && backend !== 'appwrite') return; // mode personnel : rien à faire
+
+            const handled = await handleOAuthCallback(backend);
+            if (handled) return; // déjà redirigé vers teacher.html
+
+            const { value: platformMode } = await getFromNetwork('platform_mode');
+            if (platformMode !== 'web') return; // pas encore basculé : formulaire mot de passe inchangé
+
+            document.getElementById('password-login-section').style.display = 'none';
+            const githubSection = document.getElementById('github-login-section');
+            githubSection.style.display = 'block';
+
+            document.getElementById('btn-github-login').addEventListener('click', () => startGithubOAuth(backend));
+            document.getElementById('toggle-superadmin-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('password-login-section').style.display = 'block';
+                githubSection.style.display = 'none';
+            });
         }
 
         /**
@@ -160,6 +308,8 @@
                 window.location.replace((window.BASE || '') + '/src/html/teacher.html');
             }
 
+            await initWebModeIfNeeded();
+
             // ── Aide passive au premier lancement, uniquement depuis XSpro ─────
             // IS_ELECTRON (protocol file://) est le seul signal fiable de contexte
             // XSpro dans ce dépôt — IS_IFRAME existe mais ne distingue pas l'iframe
@@ -187,6 +337,11 @@
                     sessionStorage.removeItem('teacher_login_echecs');
                     sessionStorage.setItem('teacher_authenticated', 'true');
                     sessionStorage.setItem('teacher_role', 'admin');
+                    // Nécessaire à la Zone Superadmin de teacher.html (Phase 4) pour
+                    // s'authentifier auprès de la fonction serveur "superadmin" — la
+                    // seule alternative serait de dupliquer la constante RECOVERY_TOKEN
+                    // dans teacher.html, moins maintenable qu'un seul endroit à jour.
+                    sessionStorage.setItem('superadmin_token', RECOVERY_TOKEN);
                     // Pas de storage.set ici : on est peut-etre hors-ligne
                     try {
                         const cachedUsers = JSON.parse(localStorage.getItem('_cache_users_list')) || [];

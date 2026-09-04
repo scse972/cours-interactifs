@@ -510,6 +510,30 @@ const storage = {
     },
 
     /**
+     * Attache une session formateur (posée après connexion GitHub, Phase 2 du
+     * plan multi-formateur) aux providers Supabase/Appwrite déjà instanciés —
+     * `window._storageProvider` et `window._parcoursProvider`. Sans appel à
+     * cette méthode, les providers restent en mode personnel (comportement
+     * inchangé) : c'est `teacher-login.html` qui l'appelle juste après une
+     * connexion GitHub réussie, jamais le mode personnel.
+     * @param {string|null} accessToken — JWT Supabase, ou JWT Appwrite (`account.createJWT()`)
+     * @param {string|null} ownerId     — auth.users.id (Supabase) ou user.$id (Appwrite)
+     */
+    async setOwnerSession(accessToken, ownerId) {
+        if (!this._provider) await this.init();
+        if (this._provider && typeof this._provider.setSession === 'function') {
+            this._provider.setSession(accessToken, ownerId);
+        }
+        if (window._parcoursProvider && typeof window._parcoursProvider.setSession === 'function') {
+            window._parcoursProvider.setSession(accessToken, ownerId);
+        }
+        // Le cache local mélangerait les données du formateur précédent (mode
+        // personnel) avec celles, isolées par owner_id, du formateur qui vient de
+        // se connecter — on le vide pour repartir propre.
+        Cache.keys().forEach(k => Cache.remove(k));
+    },
+
+    /**
      * Récupère une valeur.
      * Si le backend est injoignable, retourne la valeur en cache.
      */

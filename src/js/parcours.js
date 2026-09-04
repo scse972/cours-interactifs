@@ -135,16 +135,44 @@
     var teacherPrefix = slug + ':teacher:';
     var configPrefix  = slug + ':config:';
 
-    function wrap(prefix) {
+    // ── Pont vers la fonction serveur "student-progress" (Phase 3 du plan
+    // multi-formateur) ────────────────────────────────────────────────────
+    // Une fois la RLS fermée en mode Web (backend cloud), un élève anonyme
+    // (aucune session formateur posée sur le provider, cf. Phase 2 —
+    // storage.setOwnerSession) ne peut plus jamais lire/écrire app_data en
+    // direct : owner_id = auth.uid() échoue toujours pour un appel anonyme.
+    // Seule la donnée élève (studentPrefix) a besoin de ce détour — les
+    // données formateur/config restent volontairement en accès direct,
+    // protégées par la RLS elle-même (un élève n'a pas à les toucher).
+    //
+    // ⚠️ Le pont lui-même (studentProgressBridge.js) n'a jamais tourné contre
+    // une fonction serveur réelle — à valider dès qu'un projet de test existe.
+    function shouldUseProgressBridge() {
+      var backend = window._storageBackend;
+      if (backend !== 'supabase' && backend !== 'appwrite') return false; // mode local : jamais de pont
+      var p = window._storageProvider;
+      return !(p && p._ownerId); // une session formateur active => accès direct, RLS s'en charge
+    }
+
+    function wrap(prefix, isStudentScope) {
       return {
         get: function(key) {
+          if (isStudentScope && shouldUseProgressBridge()) {
+            return window.StudentProgressBridge.get(slug, token, key);
+          }
           // storage est défini par storage.js, chargé juste après
           return window.storage ? window.storage.get(prefix + key) : Promise.resolve(null);
         },
         set: function(key, value) {
+          if (isStudentScope && shouldUseProgressBridge()) {
+            return window.StudentProgressBridge.set(slug, token, key, value);
+          }
           return window.storage ? window.storage.set(prefix + key, value) : Promise.resolve();
         },
         remove: function(key) {
+          // Pas de détour pont ici : la suppression de progression élève reste
+          // une action formateur (réinitialisation), toujours faite en session
+          // authentifiée — cf. Phase 3 du plan.
           return window.storage ? window.storage.remove(prefix + key) : Promise.resolve();
         },
         // Préfixe brut, utile pour les clés legacy (DataStorage)
@@ -154,11 +182,11 @@
 
     return {
       // Données de l'élève courant
-      student: wrap(studentPrefix),
+      student: wrap(studentPrefix, true),
       // Données formateur (users_list, teacher_name…)
-      teacher: wrap(teacherPrefix),
+      teacher: wrap(teacherPrefix, false),
       // Config du parcours (chapter_config, locks, examMode…)
-      config:  wrap(configPrefix),
+      config:  wrap(configPrefix, false),
 
       // Préfixe élève brut — utilisé par DataStorage pour les clés comme
       // "student_{token}_progress" → devient "nsi-term:STU001:student_STU001_progress"
