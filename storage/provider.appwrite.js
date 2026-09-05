@@ -133,8 +133,8 @@ AppwriteProvider.prototype._fetch = async function (method, path, body) {
     return text ? JSON.parse(text) : null;
 };
 
-AppwriteProvider.prototype._documentsPath = function (suffix) {
-    return '/databases/' + this._databaseId + '/collections/' + this._collectionId + '/documents' + (suffix || '');
+AppwriteProvider.prototype._rowsPath = function (suffix) {
+    return '/tablesdb/' + this._databaseId + '/tables/' + this._collectionId + '/rows' + (suffix || '');
 };
 
 /**
@@ -144,7 +144,7 @@ AppwriteProvider.prototype._documentsPath = function (suffix) {
  */
 AppwriteProvider.prototype.get = async function (key) {
     try {
-        const doc = await this._fetch('GET', this._documentsPath('/' + this._docId(key)));
+        const doc = await this._fetch('GET', this._rowsPath('/' + this._docId(key)));
         return (doc && doc.value !== undefined) ? JSON.parse(doc.value) : null;
     } catch (e) {
         if (e.status === 404) return null;
@@ -163,7 +163,7 @@ AppwriteProvider.prototype.set = async function (key, value) {
     if (this._ownerId) data.owner_id = this._ownerId;
 
     try {
-        await this._fetch('PATCH', this._documentsPath('/' + docId), { data });
+        await this._fetch('PATCH', this._rowsPath('/' + docId), { data });
     } catch (e) {
         if (e.status !== 404) throw e;
         // Permissions par document (nécessite "Document Security" activé sur la
@@ -172,7 +172,7 @@ AppwriteProvider.prototype.set = async function (key, value) {
         // En mode personnel (pas de ownerId), pas de permissions posées : la
         // permission de collection existante ("any") continue de s'appliquer,
         // comportement inchangé.
-        const body = { documentId: docId, data };
+        const body = { rowId: docId, data };
         if (this._ownerId) {
             body.permissions = [
                 'read("user:' + this._ownerId + '")',
@@ -180,7 +180,7 @@ AppwriteProvider.prototype.set = async function (key, value) {
                 'delete("user:' + this._ownerId + '")'
             ];
         }
-        await this._fetch('POST', this._documentsPath(), body);
+        await this._fetch('POST', this._rowsPath(), body);
     }
 };
 
@@ -191,7 +191,7 @@ AppwriteProvider.prototype.set = async function (key, value) {
  */
 AppwriteProvider.prototype.remove = async function (key) {
     try {
-        await this._fetch('DELETE', this._documentsPath('/' + this._docId(key)));
+        await this._fetch('DELETE', this._rowsPath('/' + this._docId(key)));
     } catch (e) {
         if (e.status !== 404) throw e;
     }
@@ -218,8 +218,8 @@ AppwriteProvider.prototype.keys = async function () {
         if (cursor) queries.push(JSON.stringify({ method: 'cursorAfter', values: [cursor] }));
 
         const qs = queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&');
-        const data = await this._fetch('GET', this._documentsPath('?' + qs));
-        const docs = (data && Array.isArray(data.documents)) ? data.documents : [];
+        const data = await this._fetch('GET', this._rowsPath('?' + qs));
+        const docs = (data && Array.isArray(data.rows)) ? data.rows : [];
 
         for (const doc of docs) result.push(doc.key);
 
