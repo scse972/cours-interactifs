@@ -61,10 +61,17 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     // 1. Retrouver, parmi tous les formateurs, celui dont cours.json contient ce slug.
-    const ownerId = await findOwnerBySlug(admin, slug);
-    if (!ownerId) {
+    const resolution = await findOwnerBySlug(admin, slug);
+    if (resolution.statut === 'introuvable') {
         return json({ error: 'Parcours introuvable' }, 404);
     }
+    if (resolution.statut === 'ambigu') {
+        // 409 et non 403 : ce n'est pas l'eleve qui est en faute, c'est la
+        // publication. Le message reste vague cote client — inutile de lui
+        // apprendre combien de formateurs partagent ce slug.
+        return json({ error: 'Ce parcours est publie en double : contactez votre formateur.' }, 409);
+    }
+    const ownerId = resolution.ownerId;
 
     // 2. Vérifier que ce jeton figure bien dans la liste d'élèves de CE formateur.
     const authorized = await tokenIsAssigned(admin, ownerId, slug, token);
@@ -98,7 +105,32 @@ Deno.serve(async (req: Request) => {
     return json({ value });
 });
 
-async function findOwnerBySlug(admin: SupabaseClient, slug: string): Promise<string | null> {
+/**
+ * Retrouve le formateur propriétaire d'un slug, et REFUSE si plusieurs le
+ * revendiquent.
+ *
+ * La version précédente renvoyait le premier trouvé. Ce n'était pas seulement
+ * imprécis, c'était une fuite entre formateurs — parce que les jetons d'élèves
+ * ne sont pas uniques : ce sont des identifiants choisis par l'enseignant
+ * (« STU001 »), importés depuis un CSV, et le même peut exister chez plusieurs.
+ * Soit deux formateurs ayant tous deux un parcours « P001 » et un élève
+ * « STU001 » : l'élève du second était résolu vers le premier, son jeton y
+ * figurait donc aussi, l'autorisation passait, et il lisait puis écrasait la
+ * progression de l'élève d'un autre formateur.
+ *
+ * Le préfixe de slug (Phase 1) rend les slugs globalement uniques et doit
+ * empêcher ce cas d'arriver. Cette fonction ne s'y fie pas : un parcours publié
+ * à la main, une migration incomplète ou un préfixe absent suffiraient à le
+ * recréer. Devant l'ambiguïté, on refuse tout le monde plutôt que de servir la
+ * mauvaise personne — une porte fermée se remarque et se corrige, une porte qui
+ * ouvre sur le voisin, non.
+ */
+type ResolutionOwner =
+    | { statut: 'trouve'; ownerId: string }
+    | { statut: 'introuvable' }
+    | { statut: 'ambigu'; proprietaires: number };
+
+async function findOwnerBySlug(admin: SupabaseClient, slug: string): Promise<ResolutionOwner> {
     // Le nombre de lignes scanné est borné par le nombre de formateurs (quelques
     // centaines, cf. plan) — un parcours au format cours.json par ligne, pas un
     // scan de toutes les progressions élèves.
@@ -106,15 +138,28 @@ async function findOwnerBySlug(admin: SupabaseClient, slug: string): Promise<str
         .from('parcours_data')
         .select('owner_id, value')
         .eq('key', 'cours.json');
-    if (error || !data) return null;
+    if (error || !data) return { statut: 'introuvable' };
 
+    const proprietaires: string[] = [];
     for (const row of data as { owner_id: string; value: { parcours?: { slug: string }[] } }[]) {
         const parcoursList = row.value?.parcours;
         if (Array.isArray(parcoursList) && parcoursList.some((p) => p.slug === slug)) {
-            return row.owner_id;
+            proprietaires.push(row.owner_id);
         }
     }
-    return null;
+
+    if (proprietaires.length === 0) return { statut: 'introuvable' };
+    if (proprietaires.length > 1) {
+        // Trace serveur : c'est une anomalie de publication, l'administrateur
+        // doit pouvoir la voir sans attendre qu'un élève se plaigne.
+        console.error(
+            '[student-progress] Slug revendiqué par ' + proprietaires.length +
+            ' formateurs, accès refusé — slug: ' + slug +
+            ', owner_id: ' + proprietaires.join(', ')
+        );
+        return { statut: 'ambigu', proprietaires: proprietaires.length };
+    }
+    return { statut: 'trouve', ownerId: proprietaires[0] };
 }
 
 async function tokenIsAssigned(admin: SupabaseClient, ownerId: string, slug: string, token: string): Promise<boolean> {
