@@ -75,7 +75,7 @@
 
             <!-- Mode Web (Phase 2/2bis du plan multi-formateur) : connexion GitHub native.
                  Masqué par défaut — n'apparaît que si le backend est cloud (supabase/appwrite)
-                 ET que le superadmin a basculé platform_mode sur "web" (cf. initWebModeIfNeeded).
+                 ET que ce déploiement est le site partagé (storage/mode.json, cf. initWebModeIfNeeded).
                  En mode personnel, cette section reste invisible et rien ne change. -->
             <div id="github-login-section" style="display:none;">
                 <button type="button" id="btn-github-login" class="btn btn-primary" style="width: 100%; font-size: 1.2rem; padding: 1rem;">
@@ -239,22 +239,32 @@
         }
 
         /**
-         * Bascule l'écran en mode connexion GitHub si le backend est cloud ET
-         * que le superadmin a activé platform_mode="web" (Phase 2bis). Sans
-         * appel à cette fonction ou si l'une des deux conditions manque, l'écran
-         * reste le formulaire mot de passe habituel — comportement inchangé.
+         * Bascule l'écran en connexion GitHub si ce DÉPLOIEMENT est un site
+         * partagé, ce que dit storage/mode.json — un fichier, pas une clé de la
+         * base.
+         *
+         * Auparavant le mode était lu dans app_data, ce qui obligeait cette page
+         * à interroger la base AVANT de savoir quoi afficher : il fallait une
+         * policy RLS taillée pour rendre cette seule clé lisible à un visiteur
+         * non connecté. Un fichier statique supprime ce détour, et surtout
+         * personne ne peut plus convertir un site personnel en place.
+         *
+         * Fichier absent, illisible ou réseau coupé : on reste sur le formulaire
+         * mot de passe. Se tromper de ce côté laisse une page utilisable ; se
+         * tromper de l'autre afficherait une connexion GitHub qui ne mène nulle
+         * part.
          */
         async function initWebModeIfNeeded() {
             try { await storage.init(); } catch (_) { return; }
 
+            const mode = await loadMode();
+            if (mode !== 'web') return; // déploiement personnel : formulaire mot de passe
+
             const backend = window._storageBackend;
-            if (backend !== 'supabase' && backend !== 'appwrite') return; // mode personnel : rien à faire
+            if (backend !== 'supabase' && backend !== 'appwrite') return; // pas de base cloud : rien à faire
 
             const handled = await handleOAuthCallback(backend);
             if (handled) return; // déjà redirigé vers teacher.html
-
-            const { value: platformMode } = await getFromNetwork('platform_mode');
-            if (platformMode !== 'web') return; // pas encore basculé : formulaire mot de passe inchangé
 
             document.getElementById('password-login-section').style.display = 'none';
             const githubSection = document.getElementById('github-login-section');

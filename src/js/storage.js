@@ -260,6 +260,60 @@ function storagePath(relativePath) {
 
 let _loadedConfig = null;
 
+/* ─── Mode de la plateforme : personnel ou web ──────────────────────────────
+ *
+ * Ce mode est une propriété du DÉPLOIEMENT, décidée une fois pour toutes, et
+ * non un réglage qu'un site pourrait se donner à lui-même.
+ *
+ * Auparavant il vivait dans la base, sous la clé `platform_mode` d'app_data, et
+ * le tableau de bord offrait un bouton « Passer ce site en mode Web ». Un site
+ * personnel pouvait donc se convertir en place — ou être converti par accident
+ * — et la page de connexion devait interroger la base AVANT de savoir quoi
+ * afficher, ce qui exigeait une policy RLS spéciale pour rendre cette seule clé
+ * lisible à un visiteur non connecté.
+ *
+ * Les deux modes sont désormais totalement séparés :
+ *
+ *   · le site partagé du fournisseur EST en mode web dès sa naissance ;
+ *   · le fork d'un formateur EST personnel, et rien ne le fait basculer.
+ *
+ * D'où un fichier à part, storage/mode.json, et non une clé de config.json :
+ * ce dernier est réécrit par XSpro à chaque déploiement de fork, et y placer le
+ * mode aurait rendu à XSpro le pouvoir de le changer — reconstituant par une
+ * autre porte le mélange qu'on supprime ici.
+ *
+ * ABSENT VAUT PERSONNEL. Le dépôt modèle ne livre pas ce fichier : un fork est
+ * donc personnel sans que personne n'ait rien à faire, et une synchronisation
+ * depuis le modèle ne peut jamais l'écraser puisqu'il n'y existe pas.
+ */
+
+let _modePlateforme = null;
+
+async function loadMode() {
+    if (_modePlateforme) return _modePlateforme;
+
+    try {
+        const reponse = await fetch(storagePath('mode.json'), { cache: 'no-store' });
+        if (reponse.ok) {
+            const donnees = await reponse.json();
+            _modePlateforme = (donnees && donnees.mode === 'web') ? 'web' : 'personnel';
+        } else {
+            // 404 attendu et normal sur un déploiement personnel.
+            _modePlateforme = 'personnel';
+        }
+    } catch (e) {
+        // Fichier illisible, JSON invalide, réseau coupé : on retombe sur le
+        // mode le moins engageant. Se tromper vers « personnel » laisse un
+        // formulaire mot de passe ; se tromper vers « web » afficherait une
+        // connexion GitHub qui ne mène nulle part.
+        _modePlateforme = 'personnel';
+    }
+
+    window.MODE_PLATEFORME = _modePlateforme;
+    console.log('[storage] Mode de plateforme :', _modePlateforme);
+    return _modePlateforme;
+}
+
 async function loadConfig() {
     if (_loadedConfig) return _loadedConfig;
 
@@ -1086,6 +1140,7 @@ const staticJson = (function () {
 // EXPORTS GLOBAUX
 // ============================================================================
 window.storage        = storage;
+window.loadMode       = loadMode;
 window.STORAGE_KEYS   = STORAGE_KEYS;
 window.APP_CONFIG     = APP_CONFIG;
 window.StorageService = StorageService;

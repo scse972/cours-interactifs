@@ -78,9 +78,6 @@
             <p id="superadmin-indisponible" style="display:none; margin:0.5rem 0; padding:0.6rem 0.8rem; border-left:3px solid #e0a300; background:#fff8e6; color:#6b5200; font-size:0.9rem;"></p>
             <div id="superadmin-actions">
             <p><a href="admin-formateurs.html">👥 Gérer les formateurs (approbation, révocation, purge)</a></p>
-            <div style="margin: 1rem 0;">
-                <button class="btn btn-secondary" id="superadmin-toggle-platform-mode-btn"></button>
-            </div>
             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
                 <label for="superadmin-notification-email" style="font-weight:600;">Email de notification (nouvelles inscriptions) :</label>
                 <input type="email" id="superadmin-notification-email" placeholder="admin@exemple.fr" style="padding:0.4rem 0.6rem; border:2px solid #ddd; border-radius:6px; min-width:260px;">
@@ -334,10 +331,10 @@
 
     // ════════════════════════════════════════════════════════════════════
     // ZONE SUPERADMIN (Phase 2bis / 4 / 4bis du plan multi-formateur)
-    // Bascule platform_mode, réglage de l'adresse email de notification —
-    // uniquement pour le rôle admin (RECOVERY_TOKEN) sur un backend cloud
-    // (supabase/appwrite). En mode personnel (electron/sqlite) ou pour un
-    // formateur ordinaire, cette fonction sort immédiatement et la zone
+    // Réglage de l'adresse email de notification — uniquement pour le rôle
+    // admin (RECOVERY_TOKEN), sur le SITE PARTAGÉ (storage/mode.json) et un
+    // backend cloud. Sur un déploiement personnel ou pour un formateur
+    // ordinaire, cette fonction sort immédiatement et la zone
     // reste masquée.
     //
     // Passe entièrement par la fonction serveur "superadmin" (Phase 4) — pas
@@ -355,6 +352,15 @@
         if (!superadminToken) return; // connecté par mot de passe personnalisé, pas par RECOVERY_TOKEN
 
         try { await storage.init(); } catch (_) { return; }
+
+        // Cette zone n'a de sens que sur le site partagé du fournisseur. Elle
+        // s'affichait sur tout déploiement adossé à une base cloud, y compris le
+        // site personnel d'un formateur — à qui elle proposait de « passer ce
+        // site en mode Web » et de gérer des formateurs qui n'existent pas.
+        // Le mode est une propriété du déploiement (storage/mode.json), pas un
+        // réglage que le site se donne à lui-même.
+        if ((await loadMode()) !== 'web') return;
+
         const backend = window._storageBackend;
         if (backend !== 'supabase' && backend !== 'appwrite') return;
 
@@ -431,37 +437,10 @@
             return;
         }
 
-        // ── Bascule platform_mode ──
-        const toggleBtn = document.getElementById('superadmin-toggle-platform-mode-btn');
-        let currentMode = settings.platform_mode;
-
-        function renderToggleLabel() {
-            toggleBtn.textContent = (currentMode === 'web')
-                ? '⬅️ Repasser ce site en mode Personnel'
-                : '🌐 Passer ce site en mode Web';
-        }
-        renderToggleLabel();
-
-        toggleBtn.addEventListener('click', async () => {
-            if (currentMode === 'web') {
-                // Garde-fou réel (Phase 4bis) : le retour en mode Personnel exposerait
-                // les données de tous les formateurs restants derrière un simple mot
-                // de passe partagé — on le bloque tant qu'il en reste plus d'un.
-                const { count } = await callSuperadmin('count_active_formateurs');
-                if (count > 1) {
-                    alert('⛔ Retour en mode Personnel impossible : ' + count + ' formateurs actifs (pending/approved). Désinscrivez-les (révocation puis purge) jusqu\'à n\'en garder qu\'un seul avant de revenir en arrière.');
-                    return;
-                }
-                if (!confirm('Repasser ce site en mode Personnel ?')) return;
-                await callSuperadmin('set_platform_mode', { mode: null });
-                currentMode = null;
-            } else {
-                if (!confirm('Passer ce site en mode Web ? Tous les formateurs devront désormais se connecter avec GitHub.')) return;
-                await callSuperadmin('set_platform_mode', { mode: 'web' });
-                currentMode = 'web';
-            }
-            renderToggleLabel();
-        });
+        // La bascule « Passer ce site en mode Web » a été retirée : le mode est
+        // désormais une propriété du déploiement (storage/mode.json), pas un
+        // réglage qu’un site se donne à lui-même. Un site partagé naît partagé,
+        // le fork d’un formateur naît personnel, et rien ne les convertit.
 
         // ── Adresse email de notification ──
         const emailInput  = document.getElementById('superadmin-notification-email');

@@ -3,10 +3,8 @@
 // ============================================================================
 // Centralise toutes les actions superadmin qui ne peuvent plus passer par un
 // accès table direct depuis qu'une vraie RLS est en place (Phases 3/4) :
-//   - réglages globaux (platform_mode, admin_notification_email) : owner_id
-//     NULL, non modifiables par la RLS anonyme (seul platform_mode est
-//     lisible publiquement, jamais écrit sans passer par ici — cf. migration
-//     0002, bloc 4) ;
+//   - réglage global admin_notification_email : owner_id NULL, non modifiable
+//     par la RLS anonyme ;
 //   - gestion de la table formateurs (aucune policy anonyme du tout, cf.
 //     migration 0002, bloc 1) : lister, pré-créer, approuver, révoquer, purger.
 //     La pré-création exige la migration 0003 (cf. create_formateur).
@@ -58,10 +56,6 @@ Deno.serve(async (req: Request) => {
         case 'get_settings':
             return json(await getSettings(admin));
 
-        case 'set_platform_mode':
-            await setGlobalSetting(admin, 'platform_mode', body.mode === 'web' ? 'web' : null);
-            return json({ ok: true });
-
         case 'set_notification_email':
             await setGlobalSetting(admin, 'admin_notification_email', body.email || null);
             return json({ ok: true });
@@ -70,15 +64,6 @@ Deno.serve(async (req: Request) => {
             const { data, error } = await admin.from('formateurs').select('*').order('created_at', { ascending: false });
             if (error) return json({ error: error.message }, 500);
             return json({ formateurs: data });
-        }
-
-        case 'count_active_formateurs': {
-            const { count, error } = await admin
-                .from('formateurs')
-                .select('id', { count: 'exact', head: true })
-                .in('status', ['pending', 'approved']);
-            if (error) return json({ error: error.message }, 500);
-            return json({ count: count ?? 0 });
         }
 
         case 'create_formateur': {
@@ -156,9 +141,9 @@ async function getSettings(admin: ReturnType<typeof createClient>) {
         .from('app_data')
         .select('key, value')
         .is('owner_id', null)
-        .in('key', ['platform_mode', 'admin_notification_email']);
+        .in('key', ['admin_notification_email']);
 
-    const settings: Record<string, unknown> = { platform_mode: null, admin_notification_email: null };
+    const settings: Record<string, unknown> = { admin_notification_email: null };
     for (const row of data || []) settings[row.key] = row.value;
     return settings;
 }

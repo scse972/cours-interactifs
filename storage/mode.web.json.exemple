@@ -1,0 +1,4 @@
+{
+  "_lisez_moi": "Ce fichier est un EXEMPLE, il n'est jamais lu. Pour faire d'un déploiement un site partagé, copiez-le en storage/mode.json dans le dépôt du site — et seulement là. Le dépôt modèle ne doit PAS contenir mode.json : son absence vaut mode personnel, si bien qu'un fork est personnel sans rien faire, et qu'une synchronisation depuis le modèle ne peut jamais l'écraser. XSpro n'écrit jamais ce fichier, contrairement à config.json.",
+  "mode": "web"
+}
