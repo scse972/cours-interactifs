@@ -21,7 +21,34 @@
 (function () {
   'use strict';
 
-  var repoName = 'cours-interactifs';
+  // Retrouve la balise <script> de ce fichier et en tire le prefixe d'URL.
+  // document.currentScript suffit dans tous les navigateurs vises ; le repli par
+  // parcours des balises couvre le cas d'un script injecte, ou currentScript est
+  // nul.
+  function baseDepuisCeScript() {
+    var MARQUEUR = '/src/js/config.js';
+    var src = (document.currentScript && document.currentScript.src) || null;
+
+    if (!src) {
+      var balises = document.getElementsByTagName('script');
+      for (var i = balises.length - 1; i >= 0; i--) {
+        if (balises[i].src && balises[i].src.indexOf(MARQUEUR) !== -1) {
+          src = balises[i].src;
+          break;
+        }
+      }
+    }
+
+    // Repli ultime : on retombe sur l'ancien comportement plutot que sur une
+    // base vide, qui casserait un site de projet de facon plus sournoise.
+    if (!src) return isLocal ? '' : '/' + repoName;
+
+    var chemin = new URL(src, window.location.href).pathname;
+    var i2 = chemin.indexOf(MARQUEUR);
+    return (i2 >= 0) ? chemin.slice(0, i2) : '';
+  }
+
+  var repoName = 'cours-interactifs'; // repli seulement, cf. baseDepuisCeScript()
   var hostname = window.location.hostname;
   var protocol = window.location.protocol;
   var port     = window.location.port;
@@ -41,7 +68,23 @@
     parts.splice(parts.length - depth);
     window.BASE = parts.join('/');
   } else {
-    window.BASE = isLocal ? '' : '/' + repoName;
+    // La base se DEDUIT de l'emplacement reel de ce script, qui vit toujours a
+    // <BASE>/src/js/config.js — au lieu d'etre devinee a partir d'un nom de
+    // depot ecrit en dur.
+    //
+    // Pourquoi : repoName valait 'cours-interactifs' en constante, si bien que
+    // le site ne pouvait vivre QUE dans un depot portant ce nom. Publie sous
+    // n'importe quel autre (un second deploiement, un site partage, un fork
+    // renomme), il cherchait ses fichiers sous /cours-interactifs/ alors qu'il
+    // etait servi ailleurs : plus une seule page ne se chargeait, sans que rien
+    // n'indique pourquoi.
+    //
+    // Fonctionne pour tous les cas d'un coup : page de projet GitHub Pages
+    // (/<depot>/...), page d'utilisateur ou domaine personnalise (racine, base
+    // vide), et serveur local. La profondeur de la page appelante n'entre pas en
+    // jeu : currentScript.src est toujours absolu, une fois le chemin relatif
+    // resolu par le navigateur.
+    window.BASE = baseDepuisCeScript();
   }
 
   window.REPO_NAME        = repoName;

@@ -1,8 +1,9 @@
 {
   "storage": "appwrite",
+
   "appwrite": {
     "endpoint": "https://fra.cloud.appwrite.io/v1",
-    "projectId": "6a7446c000225c84134e",
-    "databaseId": "cours-interactifs"
+    "projectId": "<votre-project-id>",
+    "databaseId": "<votre-database-id>"
   }
 }
