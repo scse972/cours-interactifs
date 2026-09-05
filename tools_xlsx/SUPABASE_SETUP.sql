@@ -2,7 +2,7 @@
 -- SCRIPT COMPLET POUR SUPABASE
 -- ============================================================================
 -- À exécuter dans l'éditeur SQL de Supabase:
---   https://supabase.com/dashboard/project/rdvxgcwpennhbatkvats/sql/new
+--   https://supabase.com/dashboard/project/<votre-ref-projet>/sql/new
 -- ============================================================================
 -- ============================================================================
 -- MIGRATION COMPLÈTE POUR SUPABASE (idempotent)

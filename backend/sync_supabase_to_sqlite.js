@@ -2,9 +2,21 @@
 // Synchronise Supabase (cloud) → SQLite (local)
 // Usage: node sync_supabase_to_sqlite.js
 
-const SUPABASE_URL = 'https://rdvxgcwpennhbatkvats.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_hF3tWEb_lnpc4q5sL16Ghw_hYG5ov40';
-const SQLITE_API   = 'http://localhost:3000/api';
+// Identifiants lus dans storage/config.json, et non recopies ici : ce depot
+// est le modele que les formateurs forkent, et une constante en dur y voyage
+// avec chaque fork. Celle qui s'y trouvait designait de surcroit un projet
+// supprime depuis, si bien que ces scripts echouaient sans dire pourquoi.
+const path = require('path');
+const CONFIG = require(path.join(__dirname, '..', 'storage', 'config.json'));
+
+const SUPABASE_URL = (CONFIG.supabase || {}).url        || '';
+const SUPABASE_KEY = (CONFIG.supabase || {}).anonKey    || '';
+const SQLITE_API   = (CONFIG.sqlite   || {}).apiBaseUrl || 'http://localhost:3000/api';
+
+if (!SUPABASE_URL || !SUPABASE_KEY || SUPABASE_URL.indexOf('<') !== -1) {
+    console.error('storage/config.json ne porte pas encore vos identifiants Supabase.');
+    process.exit(1);
+}
 
 // Tables à synchroniser : { supabaseTable, sqliteRoute }
 const TABLES = [
