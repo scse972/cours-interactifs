@@ -34,7 +34,6 @@ const REGLE_HORS_CONSIGNE = 'texte(10)';
 const SuiviAtelier = {
 
     MOT_DE_PASSE_DEFAUT: 'XSedu',
-    JETON_RECUPERATION: 'YXORP@97240',
 
     slug: null,
     formateur: 'Formateur',
@@ -165,7 +164,7 @@ const SuiviAtelier = {
     async _connecter() {
         const saisie = document.getElementById('champ-mdp').value.trim();
 
-        if (saisie === this.JETON_RECUPERATION) {
+        if (await estJetonRecuperation(saisie)) {
             sessionStorage.removeItem('teacher_login_echecs');
             return this._accesAccorde('Admin');
         }

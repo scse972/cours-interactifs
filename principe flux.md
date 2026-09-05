@@ -383,7 +383,7 @@ Le fichier est parsé ligne par ligne, et la liste entière est **remplacée** (
 ```
 
 **Mécanisme jeton de récupération :**  
-Le code `YXORP@97240` est un mot de passe "root" codé en dur dans `DataStorage`. Saisi dans le champ jeton, il connecte automatiquement en tant que formateur (crée même un compte PROF001 s'il n'existe pas). C'est un **backdoor de secours** pour les formateurs qui auraient perdu leur accès.
+Un jeton de récupération fait office de mot de passe "root". Sa valeur n'est plus dans le dépôt : `src/js/storage.js` n'en porte que l'empreinte SHA-256, et les trois points d'entrée (`teacher-login.html`, `src/js/dataStorage.js`, `src/js/atelier/suiviAtelier.js`) la comparent par `estJetonRecuperation()`. **Changer le jeton, c'est changer l'empreinte dans `storage.js` ET le secret de fonction Supabase du même nom** — les deux ensemble, sinon `superadmin` répond 401. Saisi dans le champ jeton, il connecte automatiquement en tant que formateur (crée même un compte PROF001 s'il n'existe pas). C'est un **backdoor de secours** pour les formateurs qui auraient perdu leur accès. Sa valeur n'est reproduite ni dans le code ni dans cette documentation. Elle reste cependant un contournement **local** : la vérification a lieu dans le navigateur, et rien n'empêche un visiteur d'éditer le JavaScript de sa propre page pour la sauter. Ce que le hachage protège, ce n'est pas cette porte-là, c'est le secret de la fonction serveur `superadmin`, qui cesse d'être publié.
 
 ---
 
@@ -442,6 +442,6 @@ async removeUser(userId) {
 2. **Un même jeton peut exister dans plusieurs parcours** — `math-Term:teacher:users_list` et `nsi-term:teacher:users_list` sont indépendants
 3. **Pas de mot de passe** — le jeton fait office à la fois d'identifiant et de secret. La sécurité repose sur la non-devinabilité des jetons (mais un jeton comme `STU001` est trivial)
 4. **Stockage plat** — pas de normalisation, pas de jointure, tout est dans une seule table
-5. **Le "backdoor" `YXORP@97240`** permet à un formateur de se connecter sans jeton pré-existant
+5. **Le "backdoor" `RECOVERY_TOKEN`** (codé en dur dans `teacher-login.html`) permet à un formateur de se connecter sans jeton pré-existant — et à quiconque lit le code de la page
 6. **La liste des utilisateurs est remplacée en bloc** à l'import CSV — pas de merge fin
 

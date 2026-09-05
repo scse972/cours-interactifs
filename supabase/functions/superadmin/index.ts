@@ -13,7 +13,8 @@
 // compte GitHub sur ce projet — c'est justement l'exception qui permet de
 // basculer le site avant qu'aucun formateur n'existe). À la place, le même
 // jeton de récupération que celui de teacher-login.html/teacher.html
-// (RECOVERY_TOKEN, actuellement "YXORP@97240" en dur côté client) doit être
+// (RECOVERY_TOKEN — le client n'en connaît que l'empreinte SHA-256 et
+// transmet la saisie de l'utilisateur, cf. `storage.js`) doit être
 // fourni dans le corps de la requête et vérifié ici contre un secret de
 // fonction du même nom — JAMAIS la clé anon seule, qui n'authentifie rien.
 //

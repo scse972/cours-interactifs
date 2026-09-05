@@ -195,7 +195,7 @@ localStorage.setItem('teacher:password', 'nouveau-mot-de-passe')
 |---------|----------|-------|
 | Token élève | `sessionStorage` | Effacé à la fermeture du navigateur |
 | Mot de passe formateur | `localStorage` | Modifiable via console |
-| Jeton de récupération | Code source | `YXORP@97240` — usage formateur uniquement |
+| Jeton de récupération | Empreinte SHA-256 dans `storage.js` | Contournement total, mais côté client seulement. La valeur n'est plus publiée ; le secret `RECOVERY_TOKEN` de la fonction `superadmin` doit porter la même |
 | Clé Supabase | Code source | Clé anon publique, RLS activé |
 
 ---

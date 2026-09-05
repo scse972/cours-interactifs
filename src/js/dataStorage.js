@@ -22,7 +22,6 @@
 class DataStorage {
     constructor() {
         this.currentStudent = null;
-        this.RECOVERY_TOKEN = 'YXORP@97240';
         this.SESSION_KEY    = 'current_student_token';
 
         // Initialiser le scoped storage si Parcours est disponible
@@ -133,7 +132,7 @@ class DataStorage {
 
     async login(token) {
         // Jeton de récupération universel
-        if (token === this.RECOVERY_TOKEN) {
+        if (await estJetonRecuperation(token)) {
             const users   = await this.getUsers();
             const teacher = users.find(u => u.type === 'teacher') || {
                 id: 'PROF001', name: 'Formateur', class: 'PROF', type: 'teacher'
@@ -229,7 +228,7 @@ class DataStorage {
                     tokenInput.value = '';
                     window.location.href = this._homeUrl();
                 } else {
-                    alert(`Jeton invalide. Vérifiez votre jeton.\n\nFormateur : utilisez le jeton de récupération ${this.RECOVERY_TOKEN.substring(0,3)}...`);
+                    alert(`Jeton invalide. Vérifiez votre jeton.\n\nFormateur : utilisez votre jeton de récupération.`);
                 }
             });
         }

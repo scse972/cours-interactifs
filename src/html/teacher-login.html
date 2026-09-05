@@ -117,7 +117,8 @@
 
     <script>
         const DEFAULT_PASSWORD = "XSedu";
-        const RECOVERY_TOKEN = "YXORP@97240";
+        // Le jeton de récupération n’est plus ici : storage.js n’en garde que
+        // l’empreinte, comparée par estJetonRecuperation().
 
         const errorBox = document.getElementById('error-message');
 
@@ -343,15 +344,19 @@
                 const password = passwordInput.value.trim();
 
                 // ── 1. RECOVERY_TOKEN : bypass total, meme hors-ligne ──────────
-                if (password === RECOVERY_TOKEN) {
+                if (await estJetonRecuperation(password)) {
                     sessionStorage.removeItem('teacher_login_echecs');
                     sessionStorage.setItem('teacher_authenticated', 'true');
                     sessionStorage.setItem('teacher_role', 'admin');
                     // Nécessaire à la Zone Superadmin de teacher.html (Phase 4) pour
-                    // s'authentifier auprès de la fonction serveur "superadmin" — la
-                    // seule alternative serait de dupliquer la constante RECOVERY_TOKEN
-                    // dans teacher.html, moins maintenable qu'un seul endroit à jour.
-                    sessionStorage.setItem('superadmin_token', RECOVERY_TOKEN);
+                    // s'authentifier auprès de la fonction serveur "superadmin", qui
+                    // compare la valeur reçue à son propre secret RECOVERY_TOKEN.
+                    //
+                    // On mémorise ce que l'utilisateur a TAPÉ, et non une constante :
+                    // le code ne connaît plus que l'empreinte du jeton, d'où l'on ne
+                    // peut pas revenir à la valeur que le serveur attend. La saisie
+                    // n'est disponible ici que parce qu'elle vient d'être reconnue.
+                    sessionStorage.setItem('superadmin_token', password);
                     // Pas de storage.set ici : on est peut-etre hors-ligne
                     try {
                         const cachedUsers = JSON.parse(localStorage.getItem('_cache_users_list')) || [];

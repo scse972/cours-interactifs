@@ -1137,10 +1137,160 @@ const staticJson = (function () {
 })();
 
 // ============================================================================
+// JETON DE RÉCUPÉRATION — comparaison sur empreinte, jamais sur la valeur
+// ============================================================================
+//
+// Ce jeton contourne toute l'authentification formateur : saisi dans le champ
+// mot de passe, il ouvre le tableau de bord et crée au besoin un compte
+// PROF001. Il vivait auparavant en clair dans trois fichiers du dépôt — donc
+// publié sur GitHub Pages, donc lisible par n'importe quel visiteur, et
+// identique dans chaque fork.
+//
+// CE QUE LE HACHAGE N'APPORTE PAS. La vérification reste côté client, dans du
+// code que le visiteur contrôle : il peut éditer le JS de sa propre page et
+// franchir la porte sans rien connaître. Pour la façade locale, ce n'est donc
+// pas une sécurité, et il ne faut pas le croire.
+//
+// CE QUE LE HACHAGE APPORTE, et qui justifie l'opération : la valeur en clair
+// disparaît du dépôt. Or c'est la MÊME valeur qui est posée en secret de
+// fonction Supabase (`supabase secrets set RECOVERY_TOKEN=…`) et vérifiée
+// côté serveur par la fonction `superadmin`, hors d'atteinte du navigateur.
+// Tant qu'elle était publiée, ce contrôle serveur ne contrôlait rien. Il
+// redevient réel.
+//
+// D'où le partage du travail : le client compare une empreinte, mais transmet
+// à la fonction serveur la valeur que l'utilisateur a TAPÉE — la seule que le
+// serveur puisse rapprocher de son secret. Elle ne circule donc que dans une
+// session ouverte par quelqu'un qui la connaissait déjà.
+//
+// SHA-256 sans sel, à dessein : un sel figé dans le même fichier public
+// n'arrête personne, et il empêcherait de vérifier l'empreinte avec un outil
+// ordinaire. La résistance vient de la longueur du jeton, pas d'un sel.
+
+const HACHE_JETON_RECUPERATION =
+    '26d9837e628fac74b826eed1e888853fe23d61fc5a765dfba6796336a5124c77';
+
+// Constantes de SHA-256 (racines cubiques des 64 premiers nombres premiers).
+const _K256 = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+];
+
+/**
+ * SHA-256 en JavaScript pur.
+ *
+ * Présent comme filet, et non par goût de réécrire une primitive :
+ * `crypto.subtle` n'existe que dans un contexte sécurisé, et XSpro charge le
+ * site embarqué depuis une URL `file://`. La spécification range bien `file`
+ * parmi les origines dignes de confiance, mais faire dépendre la connexion
+ * formateur de ce détail de plateforme reviendrait à parier. Ici la question
+ * ne se pose plus.
+ *
+ * @param {Uint8Array} octets
+ * @returns {string} empreinte hexadécimale sur 64 caractères
+ */
+function _sha256Pur(octets) {
+    const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+               0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+
+    const longueurBits = octets.length * 8;
+
+    // Remplissage : un bit à 1, des zéros, puis la longueur sur 64 bits.
+    const taille = (((octets.length + 8) >> 6) + 1) << 6;
+    const bloc = new Uint8Array(taille);
+    bloc.set(octets);
+    bloc[octets.length] = 0x80;
+
+    const vue = new DataView(bloc.buffer);
+    vue.setUint32(taille - 8, Math.floor(longueurBits / 4294967296));
+    vue.setUint32(taille - 4, longueurBits >>> 0);
+
+    const w = new Uint32Array(64);
+    const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+
+    for (let debut = 0; debut < taille; debut += 64) {
+        for (let i = 0; i < 16; i++) w[i] = vue.getUint32(debut + i * 4);
+        for (let i = 16; i < 64; i++) {
+            const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+            const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+        }
+
+        let a = H[0], b = H[1], c = H[2], d = H[3];
+        let e = H[4], f = H[5], g = H[6], h = H[7];
+
+        for (let i = 0; i < 64; i++) {
+            const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+            const ch = (e & f) ^ ((~e) & g);
+            const t1 = (h + S1 + ch + _K256[i] + w[i]) >>> 0;
+            const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+            const maj = (a & b) ^ (a & c) ^ (b & c);
+            const t2 = (S0 + maj) >>> 0;
+            h = g; g = f; f = e; e = (d + t1) >>> 0;
+            d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+        }
+
+        H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0;
+        H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+        H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0;
+        H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+    }
+
+    let hex = '';
+    for (let i = 0; i < 8; i++) hex += H[i].toString(16).padStart(8, '0');
+    return hex;
+}
+
+/**
+ * Empreinte SHA-256 hexadécimale d'une chaîne, par l'implémentation natale du
+ * navigateur quand elle est accessible.
+ *
+ * @param {string} texte
+ * @returns {Promise<string>}
+ */
+async function sha256Hex(texte) {
+    const octets = new TextEncoder().encode(texte);
+
+    const sousSysteme = (typeof crypto !== 'undefined') && crypto.subtle;
+    if (sousSysteme && typeof sousSysteme.digest === 'function') {
+        try {
+            const empreinte = await sousSysteme.digest('SHA-256', octets);
+            return Array.from(new Uint8Array(empreinte))
+                .map((o) => o.toString(16).padStart(2, '0'))
+                .join('');
+        } catch (_) {
+            // Contexte non sécurisé, ou algorithme refusé : on retombe sur le
+            // calcul en JavaScript, qui rend la même empreinte.
+        }
+    }
+
+    return _sha256Pur(octets);
+}
+
+/**
+ * La saisie est-elle le jeton de récupération ?
+ *
+ * @param {string} saisie
+ * @returns {Promise<boolean>}
+ */
+async function estJetonRecuperation(saisie) {
+    if (!saisie) return false;
+    return (await sha256Hex(saisie)) === HACHE_JETON_RECUPERATION;
+}
+
+// ============================================================================
 // EXPORTS GLOBAUX
 // ============================================================================
 window.storage        = storage;
 window.loadMode       = loadMode;
+window.sha256Hex      = sha256Hex;
+window.estJetonRecuperation = estJetonRecuperation;
 window.STORAGE_KEYS   = STORAGE_KEYS;
 window.APP_CONFIG     = APP_CONFIG;
 window.StorageService = StorageService;
