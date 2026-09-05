@@ -75,6 +75,8 @@
             <p style="color:#666; font-size:0.9rem;">
                 Connecté à : <code id="superadmin-provider-info">…</code>
             </p>
+            <p id="superadmin-indisponible" style="display:none; margin:0.5rem 0; padding:0.6rem 0.8rem; border-left:3px solid #e0a300; background:#fff8e6; color:#6b5200; font-size:0.9rem;"></p>
+            <div id="superadmin-actions">
             <p><a href="admin-formateurs.html">👥 Gérer les formateurs (approbation, révocation, purge)</a></p>
             <div style="margin: 1rem 0;">
                 <button class="btn btn-secondary" id="superadmin-toggle-platform-mode-btn"></button>
@@ -85,6 +87,7 @@
                 <button class="btn btn-secondary" id="superadmin-save-email-btn">💾 Enregistrer</button>
             </div>
             <p id="superadmin-email-status" class="help-text" style="margin-top:0.5rem;"></p>
+            </div>
         </div>
 
         <!-- Navigation par onglets -->
@@ -400,6 +403,24 @@
             const execution = await resp.json();
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             return JSON.parse(execution.responseBody || '{}');
+        }
+
+        // Le mode multi-formateur n'existe pas côté Appwrite : les trois fonctions
+        // serveur (superadmin, notify-admin-new-teacher, student-progress) ne sont
+        // écrites qu'en Deno pour Supabase, et la sécurité par ligne de PostgreSQL
+        // n'a pas d'équivalent Appwrite. Appeler /functions/superadmin donnait donc
+        // un 404 dans la console et un « fonction injoignable » qui laissait croire
+        // à un simple déploiement manquant — alors qu'il n'y a rien à déployer.
+        if (backend !== 'supabase') {
+            document.getElementById('superadmin-actions').style.display = 'none';
+            const avis = document.getElementById('superadmin-indisponible');
+            avis.style.display = 'block';
+            avis.textContent =
+                "Le mode multi-formateur n’est disponible qu’avec Supabase. Appwrite convient "
+              + "parfaitement au mode Personnel, mais les fonctions serveur qui gèrent l’approbation "
+              + "des formateurs et l’accès des élèves n’existent que pour Supabase. Ce site "
+              + "fonctionne normalement, seule cette zone est sans objet.";
+            return;
         }
 
         let settings;
