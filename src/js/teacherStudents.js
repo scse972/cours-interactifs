@@ -288,6 +288,10 @@ class TeacherStudents {
                             </span>
                             ` : ''}
 
+                            <button class="btn-chapter-comment" onclick="dashboard.modules.students.editChapterComment('${student.id}', '${chapter.id}', event)" title="Appréciation générale — modifiable au fil de l'eau">
+                                💬
+                            </button>
+
                             <button class="btn-view-student${hasStarted ? '' : ' is-neutral'}" onclick="dashboard.showStudentChapterView('${student.id}', '${chapter.id}')" title="Voir les réponses de l'apprenant">
                                 👁️
                             </button>
@@ -632,5 +636,66 @@ class TeacherStudents {
         await storage.set(key, progress);
         alert('✅ Date limite individuelle mise à jour pour cet élève.');
         this.refresh();
+    }
+
+    // ---------------------------------------------------------------------
+    // APPRÉCIATION GÉNÉRALE « AU FIL DE L'EAU »
+    // ---------------------------------------------------------------------
+    // Ouvre un petit éditeur inline sous le badge de chapitre pour lire/écrire
+    // `chapter.globalComment` à n'importe quel moment (avant comme après le rendu,
+    // quel que soit le mode). Un seul éditeur ouvert à la fois. La sauvegarde se
+    // fait sur une relecture À FROID de la progression (même pattern que
+    // updateSubmissionStatus) pour ne pas écraser une écriture récente de
+    // l'apprenant pendant que le formateur rédige.
+    async editChapterComment(studentId, chapterId, event) {
+        if (event) event.stopPropagation();
+
+        // Un seul éditeur à la fois : fermer les autres avant d'en ouvrir un.
+        document.querySelectorAll('.chapter-comment-editor').forEach(el => el.remove());
+        document.querySelectorAll('.chapter-actions-dropdown.active').forEach(el => el.classList.remove('active'));
+
+        const chapterItem = event?.target?.closest('.chapter-progress-item');
+        if (!chapterItem) return;
+
+        const slug = window.currentParcoursSlug;
+        if (!slug) return;
+
+        // Lecture à froid au moment de l'OUVERTURE, uniquement pour pré-remplir.
+        const progress = await this.dashboard.getStudentProgress(studentId);
+        const chapter = progress.chapters?.[chapterId] || {};
+
+        const editor = document.createElement('div');
+        editor.className = 'chapter-comment-editor';
+        editor.innerHTML = `
+            <label>💬 Appréciation générale — <em>modifiable au fil de l'eau</em></label>
+            <textarea rows="3" placeholder="Appréciation générale pour ce chapitre...">${this.escapeHtml(chapter.globalComment || '')}</textarea>
+            <div class="chapter-comment-editor-actions">
+                <button type="button" class="btn btn-primary btn-save">Enregistrer</button>
+                <button type="button" class="btn btn-secondary btn-cancel">Annuler</button>
+            </div>
+        `;
+
+        const textarea = editor.querySelector('textarea');
+        editor.querySelector('.btn-save').onclick = async () => {
+            const value = textarea.value.trim();
+
+            // Relecture À FROID juste avant l'écriture : la fenêtre pendant laquelle
+            // une écriture de l'apprenant pourrait être écrasée est minimale.
+            const fresh = await this.dashboard.getStudentProgress(studentId);
+            if (!fresh.chapters) fresh.chapters = {};
+            const target = fresh.chapters[chapterId]
+                || (fresh.chapters[chapterId] = { questions: {}, completionPercent: 0, finalScore: 0 });
+            target.globalComment = value;
+            target.updatedAt = new Date().toISOString();
+
+            const key = `${slug}:${studentId}:student_${studentId}_progress`;
+            await storage.set(key, fresh);
+            this.progressCache.set(studentId, fresh);
+            this.refresh();
+        };
+        editor.querySelector('.btn-cancel').onclick = () => editor.remove();
+
+        chapterItem.appendChild(editor);
+        textarea.focus();
     }
 }
