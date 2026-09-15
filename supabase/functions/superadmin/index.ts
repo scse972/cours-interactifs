@@ -31,6 +31,11 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RECOVERY_TOKEN = Deno.env.get('RECOVERY_TOKEN')!;
 
+// Sentinelle des réglages globaux (owner_id n'est plus NULL depuis la migration
+// 0006 : deux NULL n'entrent jamais en conflit pour PostgreSQL, ce qui rendait
+// l'upsert de setGlobalSetting incapable de remplacer une valeur existante).
+const OWNER_GLOBAL = '00000000-0000-0000-0000-000000000000';
+
 interface RequestBody {
     recoveryToken: string;
     op: string;
@@ -141,7 +146,7 @@ async function getSettings(admin: ReturnType<typeof createClient>) {
     const { data } = await admin
         .from('app_data')
         .select('key, value')
-        .is('owner_id', null)
+        .eq('owner_id', OWNER_GLOBAL)
         .in('key', ['admin_notification_email']);
 
     const settings: Record<string, unknown> = { admin_notification_email: null };
@@ -151,11 +156,11 @@ async function getSettings(admin: ReturnType<typeof createClient>) {
 
 async function setGlobalSetting(admin: ReturnType<typeof createClient>, key: string, value: unknown) {
     if (value === null) {
-        await admin.from('app_data').delete().is('owner_id', null).eq('key', key);
+        await admin.from('app_data').delete().eq('owner_id', OWNER_GLOBAL).eq('key', key);
         return;
     }
     await admin.from('app_data').upsert(
-        { owner_id: null, key, value, updated_at: new Date().toISOString() },
+        { owner_id: OWNER_GLOBAL, key, value, updated_at: new Date().toISOString() },
         { onConflict: 'owner_id,key' }
     );
 }

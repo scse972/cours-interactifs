@@ -3,8 +3,9 @@
 // ============================================================================
 // Invoquée par le trigger SQL `handle_new_formateur()` (migration
 // 0002_formateurs.sql) à chaque nouvelle connexion GitHub, jamais directement
-// par un client. Lit l'adresse de notification (réglage global, owner_id
-// NULL — cf. Phase 2bis) et envoie un email à l'administrateur.
+// par un client. Lit l'adresse de notification (réglage global, owner_id =
+// sentinelle nil UUID depuis la migration 0006 — cf. Phase 2bis) et envoie un
+// email à l'administrateur.
 //
 // N'échoue jamais bruyamment : appelée depuis un trigger Postgres, une erreur
 // ici ne doit jamais faire échouer la création du compte auth.users
@@ -20,6 +21,7 @@ import { sendEmail } from '../_shared/sendEmail.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const OWNER_GLOBAL = '00000000-0000-0000-0000-000000000000';
 
 Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') return new Response('Méthode non supportée', { status: 405 });
@@ -36,7 +38,7 @@ Deno.serve(async (req: Request) => {
         const { data } = await admin
             .from('app_data')
             .select('value')
-            .is('owner_id', null)
+            .eq('owner_id', OWNER_GLOBAL)
             .eq('key', 'admin_notification_email')
             .maybeSingle();
 

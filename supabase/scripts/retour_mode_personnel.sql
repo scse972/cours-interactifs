@@ -2,9 +2,9 @@
 -- Ramener un projet Supabase du mode Web au mode Personnel
 -- ============================================================================
 -- CE FICHIER N'EST PAS UNE MIGRATION, et il ne doit pas le devenir : les
--- migrations 0001 à 0004 forment la chaîne du mode Web, et `supabase db push`
--- les applique toutes. Un fichier 0005 qui les défait serait appliqué au projet
--- du site partagé et le casserait.
+-- migrations 0001 à 0006 forment la chaîne du mode Web, et `supabase db push`
+-- les applique toutes. Un fichier numéroté qui les défait serait appliqué au
+-- projet du site partagé et le casserait.
 --
 -- À exécuter à la main, dans l'éditeur SQL du projet concerné, quand un projet
 -- ayant reçu les migrations multi-formateur doit servir au mode Personnel.
@@ -76,6 +76,12 @@ ALTER TABLE parcours_data DROP CONSTRAINT IF EXISTS parcours_data_owner_key_uniq
 ALTER TABLE app_data      ADD CONSTRAINT app_data_key_unique      UNIQUE (key);
 ALTER TABLE parcours_data ADD CONSTRAINT parcours_data_key_unique UNIQUE (key);
 
+-- Depuis la migration 0006, owner_id est NOT NULL sur app_data (sentinelle nil
+-- UUID pour les réglages globaux du mode Web). Le mode Personnel n'écrit
+-- jamais cette colonne — la rendre à nouveau nullable, sinon toute écriture du
+-- provider personnel échouerait avec "null value in column owner_id".
+ALTER TABLE app_data ALTER COLUMN owner_id DROP NOT NULL;
+
 
 -- ── 4. Retirer la machinerie propre au mode Web ────────────────────────────
 -- Le trigger d'abord : il se déclenche à chaque création de compte dans
@@ -87,11 +93,11 @@ DROP FUNCTION IF EXISTS handle_new_formateur();
 DROP FUNCTION IF EXISTS url_notification_formateurs();
 DROP TABLE    IF EXISTS formateurs;
 
--- Réglages globaux du mode Web (owner_id NULL). Sans objet ici, et
--- `platform_mode` laissé à "web" ferait afficher au site une page de connexion
--- GitHub qui ne mènerait nulle part.
+-- Réglages globaux du mode Web (owner_id = sentinelle nil UUID depuis la
+-- migration 0006). Sans objet ici, et `platform_mode` laissé à "web" ferait
+-- afficher au site une page de connexion GitHub qui ne mènerait nulle part.
 DELETE FROM app_data
- WHERE owner_id IS NULL
+ WHERE owner_id = '00000000-0000-0000-0000-000000000000'
    AND key IN ('platform_mode', 'admin_notification_email', 'supabase_url');
 
 
