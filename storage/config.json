@@ -2,8 +2,8 @@
   "storage": "supabase",
 
   "supabase": {
-    "url": "https://<votre-projet>.supabase.co",
-    "anonKey": "<votre-cle-publishable>"
+    "url": "https://alvqsatudlbifxnrwzgr.supabase.co",
+    "anonKey": "sb_publishable_i-dr2DB8tSHWM8eqGmYyNw_zc2zUdzT"
   },
 
   "sqlite": {
