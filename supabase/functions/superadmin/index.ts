@@ -42,7 +42,28 @@ interface RequestBody {
     [key: string]: unknown;
 }
 
+// Appelée directement depuis le navigateur (teacher.html), avec un corps
+// JSON — Content-Type: application/json n'est pas dans la liste des en-têtes
+// "simples" du CORS, le navigateur envoie donc toujours un préflight OPTIONS
+// avant le POST. Sans ces en-têtes, ce préflight échoue et le POST n'est
+// jamais émis (constaté en vérifiant le déploiement : "Failed to fetch").
+//
+// Origine restreinte au site partagé (pas de joker '*') : cette fonction agit
+// avec la clé service_role, l'autorisation réelle vient du RECOVERY_TOKEN
+// vérifié plus bas, mais autoriser n'importe quelle origine à seulement
+// TENTER l'appel n'apporterait rien et élargirait la surface sans raison.
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://scse972.github.io',
+    // apikey + Authorization : la passerelle Supabase les exige sur l'appel
+    // réel (cf. teacher.html, callSuperadmin) même si cette fonction ne s'en
+    // sert pas elle-même pour authentifier — seul recoveryToken, dans le
+    // corps, le fait.
+    'Access-Control-Allow-Headers': 'Content-Type, apikey, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
+
 Deno.serve(async (req: Request) => {
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
     if (req.method !== 'POST') return json({ error: 'Méthode non supportée' }, 405);
 
     let body: RequestBody;
@@ -176,6 +197,6 @@ async function updateFormateurStatus(admin: ReturnType<typeof createClient>, id:
 function json(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
         status,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
 }

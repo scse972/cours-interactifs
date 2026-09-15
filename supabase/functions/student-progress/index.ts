@@ -38,7 +38,20 @@ interface RequestBody {
     value?: unknown;
 }
 
+// Appelée directement depuis le navigateur de l'élève, corps JSON — voir la
+// même remarque CORS que dans supabase/functions/superadmin/index.ts.
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://scse972.github.io',
+    // apikey + Authorization : la passerelle Supabase les exige sur l'appel
+    // réel (cf. studentProgressBridge.js), même si cette fonction n'en tire
+    // aucune authentification elle-même — seuls slug+token, dans le corps, le
+    // font.
+    'Access-Control-Allow-Headers': 'Content-Type, apikey, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
+
 Deno.serve(async (req: Request) => {
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
     if (req.method !== 'POST') {
         return json({ error: 'Méthode non supportée' }, 405);
     }
@@ -176,6 +189,6 @@ async function tokenIsAssigned(admin: SupabaseClient, ownerId: string, slug: str
 function json(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {
         status,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
 }

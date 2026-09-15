@@ -384,6 +384,27 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# verify_jwt = false sur ces trois fonctions : elles sont appelées par un
+# navigateur anonyme (élève, ou formateur avant toute session GitHub côté
+# superadmin) avec la seule clé anon en en-tête Authorization. Sans ce
+# réglage, la passerelle Supabase rejette la requête AVANT qu'elle n'atteigne
+# le code de la fonction — y compris le préflight CORS OPTIONS, qui ne porte
+# jamais l'en-tête Authorization — d'où un échec vu du navigateur comme un
+# blocage CORS. Chaque fonction fait elle-même sa propre vérification
+# (recoveryToken pour superadmin, jeton élève + slug pour student-progress) ;
+# notify-admin-new-teacher n'est jamais appelée par un navigateur (seulement
+# par le trigger SQL handle_new_formateur) mais reçoit le même réglage par
+# cohérence, un appel direct depuis l'extérieur restant sans conséquence
+# (elle ne fait qu'envoyer un email si les paramètres attendus sont fournis).
+[functions.superadmin]
+verify_jwt = false
+
+[functions.student-progress]
+verify_jwt = false
+
+[functions.notify-admin-new-teacher]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
