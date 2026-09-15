@@ -641,42 +641,70 @@ class TeacherStudents {
     // ---------------------------------------------------------------------
     // APPRÉCIATION GÉNÉRALE « AU FIL DE L'EAU »
     // ---------------------------------------------------------------------
-    // Ouvre un petit éditeur inline sous le badge de chapitre pour lire/écrire
+    // Ouvre une mini-fenêtre modale (exclusive) pour lire/écrire
     // `chapter.globalComment` à n'importe quel moment (avant comme après le rendu,
-    // quel que soit le mode). Un seul éditeur ouvert à la fois. La sauvegarde se
+    // quel que soit le mode). Une seule modale ouverte à la fois. La sauvegarde se
     // fait sur une relecture À FROID de la progression (même pattern que
     // updateSubmissionStatus) pour ne pas écraser une écriture récente de
     // l'apprenant pendant que le formateur rédige.
     async editChapterComment(studentId, chapterId, event) {
         if (event) event.stopPropagation();
 
-        // Un seul éditeur à la fois : fermer les autres avant d'en ouvrir un.
-        document.querySelectorAll('.chapter-comment-editor').forEach(el => el.remove());
+        // Une seule modale à la fois : fermer les autres avant d'en ouvrir une.
+        document.getElementById('chapter-comment-modal')?.remove();
         document.querySelectorAll('.chapter-actions-dropdown.active').forEach(el => el.classList.remove('active'));
-
-        const chapterItem = event?.target?.closest('.chapter-progress-item');
-        if (!chapterItem) return;
 
         const slug = window.currentParcoursSlug;
         if (!slug) return;
+
+        const student = this.students.find(s => s.id === studentId);
+        const chapterConfig = this.dashboard.chapters.find(c => c.id === chapterId);
 
         // Lecture à froid au moment de l'OUVERTURE, uniquement pour pré-remplir.
         const progress = await this.dashboard.getStudentProgress(studentId);
         const chapter = progress.chapters?.[chapterId] || {};
 
-        const editor = document.createElement('div');
-        editor.className = 'chapter-comment-editor';
-        editor.innerHTML = `
-            <label>💬 Appréciation générale — <em>modifiable au fil de l'eau</em></label>
-            <textarea rows="3" placeholder="Appréciation générale pour ce chapitre...">${this.escapeHtml(chapter.globalComment || '')}</textarea>
-            <div class="chapter-comment-editor-actions">
-                <button type="button" class="btn btn-primary btn-save">Enregistrer</button>
-                <button type="button" class="btn btn-secondary btn-cancel">Annuler</button>
+        const overlay = document.createElement('div');
+        overlay.id = 'chapter-comment-modal';
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-content chapter-comment-modal-content">
+                <div class="modal-header">
+                    <h3>💬 Appréciation générale</h3>
+                    <button type="button" class="close-btn btn-cancel">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="chapter-comment-modal-subtitle">
+                        ${this.escapeHtml(student?.name || studentId)} — ${this.escapeHtml(chapterConfig?.title || chapterId)}
+                    </p>
+                    <textarea rows="5" placeholder="Appréciation générale pour ce chapitre...">${this.escapeHtml(chapter.globalComment || '')}</textarea>
+                    <div class="chapter-comment-editor-actions">
+                        <button type="button" class="btn btn-secondary btn-cancel">Annuler</button>
+                        <button type="button" class="btn btn-primary btn-save" disabled>Enregistrer</button>
+                    </div>
+                </div>
             </div>
         `;
 
-        const textarea = editor.querySelector('textarea');
-        editor.querySelector('.btn-save').onclick = async () => {
+        const closeModal = () => overlay.remove();
+        // Exclusive : un clic en dehors du contenu ferme sans sauvegarder (comme Annuler).
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+        const onKeydown = (e) => {
+            if (e.key === 'Escape') closeModal();
+        };
+        document.addEventListener('keydown', onKeydown, { once: true });
+
+        overlay.querySelectorAll('.btn-cancel').forEach(btn => btn.addEventListener('click', closeModal));
+
+        const textarea = overlay.querySelector('textarea');
+        const saveBtn = overlay.querySelector('.btn-save');
+        const initialValue = textarea.value;
+        textarea.addEventListener('input', () => {
+            saveBtn.disabled = (textarea.value === initialValue);
+        });
+        saveBtn.addEventListener('click', async () => {
             const value = textarea.value.trim();
 
             // Relecture À FROID juste avant l'écriture : la fenêtre pendant laquelle
@@ -691,11 +719,11 @@ class TeacherStudents {
             const key = `${slug}:${studentId}:student_${studentId}_progress`;
             await storage.set(key, fresh);
             this.progressCache.set(studentId, fresh);
+            closeModal();
             this.refresh();
-        };
-        editor.querySelector('.btn-cancel').onclick = () => editor.remove();
+        });
 
-        chapterItem.appendChild(editor);
+        document.body.appendChild(overlay);
         textarea.focus();
     }
 }

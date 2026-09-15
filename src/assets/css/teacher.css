@@ -529,27 +529,24 @@
     background: #219a52;
 }
 
-/* Éditeur inline de l'appréciation générale (badge de suivi des apprenants) */
-.chapter-comment-editor {
-    margin-top: 0.5rem;
-    padding: 0.6rem;
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
+/* Mini-fenêtre modale de l'appréciation générale (badge de suivi des apprenants) */
+.chapter-comment-modal-content {
+    max-width: 480px;
+    min-height: unset;
 }
 
-.chapter-comment-editor label {
-    display: block;
-    font-size: 0.8rem;
+.chapter-comment-modal-subtitle {
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
     color: #495057;
-    margin-bottom: 0.3rem;
+    font-weight: 600;
 }
 
-.chapter-comment-editor textarea {
+.chapter-comment-modal-content textarea {
     width: 100%;
     resize: vertical;
-    padding: 0.35rem 0.5rem;
-    font-size: 0.85rem;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.9rem;
     border: 1px solid #ced4da;
     border-radius: 4px;
     box-sizing: border-box;
@@ -560,7 +557,13 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
-    margin-top: 0.4rem;
+    margin-top: 0.8rem;
+}
+
+.chapter-comment-editor-actions .btn {
+    width: auto;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
 }
 
 /* États de chargement / erreur (onglet Suivi apprenants) */
