@@ -83,9 +83,11 @@ Deno.serve(async (req: Request) => {
         case 'get_settings':
             return json(await getSettings(admin));
 
-        case 'set_notification_email':
-            await setGlobalSetting(admin, 'admin_notification_email', body.email || null);
+        case 'set_notification_email': {
+            const err = await setGlobalSetting(admin, 'admin_notification_email', body.email || null);
+            if (err) return json({ error: err }, 500);
             return json({ ok: true });
+        }
 
         case 'list_formateurs': {
             const { data, error } = await admin.from('formateurs').select('*').order('created_at', { ascending: false });
@@ -175,15 +177,23 @@ async function getSettings(admin: ReturnType<typeof createClient>) {
     return settings;
 }
 
-async function setGlobalSetting(admin: ReturnType<typeof createClient>, key: string, value: unknown) {
+/**
+ * @returns l'erreur Postgres le cas échéant, jamais lancée — un réglage
+ * global raté ne doit pas faire planter l'appelant, mais ne doit plus non
+ * plus disparaître en silence (cf. migration 0008 : une contrainte oubliée
+ * faisait échouer cette même écriture pendant que l'écran affichait
+ * "Adresse enregistrée").
+ */
+async function setGlobalSetting(admin: ReturnType<typeof createClient>, key: string, value: unknown): Promise<string | null> {
     if (value === null) {
-        await admin.from('app_data').delete().eq('owner_id', OWNER_GLOBAL).eq('key', key);
-        return;
+        const { error } = await admin.from('app_data').delete().eq('owner_id', OWNER_GLOBAL).eq('key', key);
+        return error ? error.message : null;
     }
-    await admin.from('app_data').upsert(
+    const { error } = await admin.from('app_data').upsert(
         { owner_id: OWNER_GLOBAL, key, value, updated_at: new Date().toISOString() },
         { onConflict: 'owner_id,key' }
     );
+    return error ? error.message : null;
 }
 
 async function updateFormateurStatus(admin: ReturnType<typeof createClient>, id: string, status: string, setApprovedAt: boolean) {
