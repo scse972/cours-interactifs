@@ -316,14 +316,7 @@ const ChapterSubmission = {
         if (pm.saveProgress && ChapterSession.studentId) {
             await pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
         }
-        
-        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
-        if (slug && ChapterSession.studentId) {
-            const key = `${slug}:${ChapterSession.studentId}:student_${ChapterSession.studentId}_progress`;
-            await storage.set(key, ChapterSession.progress);
-            console.log(`✅ Progression sauvegardée (rendu) dans ${key}`);
-        }
-                
+
         this.lockChapterAfterSubmission();
         ChapterUI.updateSubmitButton();
         ChapterUI.updateAllProgressIndicators();
@@ -342,13 +335,6 @@ const ChapterSubmission = {
 
             if (pm.saveProgress && ChapterSession.studentId) {
                 await pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
-            }
-
-            // Sauvegarde explicite
-            const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
-            if (slug && ChapterSession.studentId) {
-                const key = `${slug}:${ChapterSession.studentId}:student_${ChapterSession.studentId}_progress`;
-                await storage.set(key, ChapterSession.progress);
             }
 
             this.lockChapterAfterSubmission();
@@ -393,12 +379,6 @@ const ChapterSubmission = {
         if (pm.recomputeGlobalStats) pm.recomputeGlobalStats(ChapterSession.progress);
         if (pm.saveProgress && ChapterSession.studentId) {
             await pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
-        }
-
-        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
-        if (slug && ChapterSession.studentId) {
-            const key = `${slug}:${ChapterSession.studentId}:student_${ChapterSession.studentId}_progress`;
-            await storage.set(key, ChapterSession.progress);
         }
 
         // Réinitialiser le DOM
@@ -478,12 +458,6 @@ const ChapterSubmission = {
         if (pm.recomputeGlobalStats) pm.recomputeGlobalStats(ChapterSession.progress);
         if (pm.saveProgress && ChapterSession.studentId) {
             await pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
-        }
-
-        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
-        if (slug && ChapterSession.studentId) {
-            const key = `${slug}:${ChapterSession.studentId}:student_${ChapterSession.studentId}_progress`;
-            await storage.set(key, ChapterSession.progress);
         }
 
         // Réinitialiser tous les champs de saisie dans le DOM

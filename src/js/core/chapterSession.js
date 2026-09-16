@@ -109,17 +109,6 @@ function syncAnswerToProgress(questionId, answer, isCorrect, score) {
     }
     if (pm.saveProgress && ChapterSession.studentId) pm.saveProgress(ChapterSession.studentId, ChapterSession.progress);
 
-    // ✅ Sauvegarde explicite avec la clé complète (slug + studentId)
-    (async () => {
-        const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
-        const studentId = ChapterSession.studentId;
-        if (slug && studentId) {
-            const key = `${slug}:${studentId}:student_${studentId}_progress`;
-            await storage.set(key, ChapterSession.progress);
-            console.log(`✅ Réponse sauvegardée dans ${key}`);
-        }
-    })();
-
     updateAllProgressIndicators();
 }
 
@@ -167,15 +156,6 @@ async function syncCourseToProgress(courseId) {
 
     if (pm.recomputeChapterStats) pm.recomputeChapterStats(ChapterSession.progress.chapters[ChapterSession.chapterId]);
     if (pm.recomputeGlobalStats) pm.recomputeGlobalStats(ChapterSession.progress);
-
-    // ✅ Sauvegarde explicite avec la clé complète (slug + studentId)
-    const slug = window.currentParcoursSlug || (window.Parcours ? Parcours.slug : null);
-    const studentId = ChapterSession.studentId;
-    if (slug && studentId) {
-        const key = `${slug}:${studentId}:student_${studentId}_progress`;
-        await storage.set(key, ChapterSession.progress);
-        console.log(`✅ Cours validé sauvegardé dans ${key}`);
-    }
 
     if (pm.unlockNextChapter && window.chaptersIndex) {
         pm.unlockNextChapter(ChapterSession.progress, ChapterSession.chapterId, window.chaptersIndex);
