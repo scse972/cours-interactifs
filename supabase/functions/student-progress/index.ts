@@ -3,7 +3,15 @@
 // ============================================================================
 // Point d'entrée unique pour l'accès élève (anonyme) à sa progression, en
 // mode Web multi-formateur (Phase 3 du plan). Reçoit en POST JSON :
-//   { action: 'get'|'set', slug, token, key, value? }
+//   { action: 'get'|'set'|'whoami', slug, token, key?, value? }
+//
+// 'whoami' vérifie qu'un jeton est bien inscrit à ce parcours et renvoie le
+// nom de l'élève, sans lire ni écrire de progression — c'est ce qu'appellent
+// login.html et user.html (coursInteractifs) pour valider un jeton, qui ne
+// peuvent plus le faire en lisant "{slug}:teacher:users_list" en direct
+// depuis que la RLS est fermée : owner_id = auth.uid() échoue toujours pour
+// un appel anonyme, ce qui provoquait une boucle de redirection infinie
+// (constaté en testant un vrai lien élève, migration 0007).
 //
 // Pourquoi une fonction serveur et pas une policy RLS anonyme :
 // `cours.json` est un document PAR FORMATEUR (colonne owner_id, cf. migration
@@ -31,10 +39,10 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface RequestBody {
-    action: 'get' | 'set';
+    action: 'get' | 'set' | 'whoami';
     slug: string;
     token: string;
-    key: string;
+    key?: string;
     value?: unknown;
 }
 
@@ -64,11 +72,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const { action, slug, token, key, value } = body || ({} as RequestBody);
-    if (!action || !slug || !token || !key) {
-        return json({ error: 'Paramètres manquants (action, slug, token, key requis)' }, 400);
+    if (!action || !slug || !token) {
+        return json({ error: 'Paramètres manquants (action, slug, token requis)' }, 400);
     }
-    if (action !== 'get' && action !== 'set') {
-        return json({ error: 'action doit être "get" ou "set"' }, 400);
+    if (action !== 'get' && action !== 'set' && action !== 'whoami') {
+        return json({ error: 'action doit être "get", "set" ou "whoami"' }, 400);
+    }
+    if ((action === 'get' || action === 'set') && !key) {
+        return json({ error: 'Paramètre manquant (key requis pour get/set)' }, 400);
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -87,8 +98,11 @@ Deno.serve(async (req: Request) => {
     const ownerId = resolution.ownerId;
 
     // 2. Vérifier que ce jeton figure bien dans la liste d'élèves de CE formateur.
-    const authorized = await tokenIsAssigned(admin, ownerId, slug, token);
-    if (!authorized) {
+    const assignedUser = await findAssignedUser(admin, ownerId, slug, token);
+    if (action === 'whoami') {
+        return json(assignedUser ? { found: true, name: assignedUser.name || null } : { found: false });
+    }
+    if (!assignedUser) {
         return json({ error: 'Jeton non autorisé pour ce parcours' }, 403);
     }
 
@@ -175,15 +189,27 @@ async function findOwnerBySlug(admin: SupabaseClient, slug: string): Promise<Res
     return { statut: 'trouve', ownerId: proprietaires[0] };
 }
 
-async function tokenIsAssigned(admin: SupabaseClient, ownerId: string, slug: string, token: string): Promise<boolean> {
+/**
+ * Retrouve l'entrée élève d'un jeton dans "{slug}:teacher:users_list", ou
+ * null si le jeton n'y figure pas.
+ *
+ * Le champ qui porte le jeton dans ces entrées est `id` (cf.
+ * exportUsersListParcours.js `_eleveToUser()` côté XSpro, et teacherUsers.js
+ * côté coursInteractifs — les deux écrivent `id`, jamais `token`). Une
+ * version précédente de cette fonction testait `u.token`, un champ qui
+ * n'existe dans aucune des deux écritures : l'autorisation échouait donc
+ * TOUJOURS, quel que soit le jeton.
+ */
+async function findAssignedUser(admin: SupabaseClient, ownerId: string, slug: string, token: string): Promise<{ id: string; name?: string } | null> {
     const { data, error } = await admin
         .from('app_data')
         .select('value')
         .eq('owner_id', ownerId)
         .eq('key', `${slug}:teacher:users_list`)
         .maybeSingle();
-    if (error || !data || !Array.isArray(data.value)) return false;
-    return (data.value as { token?: string }[]).some((u) => u.token === token);
+    if (error || !data || !Array.isArray(data.value)) return null;
+    const found = (data.value as { id?: string; name?: string }[]).find((u) => u.id === token);
+    return found ?? null;
 }
 
 function json(body: unknown, status = 200): Response {
