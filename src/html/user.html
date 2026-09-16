@@ -142,7 +142,7 @@
         if (shouldUseProgressBridge(provider)) {
             console.log('[user] Vérification du jeton via StudentProgressBridge.whoami');
             const result = await window.StudentProgressBridge.whoami(slug, token);
-            student = result.found ? { id: token, name: result.name } : null;
+            student = result.found ? { id: token, name: result.name, class: result.class } : null;
         } else {
             const usersKey = slug + ':teacher:users_list';
             console.log('[user] Récupération users via _storageProvider.get("' + usersKey + '")');

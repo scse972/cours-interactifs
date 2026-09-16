@@ -100,7 +100,9 @@ Deno.serve(async (req: Request) => {
     // 2. Vérifier que ce jeton figure bien dans la liste d'élèves de CE formateur.
     const assignedUser = await findAssignedUser(admin, ownerId, slug, token);
     if (action === 'whoami') {
-        return json(assignedUser ? { found: true, name: assignedUser.name || null } : { found: false });
+        return json(assignedUser
+            ? { found: true, name: assignedUser.name || null, class: assignedUser.class || null }
+            : { found: false });
     }
     if (!assignedUser) {
         return json({ error: 'Jeton non autorisé pour ce parcours' }, 403);
@@ -200,7 +202,7 @@ async function findOwnerBySlug(admin: SupabaseClient, slug: string): Promise<Res
  * n'existe dans aucune des deux écritures : l'autorisation échouait donc
  * TOUJOURS, quel que soit le jeton.
  */
-async function findAssignedUser(admin: SupabaseClient, ownerId: string, slug: string, token: string): Promise<{ id: string; name?: string } | null> {
+async function findAssignedUser(admin: SupabaseClient, ownerId: string, slug: string, token: string): Promise<{ id: string; name?: string; class?: string } | null> {
     const { data, error } = await admin
         .from('app_data')
         .select('value')
@@ -208,7 +210,7 @@ async function findAssignedUser(admin: SupabaseClient, ownerId: string, slug: st
         .eq('key', `${slug}:teacher:users_list`)
         .maybeSingle();
     if (error || !data || !Array.isArray(data.value)) return null;
-    const found = (data.value as { id?: string; name?: string }[]).find((u) => u.id === token);
+    const found = (data.value as { id?: string; name?: string; class?: string }[]).find((u) => u.id === token);
     return found ?? null;
 }
 
