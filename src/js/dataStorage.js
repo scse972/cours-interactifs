@@ -99,6 +99,16 @@ class DataStorage {
         // indéfiniment entre le chapitre et la connexion (0 utilisateur
         // retourné à chaque fois, quel que soit le jeton) — même cause que le
         // correctif déjà appliqué à login.html/user.html, jamais reporté ici.
+        //
+        // storage.init() peut ne pas encore avoir posé window._storageProvider
+        // à ce stade (chapterInit.js appelle ceci dès DOMContentLoaded, sans
+        // l'attendre lui-même) : sans ce garde, _shouldUseProgressBridge()
+        // répondait "false" par timing plutôt que par backend réel, et
+        // retombait sur le direct getUsers() cassé — même symptôme, cause
+        // différente de celle déjà vue sur user.html.
+        if (!window._storageProvider && typeof storage !== 'undefined') {
+            try { await storage.init(); } catch (_) {}
+        }
         if (this._shouldUseProgressBridge() && typeof window.StudentProgressBridge !== 'undefined') {
             const result = await window.StudentProgressBridge.whoami(Parcours.slug, token);
             return result.found ? { id: token, name: result.name, class: result.class, type: 'student' } : null;
