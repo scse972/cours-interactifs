@@ -27,10 +27,14 @@
 // figurer dans la liste "{slug}:teacher:users_list" de CE formateur précis
 // avant tout accès (lecture ou écriture) à sa progression.
 //
-// ⚠️ Jamais encore déployée ni exécutée contre un vrai projet Supabase — les
-// noms de colonnes/tables suivent la migration 0001_multi_tenant.sql, à
-// valider ensemble dès qu'un projet de test existe (cf. plan, prérequis
-// externes).
+// Deployee et exercee contre un vrai projet depuis (cf. PLAN_migration_plateforme,
+// journal) : c'est ce test reel qui a fait apparaitre l'absence de CORS et le
+// verify_jwt de la passerelle, tous deux corriges. L'avertissement « jamais
+// deployee » qui figurait ici n'avait plus lieu d'etre.
+//
+// Jumelle Appwrite : appwrite/functions/student-progress/src/main.js. Meme
+// contrat, memes refus, memes codes. Les faire diverger casserait l'un des deux
+// magasins sans toucher l'autre — et rien ne le signalerait.
 // ============================================================================
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -46,20 +50,50 @@ interface RequestBody {
     value?: unknown;
 }
 
-// Appelée directement depuis le navigateur de l'élève, corps JSON — voir la
+// Appelée directement depuis le navigateur de l'apprenant, corps JSON — voir la
 // même remarque CORS que dans supabase/functions/superadmin/index.ts.
-const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': 'https://scse972.github.io',
-    // apikey + Authorization : la passerelle Supabase les exige sur l'appel
-    // réel (cf. studentProgressBridge.js), même si cette fonction n'en tire
-    // aucune authentification elle-même — seuls slug+token, dans le corps, le
-    // font.
-    'Access-Control-Allow-Headers': 'Content-Type, apikey, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+//
+// L'origine etait FIGEE sur https://scse972.github.io. Or XSpro publie le site
+// de chaque formateur sur SON compte GitHub : tous les autres domaines etaient
+// refuses par le navigateur avant meme que l'appel parte. La fonction pouvait
+// etre parfaitement saine, aucun apprenant d'un autre site ne pouvait s'y
+// connecter. Constate en portant la meme fonction vers Appwrite, ou l'equivalent
+// (la « plateforme Web ») se declare par domaine.
+//
+// La liste vient donc de l'environnement : ORIGINES_AUTORISEES, domaines separes
+// par des virgules. On renvoie l'origine de l'appelant quand elle y figure —
+// jamais « * », qui obligerait a renoncer aux cookies et masquerait les fautes
+// de configuration.
+const ORIGINES_AUTORISEES = (Deno.env.get('ORIGINES_AUTORISEES') || 'https://scse972.github.io')
+    .split(',').map((o) => o.trim()).filter(Boolean);
+
+function corsHeaders(req: Request): Record<string, string> {
+    const origine = req.headers.get('origin') || '';
+    const accordee = ORIGINES_AUTORISEES.includes(origine)
+        ? origine
+        : ORIGINES_AUTORISEES[0];
+    return {
+        'Access-Control-Allow-Origin': accordee,
+        // Une meme fonction repond a plusieurs origines : sans Vary, un cache
+        // intermediaire servirait a l'une l'en-tete calcule pour l'autre.
+        'Vary': 'Origin',
+        // apikey + Authorization : la passerelle Supabase les exige sur l'appel
+        // reel (cf. studentProgressBridge.js), meme si cette fonction n'en tire
+        // aucune authentification elle-meme — seuls slug+token, dans le corps,
+        // le font.
+        'Access-Control-Allow-Headers': 'Content-Type, apikey, Authorization',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    };
+}
 
 Deno.serve(async (req: Request) => {
-    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+    const CORS = corsHeaders(req);
+    const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json', ...CORS }
+    });
+
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     if (req.method !== 'POST') {
         return json({ error: 'Méthode non supportée' }, 405);
     }
@@ -93,7 +127,7 @@ Deno.serve(async (req: Request) => {
         // 409 et non 403 : ce n'est pas l'eleve qui est en faute, c'est la
         // publication. Le message reste vague cote client — inutile de lui
         // apprendre combien de formateurs partagent ce slug.
-        return json({ error: 'Ce parcours est publie en double : contactez votre formateur.' }, 409);
+        return json({ error: 'Ce parcours est publie en double : contactez votre evaluateur.' }, 409);
     }
     const ownerId = resolution.ownerId;
 
@@ -214,9 +248,5 @@ async function findAssignedUser(admin: SupabaseClient, ownerId: string, slug: st
     return found ?? null;
 }
 
-function json(body: unknown, status = 200): Response {
-    return new Response(JSON.stringify(body), {
-        status,
-        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
-    });
-}
+// json() est desormais defini DANS le gestionnaire : les en-tetes CORS dependent
+// de l'origine de la requete, ils ne peuvent plus etre une constante de module.

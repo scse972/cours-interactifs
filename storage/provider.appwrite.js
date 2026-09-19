@@ -220,11 +220,14 @@ AppwriteProvider.prototype.keys = async function () {
         // jamais en mode personnel. Constatee en la recopiant dans la fonction
         // serveur, ou elle s'executait, elle, a chaque connexion.
         //
-        // ⚠️ Le format est desormais juste, mais cette requete echouera quand
-        // meme : la colonne `owner_id` n'existe dans aucune des deux tables.
-        // « Verifier et preparer » n'en cree que trois (key, value, updated_at,
-        // cf. APPWRITE_ATTRIBUTES cote XSpro). Le multi-formateur n'est donc pas
-        // provisionne sur Appwrite — a traiter le jour ou on l'y portera.
+        // Ce filtre ne s'executera de toute facon pas ici : le multi-formateur
+        // n'existe QUE dans la configuration Web, ou les bases Appwrite et
+        // Supabase individuelles sont desactivees. Une base Appwrite propre est
+        // donc toujours mono-formateur, `owner_id` y reste null, et la colonne
+        // n'est d'ailleurs pas creee (« Verifier et preparer » n'en cree que
+        // trois : key, value, updated_at). Le format est corrige pour qu'il soit
+        // juste le jour ou ce chemin servira, pas parce qu'il manque quelque
+        // chose aujourd'hui.
         if (this._ownerId) {
             queries.push(JSON.stringify({ method: 'equal', attribute: 'owner_id', values: [this._ownerId] }));
         }
