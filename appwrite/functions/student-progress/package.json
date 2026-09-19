@@ -1,0 +1,7 @@
+{
+  "name": "student-progress",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/main.js",
+  "description": "Acces apprenant anonyme a sa progression (whoami / get / set)."
+}
