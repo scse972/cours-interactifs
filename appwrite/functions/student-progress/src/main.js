@@ -194,8 +194,14 @@ export default async ({ req, res, error }) => {
         return res.json({ error: 'Paramètre manquant (key requis pour get/set)' }, 400);
     }
 
+    // Sans cette trace, un echec renvoyait « Erreur interne » et rien d'autre :
+    // les journaux d'Appwrite ne sont pas lisibles depuis un appel anonyme, et
+    // l'administrateur restait devant un 500 muet. On nomme l'etape.
+    let etape = 'demarrage';
+
     try {
         // ── 1. Retrouver le formateur propriétaire de ce slug ────────────────
+        etape = 'resolution du parcours (lecture de parcours_data)';
         const resolution = await trouverProprietaire(slug);
 
         if (resolution.statut === 'introuvable') {
@@ -214,6 +220,7 @@ export default async ({ req, res, error }) => {
         const ownerId = resolution.ownerId; // null en mono-formateur : c'est normal
 
         // ── 2. Ce jeton est-il inscrit chez CE formateur ? ───────────────────
+        etape = 'lecture de la liste des apprenants (app_data)';
         const inscrit = await trouverInscrit(ownerId, slug, token);
 
         if (action === 'whoami') {
@@ -229,14 +236,22 @@ export default async ({ req, res, error }) => {
         const cleProgression = slug + ':' + token + ':' + key;
 
         if (action === 'get') {
+            etape = 'lecture de la progression';
             return res.json({ value: await lire(TABLE_DONNEES, cleProgression, ownerId) });
         }
 
+        etape = 'ecriture de la progression';
         await ecrire(TABLE_DONNEES, cleProgression, value, ownerId);
         return res.json({ value });
 
     } catch (e) {
-        error('[student-progress] ' + (e && e.message ? e.message : String(e)));
-        return res.json({ error: 'Erreur interne' }, 500);
+        const cause = (e && e.message) ? e.message : String(e);
+        error("[student-progress] echec a l'etape « " + etape + " » : " + cause);
+        // On expose l'etape et la cause : elles ne disent rien d'un apprenant,
+        // seulement de notre propre configuration, et sans elles le diagnostic
+        // exige un acces console que l'administrateur n'a pas toujours sous la
+        // main. C'est le meme raisonnement que pour la distinction entre « jeton
+        // inconnu » et « service injoignable » cote client.
+        return res.json({ error: 'Erreur interne', etape, cause }, 500);
     }
 };
