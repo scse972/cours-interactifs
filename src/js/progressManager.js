@@ -834,6 +834,7 @@ function restoreQuestionState(questionId, questionData) {
     if (!ALLOW_MULTIPLE_ATTEMPTS && questionData.isCorrect === true) {
         const button = document.querySelector(`.question-section[data-question-id="${questionId}"] .btn-check-answer`);
         if (button) {
+            window.memoriserLibelleBouton?.(button);
             button.disabled = true;
             button.textContent = '✓ Validé';
         }

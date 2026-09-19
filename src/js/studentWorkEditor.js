@@ -352,6 +352,7 @@ class StudentWorkEditor {
 
         const button = question.querySelector('.btn-check-answer');
         if (button) {
+            window.memoriserLibelleBouton?.(button);
             button.textContent = '✓ Validé';
             button.style.backgroundColor = '#27ae60';
         }

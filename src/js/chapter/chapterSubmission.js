@@ -397,7 +397,7 @@ const ChapterSubmission = {
 
         document.querySelectorAll('.question-section .btn-check-answer').forEach(btn => {
             btn.disabled = false;
-            btn.textContent = 'Vérifier';
+            window.restaurerLibelleBouton?.(btn);
             btn.style.backgroundColor = '';
             btn.style.pointerEvents = 'auto';
         });
@@ -474,10 +474,10 @@ const ChapterSubmission = {
             el.style.opacity = '1';
         });
 
-        // Réinitialiser les boutons "Vérifier" s'ils existent
+        // Rendre aux boutons leur libellé d'origine, quel qu'il soit
         document.querySelectorAll('.question-section .btn-check-answer').forEach(btn => {
             btn.disabled = false;
-            btn.textContent = 'Vérifier';
+            window.restaurerLibelleBouton?.(btn);
             btn.style.backgroundColor = '';
             btn.style.pointerEvents = 'auto';
         });
