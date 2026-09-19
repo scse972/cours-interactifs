@@ -117,3 +117,34 @@ function restaurerLibelleBouton(bouton) {
 
 window.memoriserLibelleBouton = memoriserLibelleBouton;
 window.restaurerLibelleBouton = restaurerLibelleBouton;
+
+// ---------------------------------------------------------------------------
+// OÙ VA CETTE RÉPONSE ?
+// ---------------------------------------------------------------------------
+// Une seule question partage la page en deux : appuyer sur le bouton rend-il un
+// verdict tout de suite, ou la réponse part-elle chez un humain ?
+//
+//   • QCM, liste, champ court en correction auto ou semi → verdict immédiat.
+//     Vérifier est un acte VOULU, qui peut coûter des points ou déclencher une
+//     pénalité. On n'y touche jamais sans que l'apprenant l'ait demandé.
+//   • Question ouverte, ou correction manuelle → un humain lira. Rien n'est
+//     engagé, donc perdre la saisie n'a aucune contrepartie : on l'enregistre
+//     d'office.
+//
+// Une question OUVERTE n'est jamais corrigée automatiquement, quel que soit son
+// type de correction : la branche textarea de QuestionEngine.evaluate() sort en
+// 'pending' avant toute comparaison. Semi et manuel y sont donc le même geste.
+//
+// ⚠️ La MÊME règle décide du libellé du bouton, mais côté XSpro, dans
+// getButtonLabel() de src/vuesOnglets/vuesOngletsParcours/publishParcours.js —
+// le libellé est écrit dans le HTML au moment de la publication. Les deux vivent
+// dans des dépôts séparés : changer l'une sans l'autre, c'est promettre
+// « Envoyer à votre évaluateur » sur une question qui attend « Vérifier ».
+
+function partChezUnHumain(questionElement) {
+    if (!questionElement) return false;
+    if (questionElement.querySelector('textarea')) return true;
+    return questionElement.dataset.correctionType === 'manuel';
+}
+
+window.partChezUnHumain = partChezUnHumain;

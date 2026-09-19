@@ -134,6 +134,16 @@ function initCallbacks() {
         ChapterUI.updateAllProgressIndicators();
     };
 
+    // Saisie en cours d'une réponse destinée à un humain : enregistrement
+    // d'office, sans attendre que l'apprenant appuie sur le bouton.
+    //
+    // Pas de garde-fou de vacuité ici, contrairement à onAnswerValidated
+    // ci-dessus : effacer sa réponse est une action volontaire qui doit être
+    // enregistrée. Sans ça, l'ancienne version ressusciterait au rendu.
+    window.studentWorkEditor.options.onDraftChanged = ({ questionId, answer }) => {
+        syncBrouillonToProgress(questionId, answer ?? null);
+    };
+
     window.studentWorkEditor.init();
 }
 

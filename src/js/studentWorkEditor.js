@@ -170,6 +170,7 @@ class StudentWorkEditor {
         this.options = {
             onAnswerChanged: options.onAnswerChanged || (() => {}),
             onAnswerValidated: options.onAnswerValidated || (() => {}),
+            onDraftChanged: options.onDraftChanged || (() => {}),
             allowMultipleAttempts: options.allowMultipleAttempts !== false,
             ...options
         };
@@ -249,8 +250,23 @@ class StudentWorkEditor {
                 points: result.points,
                 correctionType: questionElement.dataset.correctionType
             });
+        } else if (window.partChezUnHumain?.(questionElement)) {
+            // Mode normal, réponse destinée à un humain : on l'enregistre sans
+            // attendre de geste. Rien n'est engagé — aucun verdict, aucun point,
+            // aucune pénalité — donc la perdre n'aurait aucune contrepartie.
+            //
+            // Volontairement SANS isCorrect ni points : c'est un brouillon, pas
+            // un envoi. Une réponse sous le seuil de longueur minimale, que
+            // QuestionEngine.evaluate classe 'wrong', ne doit surtout pas
+            // arriver « fausse » chez l'évaluateur avant qu'il l'ait lue.
+            this.options.onDraftChanged({
+                questionId,
+                answer: result.userAnswer,
+                questionElement
+            });
         } else {
-            // mode normal
+            // Mode normal, question à vérifier : on ne touche à RIEN. Vérifier
+            // est un acte voulu qui peut coûter des points.
             this.options.onAnswerChanged({
                 questionId,
                 result,
@@ -279,7 +295,10 @@ class StudentWorkEditor {
             const minLength = parseInt(textarea.dataset.minLength, 10);
             const longueur = result.trimmedLength;
             if (!isNaN(minLength) && minLength > 0 && longueur < minLength) {
-                this.showFeedback(feedback, `❌ Minimum ${minLength} caractères requis (${longueur}/${minLength})`, 'error');
+                // Dire que le texte est gardé : depuis que la saisie s'enregistre
+                // seule, ce refus ne fait plus perdre ce qui est écrit, et le
+                // message ne doit pas laisser croire le contraire.
+                this.showFeedback(feedback, `❌ Minimum ${minLength} caractères requis (${longueur}/${minLength}) — votre texte est conservé`, 'error');
                 this.displayIndividualFeedback(question, null);
                 return false;
             }
