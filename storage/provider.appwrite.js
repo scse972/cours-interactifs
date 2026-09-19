@@ -214,7 +214,20 @@ AppwriteProvider.prototype.keys = async function () {
             JSON.stringify({ method: 'limit', values: [pageSize] }),
             JSON.stringify({ method: 'select', values: ['key'] })
         ];
-        if (this._ownerId) queries.push(JSON.stringify({ method: 'equal', values: ['owner_id', [this._ownerId]] }));
+        // L'attribut a son propre champ : le glisser dans `values` vaut un 400
+        // (« Attribute not found in schema »). La faute dormait ici sans se voir,
+        // ce filtre ne s'appliquant qu'en multi-formateur, ou _ownerId est pose —
+        // jamais en mode personnel. Constatee en la recopiant dans la fonction
+        // serveur, ou elle s'executait, elle, a chaque connexion.
+        //
+        // ⚠️ Le format est desormais juste, mais cette requete echouera quand
+        // meme : la colonne `owner_id` n'existe dans aucune des deux tables.
+        // « Verifier et preparer » n'en cree que trois (key, value, updated_at,
+        // cf. APPWRITE_ATTRIBUTES cote XSpro). Le multi-formateur n'est donc pas
+        // provisionne sur Appwrite — a traiter le jour ou on l'y portera.
+        if (this._ownerId) {
+            queries.push(JSON.stringify({ method: 'equal', attribute: 'owner_id', values: [this._ownerId] }));
+        }
         if (cursor) queries.push(JSON.stringify({ method: 'cursorAfter', values: [cursor] }));
 
         const qs = queries.map(q => 'queries[]=' + encodeURIComponent(q)).join('&');

@@ -138,8 +138,13 @@ export default async ({ req, res, error }) => {
      * cours.json existe, ownerId vaut null, et ce n'est pas une anomalie.
      */
     async function trouverProprietaire(slugCherche) {
+        // Format d'une requete Appwrite : l'attribut a son propre champ, et
+        // `values` ne contient QUE les valeurs. Le mettre dans `values` avec la
+        // valeur imbriquee — { values: ['key', ['cours.json']] } — vaut un
+        // « Invalid query: Attribute not found in schema », donc un 400.
+        // C'est ce que produit Query.equal('key', 'cours.json') du SDK.
         const requete = encodeURIComponent(JSON.stringify({
-            method: 'equal', values: ['key', ['cours.json']]
+            method: 'equal', attribute: 'key', values: ['cours.json']
         }));
         const page   = await appel('GET', cheminLignes(TABLE_PARCOURS, '?queries[]=' + requete));
         const lignes = (page && Array.isArray(page.rows)) ? page.rows : [];
