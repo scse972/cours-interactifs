@@ -271,7 +271,7 @@ async function initChapterPage() {
         } else if (isSubmitted) {
             msgDiv.innerHTML = '📝 <strong>Copie rendue</strong> - Plus de modifications possibles.<br>Votre évaluateur la corrigera prochainement.';
         } else {
-            msgDiv.innerHTML = '🔒 <strong>Chapitre verrouillé</strong> par votre formateur.';
+            msgDiv.innerHTML = '🔒 <strong>Chapitre verrouillé</strong> par votre évaluateur.';
         }
         msgDiv.style.cssText = 'background: #e8f5e9; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;';
     }

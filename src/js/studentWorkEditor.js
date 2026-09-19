@@ -320,12 +320,14 @@ class StudentWorkEditor {
             } else if (status === 'wrong') {
                 this.showFeedback(feedback, '❌ Incorrect', 'error');
             } else {
-                this.showFeedback(feedback, '⏳ À corriger', 'warning');
+                // Même libellé qu'au rechargement de la page (progressManager) : c'est
+                // le même état, il ne doit pas se dire de deux façons.
+                this.showFeedback(feedback, '⏳ En attente de correction', 'warning');
             }
         }
 
         if (correctionType === 'manuel') {
-            this.showFeedback(feedback, '📝 Envoyé professeur', 'info');
+            this.showFeedback(feedback, '📮 Envoyé à votre évaluateur', 'info');
         }
 
         this.displayIndividualFeedback(question, state);
