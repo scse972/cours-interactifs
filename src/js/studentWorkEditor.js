@@ -26,7 +26,7 @@ class QuestionEngine {
                 return this.state('empty', answer, 0);
             }
 
-            if (minLength && answer.value.length < minLength) {
+            if (minLength && answer.trimmed.length < minLength) {
                 return this.state('wrong', answer, 0);
             }
 
@@ -88,6 +88,12 @@ class QuestionEngine {
 
             points,
             userAnswer: answer.value ?? null,
+            // Longueur utile de la saisie : sert aux seuils de longueur minimale, qui
+            // comptent la réponse sans ses blancs de bordure, alors que userAnswer,
+            // lui, reste brut (l'indentation compte comme réponse).
+            trimmedLength: typeof answer.trimmed === 'string'
+                ? answer.trimmed.length
+                : (typeof answer.value === 'string' ? answer.value.trim().length : 0),
             typeState: status,
             ...extra
         };
@@ -125,10 +131,15 @@ class QuestionEngine {
 
         const textarea = question.querySelector('textarea');
         if (textarea && textarea.value.trim()) {
+            // En NSI l'indentation FAIT PARTIE de la réponse : on enregistre la saisie
+            // brute. Le trim ne sert qu'au test de vacuité ci-dessus (pour qu'une
+            // réponse faite d'espaces ne compte pas) et à la longueur minimale, qui
+            // ne doit pas se laisser atteindre à coups d'espaces.
             return {
                 hasAnswer: true,
                 type: 'textarea',
-                value: textarea.value.trim()
+                value: textarea.value,
+                trimmed: textarea.value.trim()
             };
         }
 
@@ -266,8 +277,9 @@ class StudentWorkEditor {
         const textarea = question.querySelector('textarea');
         if (textarea) {
             const minLength = parseInt(textarea.dataset.minLength, 10);
-            if (!isNaN(minLength) && minLength > 0 && result.userAnswer.length < minLength) {
-                this.showFeedback(feedback, `❌ Minimum ${minLength} caractères requis (${result.userAnswer.length}/${minLength})`, 'error');
+            const longueur = result.trimmedLength;
+            if (!isNaN(minLength) && minLength > 0 && longueur < minLength) {
+                this.showFeedback(feedback, `❌ Minimum ${minLength} caractères requis (${longueur}/${minLength})`, 'error');
                 this.displayIndividualFeedback(question, null);
                 return false;
             }
