@@ -541,16 +541,41 @@ function recomputeChapterStats(chapter) {
     chapter.finalScore = chapter.autoScore + chapter.manualScore;
     
     // ===== NOUVEAU: correctionStatus =====
+    //
+    // ON COMPARE DES QUESTIONS À CORRECTION MANUELLE, ET RIEN D'AUTRE. Les règles
+    // ci-dessous confrontent toutes un compteur à `manualCorrectionCount`, qui ne compte
+    // que celles-là : les compteurs GLOBAUX `pendingCorrectionCount` et
+    // `correctedQuestionCount` ne peuvent donc pas servir ici, ils comptent aussi les
+    // questions automatiques. On prend les variantes filtrées calculées plus haut.
+    //
+    // POURQUOI ÇA COMPTE. Le modal de correction marque « corrected » toute ligne
+    // dépourvue de case « Traité » (voir correctionModal.js, applyTeacherInputsToChapter) :
+    // hors mode consigne, c'est le cas de TOUTES les questions automatiques. Mesure du
+    // 2026-09-20 sur une copie entièrement corrigée, chapitre de 56 questions dont 28
+    // manuelles :
+    //
+    //     manualCorrectionCount   = 28
+    //     correctedQuestionCount  = 56     <- les 28 automatiques comprises
+    //
+    // 56 ≠ 28, et `pendingCorrectionCount` étant à zéro la règle `in_progress` ne prenait
+    // pas non plus : on tombait dans le dernier cas, et un chapitre rendu et corrigé
+    // s'affichait « Non commencé ». Le défaut se recréait à chaque correction.
+    //
+    // Les deux jeux de compteurs ne diffèrent QUE lorsqu'une question automatique porte un
+    // statut de correction. Partout ailleurs ce changement ne modifie rien.
+    const enAttente = chapter.manualQuestionsPendingCount;
+    const corrigees = chapter.manualQuestionsCorrectedCount;
+
     if (chapter.manualCorrectionCount === 0) {
         // Pas de questions à correction manuelle → validé automatiquement
         chapter.correctionStatus = "validated";
-    } else if (chapter.pendingCorrectionCount === chapter.manualCorrectionCount) {
+    } else if (enAttente === chapter.manualCorrectionCount) {
         // Toutes les questions manuelles sont en attente
         chapter.correctionStatus = "pending_review";
-    } else if (chapter.pendingCorrectionCount > 0 && chapter.correctedQuestionCount > 0) {
+    } else if (enAttente > 0 && corrigees > 0) {
         // Certaines questions corrigées, d'autres en attente
         chapter.correctionStatus = "in_progress";
-    } else if (chapter.correctedQuestionCount === chapter.manualCorrectionCount) {
+    } else if (corrigees === chapter.manualCorrectionCount) {
         // Toutes les questions manuelles sont corrigées
         chapter.correctionStatus = "corrected";
     } else {
