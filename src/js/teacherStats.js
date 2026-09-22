@@ -278,11 +278,18 @@ class TeacherStats {
             const data = students.map(student => {
                 const chapterData = student.progress.chapters[chapter.id] || {};
                 const state = getChapterBadgeState(chapterData, chapterConfig);
+                // Le suivi part dans le FICHIER, et nulle part ailleurs : le tableau affiché
+                // plus haut n'en porte volontairement pas de colonne, il est déjà dense et
+                // cette appréciation se lit et s'écrit dans l'onglet Suivi apprenants. Dans
+                // l'export, en revanche, on la veut à côté de la note — c'est là qu'on
+                // prépare un bulletin ou un conseil de classe.
                 return {
                     'Nom': student.name,
                     'Classe': student.class || '',
                     'Progression': chapterData.completionPercent ? `${chapterData.completionPercent}%` : '-',
                     'Note /20': chapterData.noteAttribuee || '-',
+                    'Bonus / Pénalité': chapterData.coursePenalty ?? '',
+                    'Appréciation suivi / bonus / pénalité': chapterData.coursePenaltyComment || '',
                     'Commentaire global': chapterData.globalComment || '',
                     'Statut': state.label
                 };

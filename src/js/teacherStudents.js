@@ -188,7 +188,46 @@ class TeacherStudents {
         }
 
         html += '</div>';
+        // Les quatre filtres sont des champs du HTML qu'on vient de réécrire : sans cette
+        // sauvegarde, ils repartaient à zéro et la liste réapparaissait entière. Or on
+        // rafraîchit après CHAQUE action — enregistrer une appréciation, forcer un rendu,
+        // renvoyer pour reprise —, si bien qu'on perdait son filtre à chaque geste et qu'il
+        // fallait retrouver l'élève à la main. On les relit donc avant, on les repose après.
+        const filtres = this._lireFiltres();
         this.container.innerHTML = html;
+        this._reposerFiltres(filtres);
+    }
+
+    _lireFiltres() {
+        const valeur = (id) => document.getElementById(id)?.value ?? null;
+        return {
+            recherche: valeur('filter-student-search'),
+            classe: valeur('filter-student-class'),
+            chapitre: valeur('filter-student-chapter'),
+            statut: valeur('filter-student-status'),
+        };
+    }
+
+    _reposerFiltres(filtres) {
+        if (!filtres) return;
+        const poser = (id, valeur) => {
+            if (valeur === null || valeur === undefined) return false;
+            const champ = document.getElementById(id);
+            // Une option disparue (classe ou chapitre qui n'existe plus) ne se repose pas :
+            // le select retomberait silencieusement sur « Tous ».
+            if (!champ || (champ.tagName === 'SELECT' && !champ.querySelector(`option[value="${CSS.escape(valeur)}"]`))) return false;
+            champ.value = valeur;
+            return champ.value !== '' && champ.value !== 'all';
+        };
+        let filtrant = false;
+        filtrant = poser('filter-student-search', filtres.recherche) || filtrant;
+        filtrant = poser('filter-student-class', filtres.classe) || filtrant;
+        filtrant = poser('filter-student-chapter', filtres.chapitre) || filtrant;
+        filtrant = poser('filter-student-status', filtres.statut) || filtrant;
+        // Reposer les valeurs ne suffit pas : c'est filterStudents qui redessine la grille.
+        // On ne la rappelle que si un filtre restreint réellement l'affichage — sinon on
+        // referait tout le rendu pour rien.
+        if (filtrant) this.filterStudents();
     }
 
     renderEmptyState(message, hint) {
