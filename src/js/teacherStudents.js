@@ -288,7 +288,7 @@ class TeacherStudents {
                             </span>
                             ` : ''}
 
-                            <button class="btn-chapter-comment" onclick="dashboard.modules.students.editChapterPenaltyComment('${student.id}', '${chapter.id}', event)" title="Appréciation bonus / pénalité — modifiable au fil de l'eau">
+                            <button class="btn-chapter-comment" onclick="dashboard.modules.students.editChapterPenaltyComment('${student.id}', '${chapter.id}', event)" title="Appréciation suivi / bonus / pénalité — modifiable au fil de l'eau">
                                 🎯
                             </button>
 
@@ -680,7 +680,7 @@ class TeacherStudents {
         overlay.innerHTML = `
             <div class="modal-content chapter-comment-modal-content">
                 <div class="modal-header">
-                    <h3>🎯 Appréciation bonus / pénalité</h3>
+                    <h3>🎯 Appréciation suivi / bonus / pénalité</h3>
                     <button type="button" class="close-btn btn-cancel">&times;</button>
                 </div>
                 <div class="modal-body">
