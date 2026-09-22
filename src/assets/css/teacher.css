@@ -511,7 +511,7 @@
     background: #adb5bd;
 }
 
-/* Bouton Appréciation générale (au fil de l'eau) — à gauche de l'oeil */
+/* Bouton Appréciation bonus / pénalité (au fil de l'eau) — à gauche de l'oeil */
 .chapter-progress-item .btn-chapter-comment {
     padding: 0.2rem 0.35rem;
     font-size: 0.9rem;
@@ -529,7 +529,7 @@
     background: #219a52;
 }
 
-/* Mini-fenêtre modale de l'appréciation générale (badge de suivi des apprenants) */
+/* Mini-fenêtre modale de l'appréciation bonus / pénalité (badge de suivi des apprenants) */
 .chapter-comment-modal-content {
     max-width: 480px;
     min-height: unset;

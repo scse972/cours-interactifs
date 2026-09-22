@@ -288,8 +288,8 @@ class TeacherStudents {
                             </span>
                             ` : ''}
 
-                            <button class="btn-chapter-comment" onclick="dashboard.modules.students.editChapterComment('${student.id}', '${chapter.id}', event)" title="Appréciation générale — modifiable au fil de l'eau">
-                                💬
+                            <button class="btn-chapter-comment" onclick="dashboard.modules.students.editChapterPenaltyComment('${student.id}', '${chapter.id}', event)" title="Appréciation bonus / pénalité — modifiable au fil de l'eau">
+                                🎯
                             </button>
 
                             <button class="btn-view-student${hasStarted ? '' : ' is-neutral'}" onclick="dashboard.showStudentChapterView('${student.id}', '${chapter.id}')" title="Voir les réponses de l'apprenant">
@@ -639,15 +639,25 @@ class TeacherStudents {
     }
 
     // ---------------------------------------------------------------------
-    // APPRÉCIATION GÉNÉRALE « AU FIL DE L'EAU »
+    // APPRÉCIATION BONUS / PÉNALITÉ « AU FIL DE L'EAU »
     // ---------------------------------------------------------------------
     // Ouvre une mini-fenêtre modale (exclusive) pour lire/écrire
-    // `chapter.globalComment` à n'importe quel moment (avant comme après le rendu,
-    // quel que soit le mode). Une seule modale ouverte à la fois. La sauvegarde se
-    // fait sur une relecture À FROID de la progression (même pattern que
+    // `chapter.coursePenaltyComment` à n'importe quel moment (avant comme après le
+    // rendu, quel que soit le mode). Une seule modale ouverte à la fois. La sauvegarde
+    // se fait sur une relecture À FROID de la progression (même pattern que
     // updateSubmissionStatus) pour ne pas écraser une écriture récente de
     // l'apprenant pendant que le formateur rédige.
-    async editChapterComment(studentId, chapterId, event) {
+    //
+    // POURQUOI CE CHAMP, ET PAS `globalComment`. C'est ici qu'on note ce qui se suit
+    // séance après séance — assiduité, retards, entraide — et c'est cette appréciation
+    // que XSpro reporte dans le suivi de l'élève. L'appréciation GÉNÉRALE, elle, est un
+    // bilan de fin de chapitre : elle se rédige au moment de corriger (modal de
+    // correction, ou correction en salle), pas au fil de l'eau.
+    //
+    // Aucune garde de statut, volontairement : cette appréciation n'entre pas dans le
+    // calcul de la note, donc l'écrire ne défait aucune validation et ne change aucun
+    // statut. C'est ce qui la distingue d'une correction.
+    async editChapterPenaltyComment(studentId, chapterId, event) {
         if (event) event.stopPropagation();
 
         // Une seule modale à la fois : fermer les autres avant d'en ouvrir une.
@@ -670,14 +680,14 @@ class TeacherStudents {
         overlay.innerHTML = `
             <div class="modal-content chapter-comment-modal-content">
                 <div class="modal-header">
-                    <h3>💬 Appréciation générale</h3>
+                    <h3>🎯 Appréciation bonus / pénalité</h3>
                     <button type="button" class="close-btn btn-cancel">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p class="chapter-comment-modal-subtitle">
                         ${this.escapeHtml(student?.name || studentId)} — ${this.escapeHtml(chapterConfig?.title || chapterId)}
                     </p>
-                    <textarea rows="5" placeholder="Appréciation générale pour ce chapitre...">${this.escapeHtml(chapter.globalComment || '')}</textarea>
+                    <textarea rows="5" placeholder="Assiduité, retards, entraide… — l'appréciation qui suit le comportement au fil des séances">${this.escapeHtml(chapter.coursePenaltyComment || '')}</textarea>
                     <div class="chapter-comment-editor-actions">
                         <button type="button" class="btn btn-secondary btn-cancel">Annuler</button>
                         <button type="button" class="btn btn-primary btn-save" disabled>Enregistrer</button>
@@ -713,8 +723,11 @@ class TeacherStudents {
             if (!fresh.chapters) fresh.chapters = {};
             const target = fresh.chapters[chapterId]
                 || (fresh.chapters[chapterId] = { questions: {}, completionPercent: 0, finalScore: 0 });
-            target.globalComment = value;
-            target.updatedAt = new Date().toISOString();
+            target.coursePenaltyComment = value;
+            // `updatedAt` N'EST PAS TOUCHÉ. Cette date est réservée aux actions de
+            // l'APPRENANT — c'est d'elle que la colonne « Dernière activité » est tirée
+            // (cf. la même règle dans teacherDashboard.updateSubmissionStatus). L'écrire
+            // ici faisait passer une saisie du formateur pour du travail de l'élève.
 
             const key = `${slug}:${studentId}:student_${studentId}_progress`;
             await storage.set(key, fresh);
