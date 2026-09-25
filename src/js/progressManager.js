@@ -483,6 +483,46 @@ function aRepondu(question) {
 }
 
 /**
+ * Le mode EFFECTIF du chapitre pour cet apprenant. Même précédence que getExamContext :
+ * une fois le chapitre démarré (frozenAt posé), le mode est figé et ne suit plus les
+ * réglages faits après coup. Recopié ici plutôt qu'appelé — getExamContext n'est pas
+ * chargé partout où ce fichier l'est, le suivi d'atelier par exemple.
+ */
+function modeChapitre(chapitre, config = {}) {
+    if (chapitre?.frozenAt != null) return chapitre.frozenChapterMode || 'normal';
+    return config?.chapterMode || (config?.examMode ? 'exam' : 'normal');
+}
+
+/**
+ * LE FORMATEUR A-T-IL TRAITÉ CETTE QUESTION ? La question ne se pose que sur copie
+ * papier — modes consigne et atelier AR. L'apprenant y travaille hors de l'application :
+ * sa copie est sur une feuille, ou la consigne a été faite devant le formateur. La seule
+ * trace de ce travail est le geste de correction, et sans lui ces chapitres restaient à
+ * 0 % même entièrement corrigés.
+ *
+ * Ailleurs — Découverte, Examen, Blind — l'avancement reste ce que l'apprenant a fait
+ * dans l'application : une question laissée vide et notée 0 ne le fait pas monter.
+ */
+function aUnVerdictFormateur(question, mode) {
+    if (!question) return false;
+    if (mode !== 'consigne' && mode !== 'atelier') return false;
+
+    // AR validé en main propre : le travail a été montré, et accepté.
+    if (question.arSaisiAt) return true;
+
+    const traitee = question.manualCorrectionStatus === 'corrected' ||
+                    question.manualCorrectionStatus === 'validated';
+    if (!traitee) return false;
+
+    // En consigne, TOUTES les lignes portent une case « Traité » (voir needsTreatedCheckbox
+    // dans correctionModal.js) : cet état EST le geste du formateur, on peut s'y fier.
+    // En atelier, les questions automatiques n'ont pas de case et reçoivent « corrected »
+    // d'office au premier enregistrement — on n'y retient donc que celles qui attendaient
+    // vraiment une correction humaine, c'est-à-dire les consignes.
+    return mode === 'consigne' || question.needsManualCorrection === true;
+}
+
+/**
  * L'AVANCEMENT DANS UN CHAPITRE, CALCULÉ EN UN SEUL ENDROIT.
  *
  * Tout ce qui montre un pourcentage passe par ici : la carte de Suivi apprenants, l'onglet
@@ -498,6 +538,11 @@ function aRepondu(question) {
  * l'apprenant réponde ensuite. On se rabat donc sur la config du chapitre, puis sur les
  * questions réellement présentes dans la progression.
  *
+ * SUR COPIE PAPIER, C'EST LA CORRECTION QUI FAIT FOI. En consigne et en atelier AR,
+ * l'apprenant ne répond pas dans l'application : une question traitée par le formateur,
+ * ou une consigne dont l'AR a été validé, compte donc comme faite (voir
+ * aUnVerdictFormateur). Le pourcentage y monte à mesure que la copie est corrigée.
+ *
  * @param {Object} chapitre - entrée de progression du chapitre
  * @param {Object} [config] - configuration du chapitre (cours.json fusionné), si connue
  * @returns {{repondues:number, coursValides:number, faits:number, total:number, pourcentage:number}}
@@ -507,8 +552,10 @@ function compterAvancement(chapitre, config = {}) {
 
     // Les cours à valider portent une clé `course_N` : c'est ce qui les sépare des
     // questions. Ils ne comptent que lus ET validés — règle inchangée.
+    const mode = modeChapitre(chapitre, config);
     const repondues = entrees
-        .filter(([id, q]) => !id.startsWith('course_') && aRepondu(q)).length;
+        .filter(([id, q]) => !id.startsWith('course_') &&
+                             (aRepondu(q) || aUnVerdictFormateur(q, mode))).length;
     const coursValides = entrees
         .filter(([id, q]) => id.startsWith('course_') && q.answered && q.isCorrect === true).length;
 
