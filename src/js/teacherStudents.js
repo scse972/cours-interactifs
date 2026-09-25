@@ -25,11 +25,14 @@ class TeacherStudents {
             this.renderError();
         }
 
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.chapter-actions-dropdown.active').forEach(menu => {
-                menu.classList.remove('active');
-            });
-        });
+        document.addEventListener('click', () => this.fermerMenusActions());
+
+        // Un menu d'actions est posé dans la FENÊTRE (position fixe, voir
+        // _placerMenuActions) : il ne suit donc ni le défilement ni le
+        // redimensionnement. Plutôt que de le voir flotter au-dessus d'une autre ligne,
+        // on le ferme — c'est aussi ce que font les menus du système.
+        window.addEventListener('scroll', () => this.fermerMenusActions(), true);
+        window.addEventListener('resize', () => this.fermerMenusActions());
     }
 
     async refresh() {
@@ -447,22 +450,84 @@ class TeacherStudents {
         }
     }
 
-    toggleChapterActionsMenu(event, studentId, chapterId) {
+    /** Ferme tous les menus d'actions ouverts. */
+    fermerMenusActions() {
+        document.querySelectorAll('.chapter-actions-dropdown.active')
+            .forEach(menu => menu.classList.remove('active'));
+    }
+
+    async toggleChapterActionsMenu(event, studentId, chapterId) {
         event.stopPropagation();
-        
-        // Fermer tous les autres menus ouverts
-        document.querySelectorAll('.chapter-actions-dropdown.active').forEach(menu => {
-            if (menu.id !== `actions-menu-${studentId}-${chapterId}`) {
-                menu.classList.remove('active');
-            }
-        });
+
+        // `currentTarget` ne vaut que pendant la distribution de l'événement : on tient
+        // le bouton MAINTENANT, avant le premier await, sinon on mesurerait `null`.
+        const bouton = event.currentTarget;
 
         const menu = document.getElementById(`actions-menu-${studentId}-${chapterId}`);
-        menu.classList.toggle('active');
-        
+        if (!menu) return;
+
+        // Fermer tous les autres menus ouverts
+        document.querySelectorAll('.chapter-actions-dropdown.active').forEach(autre => {
+            if (autre !== menu) autre.classList.remove('active');
+        });
+
         if (menu.classList.contains('active')) {
-            this.populateChapterActionsMenu(menu, studentId, chapterId);
+            menu.classList.remove('active');
+            return;
         }
+
+        // Affiché mais invisible le temps d'être rempli puis placé : sans cela, il
+        // apparaîtrait un instant dans le coin de la fenêtre, là où le CSS le pose
+        // avant que le JS ne le déplace.
+        menu.style.visibility = 'hidden';
+        menu.classList.add('active');
+        await this.populateChapterActionsMenu(menu, studentId, chapterId);
+        this._placerMenuActions(menu, bouton);
+        menu.style.visibility = '';
+    }
+
+    /**
+     * Pose le menu sous son bouton, et le ramène dans la fenêtre au besoin.
+     *
+     * Le menu est en position FIXE : ses coordonnées sont celles de la fenêtre, donc
+     * celles que rendent les getBoundingClientRect() ci-dessous, sans correction de
+     * défilement.
+     *
+     * Il s'aligne à DROITE de son bouton — c'est l'ancrage d'origine, et il garde le
+     * menu au-dessus de sa propre ligne plutôt que de le faire déborder sur la carte
+     * voisine. Puis on le ramène : d'abord contre le bord droit s'il dépasse, ensuite
+     * contre le bord gauche, dans cet ordre — c'est le bord gauche qui doit gagner, un
+     * menu qui commence hors champ est illisible dès sa première ligne.
+     *
+     * En bas, il bascule AU-DESSUS du bouton s'il n'a pas la place en dessous : une
+     * ligne de chapitre en bas de fenêtre ouvrait un menu dont on ne voyait que le
+     * premier bouton.
+     */
+    _placerMenuActions(menu, bouton) {
+        if (!menu || !bouton) return;
+
+        const MARGE = 8;
+        const ECART = 4;
+        const cadreBouton = bouton.getBoundingClientRect();
+        const cadreMenu = menu.getBoundingClientRect();
+
+        let gauche = cadreBouton.right - cadreMenu.width;
+        gauche = Math.min(gauche, window.innerWidth - cadreMenu.width - MARGE);
+        gauche = Math.max(MARGE, gauche);
+
+        let haut = cadreBouton.bottom + ECART;
+        if (haut + cadreMenu.height > window.innerHeight - MARGE) {
+            const auDessus = cadreBouton.top - cadreMenu.height - ECART;
+            if (auDessus >= MARGE) haut = auDessus;
+        }
+        // Meme filet qu a l horizontale, et pour la meme raison : la bascule ci-dessus ne
+        // sert que si le menu TIENT au-dessus. Sinon, on le ramene dans la fenetre plutot
+        // que de le laisser sortir par le bas.
+        haut = Math.min(haut, window.innerHeight - cadreMenu.height - MARGE);
+        haut = Math.max(MARGE, haut);
+
+        menu.style.left = `${Math.round(gauche)}px`;
+        menu.style.top = `${Math.round(haut)}px`;
     }
 
     async populateChapterActionsMenu(menu, studentId, chapterId) {
@@ -711,7 +776,7 @@ class TeacherStudents {
 
         // Une seule modale à la fois : fermer les autres avant d'en ouvrir une.
         document.getElementById('chapter-comment-modal')?.remove();
-        document.querySelectorAll('.chapter-actions-dropdown.active').forEach(el => el.classList.remove('active'));
+        this.fermerMenusActions();
 
         const slug = window.currentParcoursSlug;
         if (!slug) return;

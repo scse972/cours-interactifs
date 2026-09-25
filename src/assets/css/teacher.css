@@ -2007,15 +2007,27 @@
     box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
 }
 
+/* Placé par _placerMenuActions() (teacherStudents.js), pas par le flux.
+
+   AVANT : position absolue et `right: 0` dans le bouton ✏️ — le menu pendait donc
+   vers la GAUCHE depuis un bouton qui se trouve, lui, à gauche de la ligne, juste
+   après le badge de statut. Avec 240px de large pour un bouton à ~110px du bord, il
+   sortait de la fenêtre par la gauche ; au zoom, où la grille retombe sur une colonne
+   collée au bord, la moitié du menu devenait illisible.
+
+   `fixed` le sort du flux de la carte : le JS le pose sous son bouton et le ramène
+   dans la fenêtre s'il n'y tient pas — horizontalement comme verticalement. Les deux
+   largeurs ci-dessous sont la dernière ligne de défense : à très fort zoom, la fenêtre
+   peut être plus étroite que les 240px du menu. */
 .chapter-actions-dropdown {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    margin-top: 4px;
+    position: fixed;
+    top: 0;
+    left: 0;
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    min-width: 240px;
+    min-width: min(240px, calc(100vw - 1rem));
+    max-width: calc(100vw - 1rem);
     z-index: 100;
     display: none;
     overflow: hidden;
