@@ -193,7 +193,7 @@ class TeacherStats {
                 <div class="stats-student-row">
                     <div class="stats-col-name">${this.escapeHtml(student.name)}</div>
                     <div class="stats-col-progress">
-                        ${typeof chapterData.completionPercent === 'number' ? `${chapterData.completionPercent}%` : '<span class="stats-empty">-</span>'}
+                        ${student.progress.chapters[chapter.id] ? `${window.ProgressManager.pourcentageAvancement(chapterData, chapter)}%` : '<span class="stats-empty">-</span>'}
                     </div>
                     <div class="stats-col-note">
                         ${typeof chapterData.noteAttribuee === 'number' ? `<span class="stats-note-value">📝 ${chapterData.noteAttribuee}/20</span>` : '<span class="stats-empty">-</span>'}
@@ -286,7 +286,7 @@ class TeacherStats {
                 return {
                     'Nom': student.name,
                     'Classe': student.class || '',
-                    'Progression': chapterData.completionPercent ? `${chapterData.completionPercent}%` : '-',
+                    'Progression': student.progress.chapters[chapter.id] ? `${window.ProgressManager.pourcentageAvancement(chapterData, chapter)}%` : '-',
                     'Note /20': chapterData.noteAttribuee || '-',
                     'Bonus / Pénalité': chapterData.coursePenalty ?? '',
                     'Appréciation suivi / bonus / pénalité': chapterData.coursePenaltyComment || '',

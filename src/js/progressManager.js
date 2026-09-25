@@ -469,32 +469,89 @@ function enregistrerBrouillon(progress, chapterId, questionId, reponse) {
 }
 
 /**
+ * Une réponse est-elle là ? C'est le critère du bilan et des badges : `answered`, ou une
+ * réponse non vide. Il est volontairement plus large que le seul drapeau — une saisie
+ * enregistrée par un chemin qui n'a pas posé `answered` reste une réponse, et l'apprenant
+ * la voit dans son bilan. Compter plus strictement ici, ce serait afficher « 0 % » sous un
+ * bilan qui montre des réponses.
+ */
+function aRepondu(question) {
+    if (!question) return false;
+    return question.answered === true ||
+           (typeof question.answer === 'string' && question.answer.trim() !== '') ||
+           (Array.isArray(question.answer) && question.answer.length > 0);
+}
+
+/**
+ * L'AVANCEMENT DANS UN CHAPITRE, CALCULÉ EN UN SEUL ENDROIT.
+ *
+ * Tout ce qui montre un pourcentage passe par ici : la carte de Suivi apprenants, l'onglet
+ * Rendus à corriger, les Statistiques et leur export, l'anneau de l'accueil apprenant et
+ * celui de la page de chapitre. Avant, chacun lisait `completionPercent`, un résumé figé au
+ * dernier passage de l'apprenant, pendant que le badge d'à côté, lui, recomptait les
+ * réponses : sur la même ligne, « 📤 Rendu » et « 0 % ».
+ *
+ * LE DÉNOMINATEUR A DES REPLIS, ET CE N'EST PAS DE LA PRUDENCE DÉCORATIVE. Une entrée de
+ * chapitre créée par un geste du formateur avant que l'apprenant ne l'ouvre pouvait n'avoir
+ * aucun `progressItemCount` ; il ne se posait alors JAMAIS (ensureChapterInitialized ne
+ * construit que les entrées absentes), et l'avancement restait bloqué à 0 quoi que
+ * l'apprenant réponde ensuite. On se rabat donc sur la config du chapitre, puis sur les
+ * questions réellement présentes dans la progression.
+ *
+ * @param {Object} chapitre - entrée de progression du chapitre
+ * @param {Object} [config] - configuration du chapitre (cours.json fusionné), si connue
+ * @returns {{repondues:number, coursValides:number, faits:number, total:number, pourcentage:number}}
+ */
+function compterAvancement(chapitre, config = {}) {
+    const entrees = Object.entries(chapitre?.questions || {});
+
+    // Les cours à valider portent une clé `course_N` : c'est ce qui les sépare des
+    // questions. Ils ne comptent que lus ET validés — règle inchangée.
+    const repondues = entrees
+        .filter(([id, q]) => !id.startsWith('course_') && aRepondu(q)).length;
+    const coursValides = entrees
+        .filter(([id, q]) => id.startsWith('course_') && q.answered && q.isCorrect === true).length;
+
+    const attendusParConfig = (config?.questions?.length ?? config?.questionCount ?? 0) +
+                              (config?.courseValidationCount ?? 0);
+    const total = chapitre?.progressItemCount ||
+                  config?.progressItemCount ||
+                  attendusParConfig ||
+                  entrees.length;
+
+    const faits = repondues + coursValides;
+
+    return {
+        repondues,
+        coursValides,
+        faits,
+        total,
+        pourcentage: total > 0 ? Math.round((faits / total) * 100) : 0
+    };
+}
+
+/** Le même calcul, quand seul le pourcentage intéresse l'appelant. */
+function pourcentageAvancement(chapitre, config = {}) {
+    return compterAvancement(chapitre, config).pourcentage;
+}
+
+/**
  * Recalcule les statistiques d'un chapitre
  * @param {Object} chapter - Le chapitre à recalculer
+ * @param {Object} [chapterConfig] - sa configuration, quand l'appelant la connaît : elle
+ *        sert de repli au dénominateur de l'avancement (voir compterAvancement)
  */
-function recomputeChapterStats(chapter) {
-    // Compter les questions répondues (exclure les cours)
-    chapter.answeredQuestions = Object.values(chapter.questions)
-        .filter(q => q.answered && !q.questionHash?.startsWith('course_')).length;
-    
-    // Compter les cours validés
-    let answeredCourses = 0;
-    if (chapter.questions) {
-        Object.keys(chapter.questions).forEach(key => {
-            if (key.startsWith('course_') && chapter.questions[key].answered && chapter.questions[key].isCorrect === true) {
-                answeredCourses++;
-            }
-        });
-    }
-    chapter.answeredCourses = answeredCourses;
-    
-    // Calculer le pourcentage de complétion
-    const totalItems = chapter.progressItemCount;
-    const completedItems = chapter.answeredQuestions + answeredCourses;
-    
-    chapter.completionPercent = totalItems > 0
-        ? Math.round((completedItems / totalItems) * 100)
-        : 0;
+function recomputeChapterStats(chapter, chapterConfig = {}) {
+    // Les compteurs d'avancement viennent d'un calcul unique, partagé avec l'affichage
+    // (voir compterAvancement) : deux nombres qui parlent de la même chose, sur la même
+    // ligne, doivent être le même nombre.
+    const avancement = compterAvancement(chapter, chapterConfig);
+    const totalItems = avancement.total;
+    const completedItems = avancement.faits;
+
+    chapter.answeredQuestions = avancement.repondues;
+    chapter.answeredCourses = avancement.coursValides;
+    chapter.completionPercent = avancement.pourcentage;
     
     // ===== NOUVEAUX: Compteurs de correction =====
     chapter.manualCorrectionCount = Object.values(chapter.questions)
@@ -821,13 +878,40 @@ function ensureChapterInitialized(progress, chaptersConfig) {
         gelerContexteChapitre(progress.chapters[chapterId], effectiveConfig);
     }
 
+    const entree = progress.chapters[chapterId];
+
+    // Une entrée créée par un geste du formateur (statut forcé, appréciation de suivi)
+    // avant le premier accès de l'apprenant peut arriver ici sans sa table de questions.
+    if (!entree.questions) entree.questions = {};
+
     // S'assurer que toutes les questions sont initialisées
     if (chapterConfig.questions) {
         chapterConfig.questions.forEach(q => {
-            if (!progress.chapters[chapterId].questions[q.id]) {
-                progress.chapters[chapterId].questions[q.id] = initQuestion(q);
+            if (!entree.questions[q.id]) {
+                entree.questions[q.id] = initQuestion(q);
             }
         });
+    }
+
+    // RATTRAPAGE DES COMPTEURS. Même origine : ces entrées-là arrivent sans
+    // `progressItemCount`, et comme cette fonction ne construit que les entrées ABSENTES,
+    // le trou ne se rebouchait jamais — l'avancement restait à 0 % pour toujours, y compris
+    // une fois la copie rendue. On repose donc les compteurs depuis la config au premier
+    // passage, et on recompte l'avancement.
+    //
+    // Rien d'autre n'est touché : ni les scores, ni les statuts, ni `updatedAt` — c'est une
+    // réparation, pas une action de l'apprenant.
+    if (!(entree.progressItemCount > 0)) {
+        entree.questionCount = chapterConfig.questions?.length || entree.questionCount || 0;
+        entree.courseValidationCount = chapterConfig.courseValidationCount || entree.courseValidationCount || 0;
+        entree.progressItemCount = chapterConfig.progressItemCount ||
+                                   (entree.questionCount + entree.courseValidationCount);
+        if (!entree.maxPoints) entree.maxPoints = chapterConfig.maxPoints || 0;
+
+        const rattrapage = compterAvancement(entree, chapterConfig);
+        entree.answeredQuestions = rattrapage.repondues;
+        entree.answeredCourses = rattrapage.coursValides;
+        entree.completionPercent = rattrapage.pourcentage;
     }
 }
 
@@ -1101,30 +1185,15 @@ function computeChapterUIStats(chapter, chapterConfig, maxNote = 20) {
     // =========================
     // Progression globale
     // =========================
-    const totalItems = chapter.progressItemCount || chapterConfig.progressItemCount || 0;
+    const avancement = compterAvancement(chapter, chapterConfig);
+    const totalItems = avancement.total;
     const totalQuestions = chapter.questionCount || chapterConfig.questionCount || 0;
     const totalValidatableCourses = chapter.courseValidationCount || chapterConfig.courseValidationCount || 0;
-    
-    // Compter les questions répondues (exclure les cours)
-    const answeredQuestions = Object.values(chapter.questions || {})
-        .filter(q => q.answered && !q.questionHash?.startsWith('course_'))
-        .length;
-    
-    // Compter les cours validés
-    let answeredCourses = 0;
-    if (chapter.questions) {
-        Object.keys(chapter.questions).forEach(key => {
-            if (key.startsWith('course_') && chapter.questions[key].answered && 
-                chapter.questions[key].isCorrect === true) {
-                answeredCourses++;
-            }
-        });
-    }
-    
-    const completedItems = answeredQuestions + answeredCourses;
-    const globalPercentage = totalItems > 0
-        ? Math.round((completedItems / totalItems) * 100)
-        : 0;
+
+    const answeredQuestions = avancement.repondues;
+    const answeredCourses = avancement.coursValides;
+    const completedItems = avancement.faits;
+    const globalPercentage = avancement.pourcentage;
 
     // =========================
     // Questions auto-corrigées
@@ -1314,11 +1383,16 @@ window.ProgressManager = {
     initQuestion,
     getOrCreateStudentProgress,
     ensureChapterInitialized,
+    degelerContexteChapitre,
     
     // Enregistrement des réponses
     recordAnswer,
     enregistrerBrouillon,
     
+    // Avancement — le seul calcul, partagé par tous les écrans
+    compterAvancement,
+    pourcentageAvancement,
+
     // Recalcul des statistiques
     recomputeChapterStats,
     setSubmissionStatus,      // le seul écrivain légitime de submissionStatus

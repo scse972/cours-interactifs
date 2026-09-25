@@ -297,7 +297,10 @@ class TeacherStudents {
                 const chapterData = progress.chapters[chapter.id] || { completed: false, score: 0 };
                 const state = getChapterBadgeState(chapterData, chapter);
                 const hasStarted = state.status !== 'not_started';
-                const percent = chapterData.completionPercent || 0;
+                // Recompté, jamais lu dans le champ stocké : le badge juste à côté, lui,
+                // a toujours recompté, et les deux se contredisaient (« 📤 Rendu » et
+                // « 0 % » sur la même ligne). Voir compterAvancement dans progressManager.js.
+                const percent = window.ProgressManager.pourcentageAvancement(chapterData, chapter);
                 const titleEscaped = this.escapeHtml(chapter.title);
 
                 html += `
@@ -465,7 +468,7 @@ class TeacherStudents {
     async populateChapterActionsMenu(menu, studentId, chapterId) {
         const progress = await this.dashboard.getStudentProgress(studentId);
         const chapterData = progress.chapters[chapterId] || {};
-        const chapterConfig = this.dashboard.chapters.find(c => c.id === chapterId);
+        const chapterConfig = this.dashboard.chapters.find(c => String(c.id) === String(chapterId));
 
         const state = getChapterBadgeState(chapterData, chapterConfig);
 
@@ -618,7 +621,14 @@ class TeacherStudents {
         if (!slug) return;
         
         const progress = await this.dashboard.getStudentProgress(studentId);
-        const chapterConfig = this.dashboard.chapters.find(c => c.id === chapterId) || {};
+        // Sans sa config, initChapter poserait un chapitre à zéro question : l'apprenant
+        // qui le referait resterait bloqué à 0 % d'avancement, faute de dénominateur.
+        // Mieux vaut ne rien effacer du tout.
+        const chapterConfig = this.dashboard.chapters.find(c => String(c.id) === String(chapterId));
+        if (!chapterConfig) {
+            alert('❌ Chapitre introuvable dans ce parcours : rien n\'a été réinitialisé.');
+            return;
+        }
 
         // Réinitialiser complètement le chapitre (même structure qu'un chapitre jamais commencé)
         progress.chapters[chapterId] = window.ProgressManager.initChapter(chapterConfig);
@@ -707,7 +717,7 @@ class TeacherStudents {
         if (!slug) return;
 
         const student = this.students.find(s => s.id === studentId);
-        const chapterConfig = this.dashboard.chapters.find(c => c.id === chapterId);
+        const chapterConfig = this.dashboard.chapters.find(c => String(c.id) === String(chapterId));
 
         // Lecture à froid au moment de l'OUVERTURE, uniquement pour pré-remplir.
         const progress = await this.dashboard.getStudentProgress(studentId);
@@ -760,8 +770,22 @@ class TeacherStudents {
             // une écriture de l'apprenant pourrait être écrasée est minimale.
             const fresh = await this.dashboard.getStudentProgress(studentId);
             if (!fresh.chapters) fresh.chapters = {};
-            const target = fresh.chapters[chapterId]
-                || (fresh.chapters[chapterId] = { questions: {}, completionPercent: 0, finalScore: 0 });
+            // ENTRÉE COMPLÈTE, AVEC SES COMPTEURS. L'entrée creuse d'avant (sans
+            // `progressItemCount`) condamnait l'avancement du chapitre à 0 % : le
+            // dénominateur manquait à tous les recalculs suivants, et personne ne le
+            // reposait jamais. L'apprenant pouvait répondre à tout puis rendre sa copie,
+            // sa carte affichait « 📤 Rendu — 0 % ».
+            let target = fresh.chapters[chapterId];
+            if (!target) {
+                if (!chapterConfig) {
+                    alert('❌ Chapitre introuvable dans ce parcours : appréciation non enregistrée.');
+                    return;
+                }
+                target = fresh.chapters[chapterId] = window.ProgressManager.initChapter(chapterConfig);
+                // Écrire une appréciation n'est pas démarrer le chapitre : le mode et la date
+                // limite restent à figer au premier accès de l'apprenant (ensureChapterInitialized).
+                window.ProgressManager.degelerContexteChapitre(target);
+            }
             target.coursePenaltyComment = value;
             // `updatedAt` N'EST PAS TOUCHÉ. Cette date est réservée aux actions de
             // l'APPRENANT — c'est d'elle que la colonne « Dernière activité » est tirée
