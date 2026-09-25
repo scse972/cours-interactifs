@@ -2007,27 +2007,15 @@
     box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
 }
 
-/* Placé par _placerMenuActions() (teacherStudents.js), pas par le flux.
-
-   AVANT : position absolue et `right: 0` dans le bouton ✏️ — le menu pendait donc
-   vers la GAUCHE depuis un bouton qui se trouve, lui, à gauche de la ligne, juste
-   après le badge de statut. Avec 240px de large pour un bouton à ~110px du bord, il
-   sortait de la fenêtre par la gauche ; au zoom, où la grille retombe sur une colonne
-   collée au bord, la moitié du menu devenait illisible.
-
-   `fixed` le sort du flux de la carte : le JS le pose sous son bouton et le ramène
-   dans la fenêtre s'il n'y tient pas — horizontalement comme verticalement. Les deux
-   largeurs ci-dessous sont la dernière ligne de défense : à très fort zoom, la fenêtre
-   peut être plus étroite que les 240px du menu. */
 .chapter-actions-dropdown {
-    position: fixed;
-    top: 0;
-    left: 0;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    min-width: min(240px, calc(100vw - 1rem));
-    max-width: calc(100vw - 1rem);
+    min-width: 240px;
     z-index: 100;
     display: none;
     overflow: hidden;
@@ -2037,6 +2025,22 @@
 .chapter-actions-dropdown.active {
     display: block;
 }
+
+/* LE CÔTÉ D'OUVERTURE EST CHOISI À CHAQUE OUVERTURE, selon la place disponible
+   autour du bouton — voir _orienterMenuActions() dans teacherStudents.js.
+
+   `right: 0` ci-dessus faisait pendre le menu vers la GAUCHE, toujours. Or le bouton
+   ✏️ se trouve, lui, à gauche de la ligne, juste après le badge de statut : sur une
+   carte collée au bord gauche de la fenêtre — le cas ordinaire au zoom, où la grille
+   retombe sur une seule colonne — un menu de 240px sortait de l'écran par la gauche.
+
+   Le menu reste en position ABSOLUE, ancré à son bouton. C'est ce qui rend le procédé
+   sûr : il suit sa carte, y compris le `transform` de `.student-card:hover`. Une
+   position fixe, elle, se serait ancrée sur cette carte transformée au lieu de la
+   fenêtre — un ancêtre transformé devient le bloc conteneur des enfants en position
+   fixe — et le menu serait parti se poser n'importe où dans la page. */
+.chapter-actions-dropdown.ouvre-a-droite { left: 0; right: auto; }
+.chapter-actions-dropdown.ouvre-a-gauche { right: 0; left: auto; }
 
 .chapter-actions-dropdown button {
     display: block;
