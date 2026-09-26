@@ -93,6 +93,11 @@ Le HTML des questions est **pré-généré et figé** dans `parcours/cours.json`
 le touche jamais. On décore le DOM après affichage, en insérant dans `.question-meta` un
 `<button class="qr-badge">` puis un `<span class="qr-nom">`.
 
+Le nom tient sur **deux lignes**, coupées au premier espace : « Jean Dupont » donne « Jean » puis
+« Dupont », même s'il tiendrait sur une seule — on veut les deux mots lisibles l'un sous l'autre.
+Chaque ligne est tronquée à part (« … ») ; le nom complet reste dans l'infobulle. Deux lignes de
+0,8 rem tiennent dans les 32 px du bandeau, qui ne grossit donc pas.
+
 L'appel est fait depuis `src/js/chapitre.js`, dans le même `setTimeout` que
 `AtelierQuestion.init()` — donc après `restoreAllAnswers()` et après le tirage d'ordre : les
 sections sont alors en place et à leur position définitive. Le tri de `chapterOrdre` et la

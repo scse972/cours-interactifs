@@ -940,11 +940,21 @@
     height: 28px;
 }
 
+/* Deux lignes (prénom, nom — coupées au premier espace par qrQuestion.js), chacune
+   tronquée à part. 2 × 0.8rem × 1.15 ≈ 29px : tient dans les 32px du bandeau. */
 .qr-nom {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
     font-size: 0.8rem;
     font-weight: 500;
+    line-height: 1.15;
     color: #475569;
-    max-width: 12ch;
+    max-width: 14ch;
+    min-width: 0;
+}
+
+.qr-nom > span {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
