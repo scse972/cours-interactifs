@@ -86,88 +86,61 @@ théorique — votre geste vous appartient, et ne lui est annoncé qu'à la vali
         modes: {
             titre: '🎛️ Les modes de chapitre et leurs options',
             html: `
-<p>Le mode est une <strong>politique de diffusion</strong>, pas une propriété du contenu : le même
-chapitre peut être joué différemment d'une classe à l'autre, et vous pouvez en changer sans
-republier le parcours.</p>
+<p>Le mode règle la <strong>diffusion</strong>, pas le contenu : un même chapitre peut se jouer
+différemment d'une classe à l'autre, et se changer sans republier le parcours.</p>
 <table class="aide-table">
   <tr><th>Mode</th><th>Principe</th></tr>
   <tr><td>📖 Découverte</td><td>Retour immédiat, l'apprenant peut réessayer.</td></tr>
-  <tr><td>📝 Examen</td><td>Aucun retour, enregistrement en temps réel, tout se verrouille au rendu.</td></tr>
-  <tr><td>🥽 Blind</td><td>Aucun retour pendant la saisie. Au rendu, l'apprenant voit sa note sans savoir où il s'est trompé, et choisit : valider ou recommencer. Détail plus bas.</td></tr>
-  <tr><td>💰 Millionnaire</td><td>Une erreur réinitialise les questions auto-corrigées. Pas de reprise : revenir sur le chapitre repart d'une tentative neuve.</td></tr>
-  <tr><td>🧾 Atelier AR</td><td>Les questions ouvertes se valident en main propre, par échange de codes — dans l'application.</td></tr>
-  <tr><td>📋 Consigne</td><td>Travail sur papier : vous imprimez une feuille nominative avec un QRCode par question. L'application reste consultable comme en Découverte, et vous corrigez même sans rendu.</td></tr>
+  <tr><td>📝 Examen</td><td>Aucun retour, enregistrement en continu, tout se verrouille au rendu.</td></tr>
+  <tr><td>🥽 Blind</td><td>Aucun retour. Au rendu, l'apprenant voit sa note sans savoir où il s'est trompé, puis valide ou recommence (voir plus bas).</td></tr>
+  <tr><td>💰 Millionnaire</td><td>Une erreur remet à zéro les questions auto-corrigées. Pas de reprise : revenir sur le chapitre repart d'une tentative neuve.</td></tr>
+  <tr><td>🧾 Atelier AR</td><td>Les questions ouvertes se valident en main propre, par échange de codes dans l'application.</td></tr>
+  <tr><td>📋 Consigne</td><td>Travail sur papier, feuille nominative à QRCodes. L'application reste consultable comme en Découverte ; vous corrigez même sans rendu.</td></tr>
 </table>
-<p><strong>Le mode est figé au premier démarrage de chaque apprenant.</strong> Si vous en changez
-ensuite, cela ne concerne que ceux qui n'ont pas commencé — on ne change pas les règles sous les
-pieds de quelqu'un qui joue.</p>
+<p><strong>Le mode est figé au premier démarrage de chaque apprenant.</strong> Le changer ensuite
+ne touche que ceux qui n'ont pas commencé.</p>
 
-<h4>🥽 Ce qui se passe au rendu en Blind</h4>
-<p>Pendant le travail, Blind ressemble à Examen : pas de bouton « Vérifier », aucune indication
-juste ou faux, les réponses s'enregistrent en silence. <strong>Tout se joue au moment de
-rendre.</strong> En Examen, « Rendre » envoie la copie aussitôt, définitivement. En Blind, il
-ouvre d'abord un écran de bilan :</p>
-<ul>
-  <li>l'apprenant y voit <strong>sa note sur 20</strong>, mais <strong>pas quelles questions sont
-      justes ou fausses</strong> ;</li>
-  <li>si des questions attendent votre correction (réponses rédigées), il voit une
-      <strong>fourchette</strong> : la note si vous ne leur accordez rien, et celle si vous leur
-      accordez tout ;</li>
-  <li>il choisit ensuite entre deux boutons.</li>
-</ul>
+<h4>🥽 Le rendu en Blind</h4>
+<p>Pendant le travail, comme en Examen : ni « Vérifier », ni juste / faux. Mais « Rendre »
+n'envoie pas la copie : il ouvre un bilan qui donne <strong>la note sur 20, sans dire quelles
+questions sont fausses</strong> — ou une <strong>fourchette</strong> s'il reste des réponses
+rédigées à corriger (de « vous n'accordez rien » à « vous accordez tout »).</p>
 <table class="aide-table">
   <tr><th>Bouton</th><th>Effet</th></tr>
-  <tr><td>✅ Valider définitivement</td><td>La copie vous est rendue et se verrouille, exactement
-      comme en Examen.</td></tr>
-  <tr><td>🔄 Recommencer</td><td>Ses réponses aux questions auto-corrigées et semi-automatiques
-      sont effacées ; celles à correction manuelle sont conservées. Il refait les questions
-      effacées, puis peut rendre de nouveau.</td></tr>
+  <tr><td>✅ Valider définitivement</td><td>La copie vous est rendue et se verrouille, comme en Examen.</td></tr>
+  <tr><td>🔄 Recommencer</td><td>Les réponses auto et semi-automatiques sont effacées, les manuelles conservées. Il corrige, puis rend de nouveau.</td></tr>
 </table>
-<p><strong>Il peut recommencer autant de fois qu'il le veut</strong>, tant qu'il n'a pas validé :
-d'ici là, sa copie n'est pas rendue. Le mode ne juge donc pas un premier jet. Il oblige
-l'apprenant à se relire et à trouver lui-même ses erreurs, puisqu'il sait combien de points il
-perd sans savoir où.</p>
-<p>Rien n'est retiré pour une erreur : en Blind, une question auto-corrigée fausse ou sans réponse
-vaut 0, jamais des points négatifs. On ne sanctionne pas une erreur commise sans retour. La
-pénalité de cours n'entre pas non plus dans ce bilan.</p>
+<p><strong>Tentatives illimitées</strong> tant qu'il n'a pas validé — sa copie n'est rendue
+qu'à ce moment. Il sait combien de points il perd, pas où : à lui de se relire.
+Une erreur vaut 0, jamais de points négatifs, et la pénalité de cours n'entre pas dans ce bilan.</p>
 
 <h4>🖨️ Feuille de consignes (mode Consigne)</h4>
-<p>En mode 📋 Consigne, la carte du chapitre porte un bouton <strong>« 🖨️ Feuille de
-consignes »</strong> : un jeu de pages par apprenant, avec les énoncés, la place pour écrire
-et un QRCode par question — celui que vous scannerez depuis « ✍️ Correction en salle » pour
-noter la question sans chercher l'apprenant dans vos listes. La feuille est
-<strong>nominative</strong> : chaque QRCode ne vaut que pour son apprenant, et le nom est
-rappelé en vertical à côté de chacun d'eux — de quoi savoir à qui est une feuille ramassée
-sans revenir à la page de garde, et de quoi dissuader les échanges discrets.</p>
-<p>Imprimer <strong>ouvre aussi le suivi de correction</strong> des apprenants qui n'ont pas
-encore ouvert le chapitre. C'est nécessaire : sans cette ligne, une copie faite entièrement
-sur papier n'apparaîtrait ni dans « 📬 Rendus à corriger » ni dans XSpro, et resterait donc
-incorrigeable. Distribuer la feuille et ouvrir le suivi sont le même geste.</p>
-<p><strong>Les QRCodes sont optionnels.</strong> La case « Imprimer les QRCodes » est cochée
-par défaut, mais vous pouvez la décocher : vous obtenez alors une feuille d'énoncés nue —
-le nom accolé aux QRCodes disparaît avec eux — et vous corrigez ensuite par les voies
-habituelles, depuis « 📬 Rendus à corriger » ou depuis XSpro. Tout le reste du mode ne
-change pas : la page de garde reste nominative, et le suivi de correction s'ouvre pareil.</p>
-<p>⚠️ <strong>Pour les QRCodes, imprimez depuis le site publié, en HTTPS.</strong> L'empreinte portée par les
-QRCodes est calculée par <code>crypto.subtle</code>, que le navigateur ne fournit qu'en
-contexte sûr (HTTPS ou <code>localhost</code>). Depuis une adresse réseau en
-<code>http://192.168.…</code>, aucune empreinte n'est calculable : la case est alors
-décochée et verrouillée, avec l'explication — la <strong>feuille d'énoncés s'imprime
-normalement</strong>, seuls les QRCodes manquent. C'est la même contrainte que le
-scan, décrite dans la fiche « 📱 Application téléphone ».</p>
+<p>Le bouton <strong>« 🖨️ Feuille de consignes »</strong> de la carte imprime, par apprenant,
+les énoncés, la place pour écrire et un QRCode par question, à scanner depuis
+« ✍️ Correction en salle ». Chaque QRCode ne vaut que pour son apprenant, dont le nom est écrit
+en vertical à côté : on sait à qui est une feuille ramassée, et on dissuade les échanges.</p>
+<ul>
+  <li><strong>Imprimer ouvre le suivi de correction</strong> des apprenants qui n'ont pas ouvert
+      le chapitre. Sans cela, une copie faite sur papier n'apparaîtrait ni dans
+      « 📬 Rendus à corriger » ni dans XSpro.</li>
+  <li><strong>Les QRCodes sont optionnels</strong> (case cochée par défaut). Sans eux, la feuille
+      ne porte que les énoncés, et vous corrigez depuis « 📬 Rendus à corriger » ou XSpro.
+      La page de garde reste nominative, le suivi s'ouvre pareil.</li>
+  <li>⚠️ <strong>QRCodes = site publié, en HTTPS.</strong> Leur empreinte est calculée par
+      <code>crypto.subtle</code>, absent en <code>http://192.168.…</code> : la case y est
+      verrouillée et seuls les énoncés s'impriment. Même contrainte que le scan
+      (fiche « 📱 Installer et utiliser en salle »).</li>
+</ul>
 
 <h4>🎲 Ordre aléatoire</h4>
-<p>Proposé en Examen, Blind et Millionnaire, et seulement sur les chapitres
-<strong>entièrement auto-corrigés</strong> : mélanger des questions dont certaines attendent une
-correction manuelle brouillerait votre lecture sans rien apporter. Coché d'office en Millionnaire.</p>
-<p>Les questions déjà répondues restent en tête, dans l'ordre où elles l'ont été ; les autres sont
-tirées au sort, à chaque affichage. Les blocs de cours ne bougent pas, et vos vues gardent toujours
+<p>Examen, Blind et Millionnaire (coché d'office), sur les chapitres <strong>entièrement
+auto-corrigés</strong> seulement. Les questions répondues restent en tête, dans leur ordre ; les
+autres sont retirées au sort à chaque affichage. Les cours ne bougent pas, et vos vues gardent
 l'ordre publié.</p>
 
 <h4>📄 Question par question</h4>
-<p>Proposé en Examen et Blind. Un écran = un élément, blocs de cours compris, avec navigation libre
-dans les deux sens. À l'ouverture on se place sur la première étape non faite. La pagination
-s'efface dès que la copie est rendue.</p>
+<p>Examen et Blind. Un écran par élément, cours compris, navigation libre. On s'ouvre sur la
+première étape non faite ; la pagination disparaît une fois la copie rendue.</p>
 `
         },
 
@@ -332,8 +305,8 @@ l'application. Travaillez dans l'une ou dans l'autre, pas dans les deux.</p>
 .aide-icone:focus-visible { box-shadow:0 0 0 2px #fff, 0 0 0 4px #2563eb; }
 .aide-overlay { position:fixed; inset:0; z-index:30000; display:flex; align-items:center;
     justify-content:center; padding:1rem; background:rgba(15,23,42,.6); }
-.aide-contenu { background:#fff; border-radius:12px; max-width:640px; width:100%;
-    max-height:85vh; display:flex; flex-direction:column;
+.aide-contenu { background:#fff; border-radius:12px; max-width:820px; width:100%;
+    max-height:90vh; display:flex; flex-direction:column;
     box-shadow:0 20px 50px rgba(0,0,0,.35); }
 .aide-entete { display:flex; align-items:center; justify-content:space-between;
     gap:1rem; padding:1rem 1.25rem; border-bottom:1px solid #e2e8f0; }
@@ -350,7 +323,9 @@ l'application. Travaillez dans l'une ou dans l'autre, pas dans les deux.</p>
 .aide-table { width:100%; border-collapse:collapse; margin:0.6rem 0; font-size:0.85rem; }
 .aide-table th, .aide-table td { border:1px solid #e2e8f0; padding:0.35rem 0.6rem; text-align:left; }
 .aide-table th { background:#f1f5f9; font-weight:600; color:#334155; }
-@media (max-width:520px) { .aide-corps { font-size:0.88rem; } .aide-table { font-size:0.78rem; } }
+.aide-table td:first-child { white-space:nowrap; }
+@media (max-width:520px) { .aide-corps { font-size:0.88rem; } .aide-table { font-size:0.78rem; }
+    .aide-table td:first-child { white-space:normal; } }
 `;
             document.head.appendChild(style);
         },
