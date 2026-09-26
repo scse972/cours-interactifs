@@ -90,13 +90,13 @@ class TeacherChapters {
                         : config.ordreAleatoire === true
                 },
                 {
-                    // 📄 Examen et Blind, sans condition sur le type de correction : afficher
-                    // une question ouverte seule ne pose aucun problème. Décoché par défaut,
-                    // car ça change toute l'expérience de l'apprenant.
+                    // 📄 Examen, Blind et Millionnaire, sans condition sur le type de
+                    // correction : afficher une question ouverte seule ne pose aucun problème.
+                    // Décoché par défaut, car ça change toute l'expérience de l'apprenant.
                     cle: 'questionParQuestion',
                     libelle: '📄 Question par question',
                     aide: 'Une seule question affichée à la fois, avec navigation libre dans les deux sens. Les blocs de cours comptent comme des étapes.',
-                    proposable: ['exam', 'blind'].includes(chapterMode),
+                    proposable: ['exam', 'blind', 'millionnaire'].includes(chapterMode),
                     actif: config.questionParQuestion === true
                 }
                 // 🤖 Mode anti-IA : à venir. Il prendra place ici, sur le même modèle.

@@ -448,8 +448,10 @@ class StudentWorkEditor {
         document.getElementById('millionnaire-restart-btn').addEventListener('click', async () => {
             overlay.remove();
             await window.ChapterSubmission._resetAutoQuestions();
-            // Nouvelle tentative = nouveau tirage de l'ordre des questions.
+            // Nouvelle tentative = nouveau tirage de l'ordre des questions, puis la
+            // pagination le relit : sinon « Suivant » suivrait l'ancien ordre.
             window.ChapterOrdre?.appliquer();
+            window.ChapterPagination?.init();
         });
 
         document.getElementById('millionnaire-submit-btn').addEventListener('click', async () => {

@@ -93,6 +93,7 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Recommencer | `_resetAutoQuestions()` — remet à zéro les questions auto **et semi**, conserve les manuelles, puis re-tire l'ordre |
 | Retour sur le chapitre | **Pas de reprise** : la tentative en cours est effacée et l'ordre re-tiré, y compris après un simple rechargement |
 | Ordre des questions | Tiré au sort **par défaut** si le chapitre est entièrement auto-corrigé |
+| Question par question | Possible ; « Recommencer » relance la pagination (`ChapterPagination.init()`), qui suit le nouvel ordre depuis la première étape à faire |
 
 > Le rechargement compte comme une nouvelle tentative : c'est ce qui empêche de « sauvegarder » une
 > bonne série en quittant la page. Un bandeau prévient l'apprenant, sinon il croirait avoir perdu ses
@@ -153,7 +154,7 @@ et le découpage de l'affichage changent**.
 | Option | Modes concernés | Condition | Défaut |
 |---|---|---|---|
 | 🎲 Ordre aléatoire | Examen, Blind, Millionnaire | Chapitre **entièrement auto-corrigé** | coché en Millionnaire, décoché ailleurs |
-| 📄 Question par question | Examen, Blind | aucune | décoché |
+| 📄 Question par question | Examen, Blind, Millionnaire | aucune | décoché |
 
 Sur la carte du chapitre, elles s'affichent en liste d'interrupteurs sous le menu du mode, et
 seulement quand elles sont proposées. Ajouter une option — le futur **mode anti-IA** notamment —

@@ -45,7 +45,7 @@ cours-interactifs/                         # Racine du dépôt (servie sur GitHu
 │   │   ├── chapter/
 │   │   │   ├── chapterBilan.js            #   Bilan de chapitre
 │   │   │   ├── chapterOrdre.js            #   Ordre d'affichage des questions (option aléatoire)
-│   │   │   ├── chapterPagination.js       #   Affichage question par question (Examen, Blind)
+│   │   │   ├── chapterPagination.js       #   Affichage question par question (Examen, Blind, Millionnaire)
 │   │   │   ├── chapterSubmission.js       #   Soumission de chapitre
 │   │   │   └── chapterUI.js               #   UI chapitre
 │   │   ├── vendor/                        #   Bibliothèques tierces embarquées (jamais de CDN :
@@ -417,7 +417,7 @@ stable, pas de l'ordre vu par tel apprenant. Voir `src/js/chapter/chapterOrdre.j
 
 ## 📄 Option « question par question »
 
-Proposée aux modes **Examen et Blind**, sans condition sur le type de correction — afficher une question
+Proposée aux modes **Examen, Blind et Millionnaire**, sans condition sur le type de correction — afficher une question
 ouverte seule à l'écran ne pose aucun problème. Décochée par défaut : elle change toute l'expérience.
 Stockée dans `chapter_config` (`questionParQuestion`).
 

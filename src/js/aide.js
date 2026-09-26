@@ -139,8 +139,9 @@ autres sont retirées au sort à chaque affichage. Les cours ne bougent pas, et 
 l'ordre publié.</p>
 
 <h4>📄 Question par question</h4>
-<p>Examen et Blind. Un écran par élément, cours compris, navigation libre. On s'ouvre sur la
-première étape non faite ; la pagination disparaît une fois la copie rendue.</p>
+<p>Examen, Blind et Millionnaire. Un écran par élément, cours compris, navigation libre. On s'ouvre
+sur la première étape non faite ; la pagination disparaît une fois la copie rendue. En
+Millionnaire, « Recommencer » repart de la première question, dans le nouvel ordre.</p>
 `
         },
 
