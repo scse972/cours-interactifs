@@ -172,8 +172,10 @@ navigation libre dans les deux sens. À l'ouverture, on se place sur la premièr
 pagination s'efface dès que le chapitre est rendu ou verrouillé.
 
 **Anti-IA** (`ChapterAntiIA`) — l'intitulé des questions visées (toutes, ou auto et semi) est retiré
-du DOM jusqu'au clic de l'apprenant, puis remasqué au clic hors de la question (persistant) ou hors
-de l'intitulé (temporaire), et dès que la fenêtre perd le focus. Initialisé avant la révélation de la
+du DOM. Persistant : un clic l'affiche en place, un clic hors de la question le remasque.
+Temporaire : le survol l'affiche dans une fenêtre posée par-dessus (rien ne se décale), retirée dès
+que le pointeur en sort. Dans les deux cas, tout se remasque quand la fenêtre du navigateur perd le
+focus. Initialisé avant la révélation de la
 page, pour que l'énoncé ne s'affiche jamais. Reste actif sur une copie rendue.
 
 > La **source unique de vérité des six modes** est `src/js/core/getExamContext.js`. Le mode effectif

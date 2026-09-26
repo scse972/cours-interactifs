@@ -1,25 +1,33 @@
 // ============================================================================
-// CHAPTER ANTI-IA - Énoncés masqués jusqu'au clic
+// CHAPTER ANTI-IA - Énoncés masqués
 // ============================================================================
 // Option « 🤖 Anti-IA », disponible dans les modes Examen, Blind et Millionnaire.
 // Un agent intégré au navigateur, ou une capture d'écran confiée à une IA, lit d'un
-// coup tout l'énoncé d'un chapitre. Ici l'intitulé d'une question n'est affiché que
-// lorsque l'apprenant clique dessus, et il se remasque dès qu'il clique ailleurs.
+// coup tout l'énoncé d'un chapitre. Ici l'intitulé d'une question n'est lisible qu'à
+// la demande de l'apprenant, une question à la fois.
 //
 // Quatre niveaux, réglés par le formateur (chapter_config.antiIA) :
 //
-//   tous-persistant   toutes les questions   remasquée hors de la QUESTION
-//   tous-temporaire   toutes les questions   remasquée hors de l'INTITULÉ
-//   auto-persistant   auto et semi           remasquée hors de la question
-//   auto-temporaire   auto et semi           remasquée hors de l'intitulé
+//   tous-persistant   toutes les questions   clic → affiché EN PLACE, remasqué au
+//                                            clic hors de la question
+//   tous-temporaire   toutes les questions   survol → affiché dans une FENÊTRE posée
+//                                            par-dessus, fermée dès qu'on en sort
+//   auto-persistant   auto et semi           comme tous-persistant
+//   auto-temporaire   auto et semi           comme tous-temporaire
+//
+// La fenêtre du niveau temporaire ne décale rien : la page garde sa mise en page, la
+// fenêtre recouvre ce qui suit le temps de la lecture. Sur écran tactile, où il n'y a
+// pas de survol, un toucher l'ouvre et un toucher ailleurs la ferme ; au clavier, elle
+// suit le focus du voile.
 //
 // Les blocs de cours ne sont jamais masqués.
 //
 // MASQUER, C'EST RETIRER DU DOM. Un agent lit la page, pas l'écran : un simple flou
 // laisserait tout le texte à sa portée. L'intitulé et l'indication partent donc dans
-// une WeakMap indexée par la section, et ne reviennent dans la page que révélés.
-// Indexer par la section fait que l'ordre peut être retiré au sort (Millionnaire) ou
-// la page découpée en étapes (pagination) sans que ce module ait à le savoir.
+// une WeakMap indexée par la section, et ne reviennent dans la page que le temps de
+// la lecture. Indexer par la section fait que l'ordre peut être retiré au sort
+// (Millionnaire) ou la page découpée en étapes (pagination) sans que ce module ait à
+// le savoir.
 //
 // Limites, dites aussi dans l'aide : les bonnes réponses (data-correct-answers) restent
 // dans la page, cours.json est public, et une capture prise pendant qu'un énoncé est
@@ -35,18 +43,15 @@ const ChapterAntiIA = {
     MODES: ['exam', 'blind', 'millionnaire'],
 
     NIVEAUX: {
-        'tous-persistant': { portee: 'tous', remasque: 'question' },
-        'tous-temporaire': { portee: 'tous', remasque: 'intitule' },
-        'auto-persistant': { portee: 'auto', remasque: 'question' },
-        'auto-temporaire': { portee: 'auto', remasque: 'intitule' }
+        'tous-persistant': { portee: 'tous', affichage: 'place' },
+        'tous-temporaire': { portee: 'tous', affichage: 'fenetre' },
+        'auto-persistant': { portee: 'auto', affichage: 'place' },
+        'auto-temporaire': { portee: 'auto', affichage: 'fenetre' }
     },
 
-    // Ce qui, dans une question, fait partie de « l'intitulé » en niveau temporaire :
-    // lire l'indication, c'est encore lire l'énoncé.
-    ZONE_INTITULE: '.question-text, .hint-container, [data-hint-btn]',
-
     _contenus: new WeakMap(),
-    _revelee: null,
+    _revelee: null,       // persistant : la section dont l'énoncé est affiché en place
+    _fenetre: null,       // temporaire : { section, element } de la fenêtre ouverte
     _niveau: null,
     _ecoutesBranchees: false,
 
@@ -63,6 +68,10 @@ const ChapterAntiIA = {
         if (new URLSearchParams(window.location.search).get('teacher_view') === 'true') return null;
         if (!this.estProposable()) return null;
         return this.NIVEAUX[window.currentChapterConfig?.antiIA] || null;
+    },
+
+    _enFenetre() {
+        return this._niveau?.affichage === 'fenetre';
     },
 
     // ------------------------------------------------------------------------
@@ -99,13 +108,15 @@ const ChapterAntiIA = {
             texte: texte.innerHTML,
             indication: indication ? indication.innerHTML : null
         });
+        if (indication) indication.innerHTML = '';
+
+        if (this._enFenetre()) this._brancherSurvol(section, texte);
         this._voiler(section);
     },
 
     _voiler(section) {
         const texte = section.querySelector('.question-text');
-        const indication = section.querySelector('.hint-content');
-        const temporaire = this._niveau.remasque === 'intitule';
+        const fenetre = this._enFenetre();
 
         texte.classList.add('anti-ia-masque');
         // Pas un <button> : le verrouillage au rendu désactive tous les boutons de la
@@ -113,23 +124,42 @@ const ChapterAntiIA = {
         texte.innerHTML = `
             <div class="anti-ia-voile" role="button" tabindex="0"
                  aria-label="Afficher l'énoncé de la question">
-                🙈 Énoncé masqué — cliquer pour l'afficher
-                ${temporaire ? '<small>Il se masquera dès que vous cliquerez ailleurs.</small>' : ''}
+                🙈 Énoncé masqué — ${fenetre ? 'survoler' : 'cliquer'} pour l'afficher
+                ${fenetre ? '<small>Il disparaît dès que le pointeur sort de sa fenêtre.</small>' : ''}
             </div>`;
-        if (indication) indication.innerHTML = '';
 
         const voile = texte.querySelector('.anti-ia-voile');
-        voile.addEventListener('click', () => this.reveler(section));
+        const ouvrir = () => fenetre ? this.ouvrirFenetre(section) : this.reveler(section);
+        voile.addEventListener('click', ouvrir);
         voile.addEventListener('keydown', (evenement) => {
             if (evenement.key === 'Enter' || evenement.key === ' ') {
                 evenement.preventDefault();
-                this.reveler(section);
+                ouvrir();
             }
+        });
+        if (fenetre) voile.addEventListener('focus', ouvrir);
+    },
+
+    /**
+     * Temporaire : posé une fois par section, sur `.question-text`, qui contient le voile
+     * ET la fenêtre. Passer du voile à la fenêtre ne compte donc pas comme une sortie ;
+     * seule la sortie des deux la ferme. Le toucher n'a pas de survol : un « leave »
+     * tactile suit chaque toucher, il fermerait la fenêtre aussitôt ouverte.
+     */
+    _brancherSurvol(section, texte) {
+        texte.addEventListener('pointerenter', (evenement) => {
+            if (evenement.pointerType !== 'touch') this.ouvrirFenetre(section);
+        });
+        texte.addEventListener('pointerleave', (evenement) => {
+            if (evenement.pointerType !== 'touch') this.fermerFenetre();
+        });
+        texte.addEventListener('focusout', (evenement) => {
+            if (!texte.contains(evenement.relatedTarget)) this.fermerFenetre();
         });
     },
 
     // ------------------------------------------------------------------------
-    // RÉVÉLER / REMASQUER
+    // PERSISTANT : AFFICHÉ EN PLACE
     // ------------------------------------------------------------------------
 
     reveler(section) {
@@ -148,31 +178,68 @@ const ChapterAntiIA = {
 
     masquer(section) {
         if (!section || !this._contenus.has(section)) return;
+        const indication = section.querySelector('.hint-content');
+        if (indication) indication.innerHTML = '';
         this._voiler(section);
         if (this._revelee === section) this._revelee = null;
     },
 
+    // ------------------------------------------------------------------------
+    // TEMPORAIRE : FENÊTRE AU SURVOL
+    // ------------------------------------------------------------------------
+
+    ouvrirFenetre(section) {
+        const contenu = this._contenus.get(section);
+        if (!contenu) return;
+        if (this._fenetre?.section === section) return;
+        this.fermerFenetre();
+
+        const texte = section.querySelector('.question-text');
+        // L'indication n'y figure que si l'apprenant l'a ouverte : lire l'indication,
+        // c'est encore lire l'énoncé, elle est donc masquée avec lui.
+        const conteneurIndication = section.querySelector('.hint-container');
+        const indicationOuverte = conteneurIndication && conteneurIndication.style.display !== 'none'
+            && contenu.indication;
+
+        const element = document.createElement('div');
+        element.className = 'anti-ia-fenetre';
+        element.setAttribute('role', 'tooltip');
+        element.innerHTML = contenu.texte +
+            (indicationOuverte ? `<div class="anti-ia-fenetre-indication">💡 ${contenu.indication}</div>` : '');
+        texte.appendChild(element);
+
+        this._fenetre = { section, element };
+    },
+
+    fermerFenetre() {
+        if (!this._fenetre) return;
+        this._fenetre.element.remove();
+        this._fenetre = null;
+    },
+
     masquerTout() {
         if (this._revelee) this.masquer(this._revelee);
+        this.fermerFenetre();
     },
 
     /**
-     * Posées une seule fois. Un clic ou un focus hors de la zone autorisée remasque ;
-     * quitter la fenêtre ou l'onglet remasque tout (agent qui prend la main, outil de
-     * capture qui vole le focus).
+     * Posées une seule fois. Persistant : un clic ou un focus hors de la question
+     * remasque. Temporaire : un toucher ou un focus hors de la fenêtre la ferme (le
+     * survol, lui, est géré section par section). Quitter la fenêtre du navigateur ou
+     * l'onglet remasque tout (agent qui prend la main, outil de capture qui vole le
+     * focus).
      */
     _brancherEcoutes() {
         if (this._ecoutesBranchees) return;
         this._ecoutesBranchees = true;
 
         const horsZone = (evenement) => {
-            const section = this._revelee;
-            if (!section) return;
             const cible = evenement.target;
-            const dansQuestion = section.contains(cible);
-            const dansIntitule = dansQuestion && !!cible.closest?.(this.ZONE_INTITULE);
-            const garde = this._niveau.remasque === 'question' ? dansQuestion : dansIntitule;
-            if (!garde) this.masquer(section);
+            if (this._revelee && !this._revelee.contains(cible)) this.masquer(this._revelee);
+            if (this._fenetre) {
+                const texte = this._fenetre.section.querySelector('.question-text');
+                if (!texte.contains(cible)) this.fermerFenetre();
+            }
         };
 
         document.addEventListener('pointerdown', horsZone, true);

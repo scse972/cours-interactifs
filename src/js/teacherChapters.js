@@ -101,13 +101,14 @@ class TeacherChapters {
                     actif: config.questionParQuestion === true
                 },
                 {
-                    // 🤖 Examen, Blind et Millionnaire. Les intitulés sont masqués jusqu'au
-                    // clic de l'apprenant (cf. chapter/chapterAntiIA.js) : « persistant »
-                    // les laisse visibles tant qu'il travaille dans la question,
-                    // « temporaire » les remasque dès qu'il clique hors de l'intitulé.
+                    // 🤖 Examen, Blind et Millionnaire. Les intitulés ne se lisent qu'à la
+                    // demande de l'apprenant (cf. chapter/chapterAntiIA.js) : « persistant »
+                    // les affiche en place au clic, jusqu'à un clic hors de la question ;
+                    // « temporaire » les montre au survol, dans une fenêtre qui disparaît dès
+                    // que le pointeur en sort.
                     cle: 'antiIA',
                     libelle: '🤖 Anti-IA',
-                    aide: "Les énoncés sont masqués : l'apprenant clique dessus pour les lire, ils se remasquent dès qu'il clique ailleurs. Contre les agents IA du navigateur et les captures d'écran.",
+                    aide: "Les énoncés sont masqués. Persistants : un clic les affiche, jusqu'à un clic hors de la question. Temporaires : le survol les montre dans une fenêtre qui disparaît dès qu'on en sort. Contre les agents IA du navigateur et les captures d'écran.",
                     proposable: ['exam', 'blind', 'millionnaire'].includes(chapterMode),
                     choix: [
                         { valeur: '',                libelle: 'Désactivé' },

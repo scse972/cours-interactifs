@@ -739,6 +739,38 @@
     outline: none;
 }
 
+/* Niveau temporaire : l'énoncé s'affiche dans une fenêtre posée sur le voile, sans rien
+   décaler — elle recouvre ce qui suit le temps de la lecture. */
+.anti-ia-masque {
+    position: relative;
+}
+
+.anti-ia-fenetre {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    box-sizing: border-box;
+    min-height: 100%;      /* couvre au moins tout le voile, même pour un énoncé court */
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 0.9rem 1rem;
+    background: white;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(16, 24, 40, 0.22);
+    color: #2c3e50;
+    text-align: left;
+}
+
+.anti-ia-fenetre-indication {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed #d6dbdf;
+    color: #7b5800;
+}
+
 /* ============================================
    AFFICHAGE QUESTION PAR QUESTION
    Voir chapterPagination.js

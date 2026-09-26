@@ -438,15 +438,18 @@ d'un seul tenant. Voir `src/js/chapter/chapterPagination.js`.
 Proposée aux modes **Examen, Blind et Millionnaire**. Stockée dans `chapter_config` (`antiIA`), avec
 quatre niveaux choisis par un menu sur la carte du chapitre :
 
-| Valeur | Libellé | Questions masquées | Remasquée au clic… |
+| Valeur | Libellé | Questions masquées | Lecture de l'énoncé |
 |---|---|---|---|
-| `tous-persistant` | Intitulés persistants | toutes | hors de la question |
-| `tous-temporaire` | Intitulés temporaires | toutes | hors de l'intitulé (et de l'indication), réponse comprise |
-| `auto-persistant` | Auto-corrigés persistants | auto et semi | hors de la question |
-| `auto-temporaire` | Auto-corrigés temporaires | auto et semi | hors de l'intitulé, réponse comprise |
+| `tous-persistant` | Intitulés persistants | toutes | clic → affiché **en place**, remasqué au clic hors de la question |
+| `tous-temporaire` | Intitulés temporaires | toutes | survol → **fenêtre** posée par-dessus, fermée dès que le pointeur en sort |
+| `auto-persistant` | Auto-corrigés persistants | auto et semi | comme `tous-persistant` |
+| `auto-temporaire` | Auto-corrigés temporaires | auto et semi | comme `tous-temporaire` |
 
-L'apprenant clique sur l'énoncé pour le lire ; une seule question est révélée à la fois, et quitter
-la fenêtre ou l'onglet remasque tout. Les blocs de cours ne sont jamais masqués. Le but : priver
+Une seule question est lisible à la fois, et quitter la fenêtre ou l'onglet remasque tout. La
+fenêtre du niveau temporaire ne décale rien : la mise en page reste celle du voile, la fenêtre
+recouvre ce qui suit. Sans survol possible (tactile), un toucher l'ouvre et un toucher ailleurs la
+ferme ; au clavier, elle suit le focus du voile. L'indication n'y figure que si l'apprenant l'a
+ouverte. Les blocs de cours ne sont jamais masqués. Le but : priver
 un agent IA intégré au navigateur, ou une capture d'écran, de l'énoncé complet du chapitre.
 
 **Masquer, c'est retirer du DOM** : l'intitulé et l'indication partent dans une `WeakMap` indexée
