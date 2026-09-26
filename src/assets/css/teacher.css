@@ -111,12 +111,27 @@
 /* Carte d'un chapitre : l'en-tête (pastilles, 👁 et cadenas, titre), puis des sections
    empilées — le mode et ses options, la limite de date. */
 .chapter-control-card {
-    background: white;
-    border: 1px solid #eee;
+    --teinte-etat: #adb5bd;
+    --fond-etat: #f8f9fa;
+    background: linear-gradient(180deg, var(--fond-etat) 0, white 5.5rem);
+    border: 1px solid #e3e7eb;
+    border-left: 4px solid var(--teinte-etat);
     border-radius: 8px;
     padding: 1.25rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
+.chapter-control-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.08), 0 10px 24px rgba(16, 24, 40, 0.10);
+}
+
+/* Bordure gauche de la couleur de la pastille d'état, comme dans « Rendus à corriger » ;
+   le haut de la carte en prend une teinte très pâle. */
+.carte-status-available { --teinte-etat: #27ae60; --fond-etat: #eefaf3; }
+.carte-status-locked    { --teinte-etat: #34495e; --fond-etat: #eef1f4; }
+.carte-status-expired   { --teinte-etat: #c291d5; --fond-etat: #f7f0fa; }
 
 .control-header {
     display: flex;

@@ -103,7 +103,7 @@ class TeacherChapters {
             ].filter(option => option.proposable);
 
             html += `
-                <div class="chapter-control-card">
+                <div class="chapter-control-card carte-${statusClass}">
                     <div class="control-header">
                         <div class="control-header-badges">
                             <span class="control-status ${statusClass}">${statusText}</span>
