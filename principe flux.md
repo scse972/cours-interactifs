@@ -30,7 +30,7 @@ L'infrastructure est **multi-parcours** : une même instance peut servir plusieu
 |---|---|
 | `math-Term:teacher:users_list` | `[{id:"STU001", name:"Jean", class:"TG3", type:"student"}, ...]` |
 | `math-Term:STU001:student_STU001_progress` | `{chapters:{1:{completed:true,...}}, scores:{}, totalCompleted:3, questionAttempts:{...}}` |
-| `math-Term:config:chapter_config` | `{1:{locked:false, examMode:true, endDate:"2026-06-01T19:00:00", dateLimitEnabled:true}, ...}` |
+| `math-Term:config:chapter_config` | `{1:{locked:false, chapterMode:"exam", examMode:true, endDate:"2026-06-01T19:00:00", dateLimitEnabled:true}, ...}` |
 | `math-Term:STU001:course_progress` | Progression de lecture des pages de cours |
 | `math-Term:STU001:userAnswers` | Réponses brutes aux questions (restauration) |
 
@@ -171,7 +171,8 @@ Pour chaque chapitre, le formateur peut :
 | Action | Stockage dans Supabase |
 |---|---|
 | 🔒 **Verrouiller/Déverrouiller** | `slug:config:chapter_config` → `{1: {locked: true/false}}` |
-| 📝 **Mode examen** | `slug:config:chapter_config` → `{1: {examMode: true/false}}` |
+| 🎯 **Mode du chapitre** | `slug:config:chapter_config` → `{1: {chapterMode: "exam", examMode: true}}` — `chapterMode` fait foi (six valeurs), `examMode` n'est gardé que pour l'ancien code |
+| 🎲📄 **Options du mode** | `slug:config:chapter_config` → `{1: {ordreAleatoire: true, questionParQuestion: false}}` |
 | 📅 **Limite de date** | `slug:config:chapter_config` → `{1: {endDate: "2026-06-01T19:00:00", dateLimitEnabled: true}}` |
 
 ### 7.4 Simulation apprenant (icône 👁)
@@ -235,7 +236,7 @@ Pour les questions de type `manuel` et `semi` en attente, le formateur utilise `
 | `parcours.js` | Détection slug, gestion token, scoped storage |
 | `storage.js` | Backend Supabase + cache localStorage + queue offline + sync auto |
 | `dataStorage.js` | Couche métier : users, progression, questions, auth |
-| `teacherChapters.js` | Interface formateur : verrous, examen, dates |
+| `teacherChapters.js` | Interface formateur : verrous, mode et options du mode, dates |
 | `correctionModal.js` | Modal de correction manuelle |
 | `chapters_index.json` | Définition locale des chapitres/questions (généré depuis Excel) |
 

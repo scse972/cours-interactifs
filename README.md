@@ -358,8 +358,8 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 |---|---|---|
 | Découverte | 📖 | Feedback immédiat, l'apprenant peut réessayer |
 | Examen | 📝 | Pas de feedback, enregistrement en temps réel, tout se verrouille au rendu |
-| Blind | 🥽 | Saisie silencieuse, bilan min/max à la validation |
-| Millionnaire | 💰 | Une erreur réinitialise les questions auto-corrigées. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
+| Blind | 🥽 | Aucun retour pendant la saisie. Au rendu, l'apprenant voit sa note — ou une fourchette, tant que des réponses rédigées attendent la correction — **sans savoir où il s'est trompé**, puis valide définitivement ou recommence, **autant de fois qu'il veut**. Une erreur vaut 0, jamais de points négatifs |
+| Millionnaire | 💰 | Une réponse fausse ouvre un choix : **recommencer** (questions auto et semi-automatiques remises à zéro, manuelles conservées) ou **rendre la copie**. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
 | Atelier AR | 🧾 | Les questions ouvertes se valident **en main propre**, par échange de codes — dans l'application |
 | Consigne | 📋 | Travail **sur papier** : feuille nominative imprimable avec un QRCode par question. Côté élève, rien ne change (comportement Découverte) ; côté formateur la correction est accessible **même sans rendu**, les champs vides étant normaux |
 
@@ -415,7 +415,7 @@ Les blocs de cours ne bougent pas : seules les questions permutent entre elles. 
 (modale de correction, bilan) conservent toujours l'ordre publié — le formateur a besoin d'une référence
 stable, pas de l'ordre vu par tel apprenant. Voir `src/js/chapter/chapterOrdre.js`.
 
-## 📄 Option « questions par questions »
+## 📄 Option « question par question »
 
 Proposée aux modes **Examen et Blind**, sans condition sur le type de correction — afficher une question
 ouverte seule à l'écran ne pose aucun problème. Décochée par défaut : elle change toute l'expérience.

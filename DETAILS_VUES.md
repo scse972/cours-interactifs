@@ -76,8 +76,10 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Boutons "Vérifier" cachés | ✅ |
 | Réponse saisie | Enregistrée **en silence** : `onAnswerValidated` avec `isCorrect = null` et `points = 0` |
 | Feedback | Aucun, ni à la saisie ni à la restauration (`restoreAllAnswers` sort avant l'affichage) |
-| Rendu | `validateAllQuestions()` puis **bilan min/max** en modale (`ChapterBilan.showBlindBilan`) |
-| Après confirmation | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé |
+| Rendu | `validateAllQuestions()` puis **bilan min/max** en modale (`ChapterBilan.showBlindBilan`) : la note ou la fourchette, **sans le détail des questions fausses** — rien n'est encore rendu |
+| ✅ Valider définitivement | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé, comme en Examen |
+| 🔄 Recommencer | `_resetBlindAttempt` — réponses auto et semi effacées, manuelles conservées ; l'apprenant corrige et rend de nouveau. **Sans limite** de tentatives |
+| Message sous le chapitre | Aucun : le « Vous ne pouvez plus modifier » d'Examen serait faux tant que « Recommencer » reste possible |
 
 > Le bilan min/max n'est pas une estimation optimiste : une question auto sans réponse ou fausse
 > compte 0 dans les **deux** bornes, c'est définitif. Seules les questions manuelles ou semi avec une
@@ -166,7 +168,7 @@ blocs de cours ne bougent pas. Les vues formateur gardent toujours l'ordre publi
 navigation libre dans les deux sens. À l'ouverture, on se place sur la première étape non faite. La
 pagination s'efface dès que le chapitre est rendu ou verrouillé.
 
-> La **source unique de vérité des cinq modes** est `src/js/core/getExamContext.js`. Le mode effectif
+> La **source unique de vérité des six modes** est `src/js/core/getExamContext.js`. Le mode effectif
 > d'un apprenant est **figé à son premier démarrage** (`frozenChapterMode`) : le formateur qui change
 > le mode ensuite n'affecte que ceux qui n'ont pas commencé. Les deux options ci-dessus, elles, sont
 > relues à chaque affichage.
