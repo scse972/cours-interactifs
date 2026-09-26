@@ -160,7 +160,7 @@ class TeacherStudents {
                     <label for="filter-student-status">Statut:</label>
                     <select id="filter-student-status" onchange="dashboard.modules.students.filterStudents()">
                         <option value="all">Tous</option>
-                        <option value="validated">✅ Terminé</option>
+                        <option value="validated">✅ Correction publiée</option>
                         <option value="returned_for_revision">🔄 À revoir</option>
                         <option value="submitted">📤 Rendu</option>
                         <option value="late_submitted">⚠️ Rendu en retard</option>
@@ -575,7 +575,7 @@ class TeacherStudents {
     }
 
     async validateFinal(studentId, chapterId) {
-        if (!await confirm('Valider définitivement cette copie ?')) return;
+        if (!await confirm('Publier la correction de cette copie ?')) return;
         await this.dashboard.updateSubmissionStatus(studentId, chapterId, 'validated');
         this.refresh();
         await this._refreshSubmissionsBadge();
@@ -589,7 +589,7 @@ class TeacherStudents {
     }
 
     async reopenApproved(studentId, chapterId) {
-        if (!await confirm('Rouvrir ce chapitre terminé pour modification ?')) return;
+        if (!await confirm('Rouvrir cette correction publiée pour modification ?')) return;
         
         const slug = window.currentParcoursSlug;
         if (!slug) return;
@@ -613,7 +613,7 @@ class TeacherStudents {
     }
 
     async returnApprovedForRevision(studentId, chapterId) {
-        if (!await confirm('Renvoyer ce chapitre terminé à l\'apprenant pour reprise ?')) return;
+        if (!await confirm('Renvoyer à l\'apprenant, pour reprise, ce chapitre dont la correction est publiée ?')) return;
         
         const slug = window.currentParcoursSlug;
         if (!slug) return;

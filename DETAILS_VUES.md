@@ -77,7 +77,7 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Réponse saisie | Enregistrée **en silence** : `onAnswerValidated` avec `isCorrect = null` et `points = 0` |
 | Feedback | Aucun, ni à la saisie ni à la restauration (`restoreAllAnswers` sort avant l'affichage) |
 | Rendu | `validateAllQuestions()` puis **bilan min/max** en modale (`ChapterBilan.showBlindBilan`) : la note ou la fourchette, **sans le détail des questions fausses** — rien n'est encore rendu |
-| ✅ Valider définitivement | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé, comme en Examen |
+| 📤 Rendre définitivement | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé, comme en Examen |
 | 🔄 Recommencer | `_resetBlindAttempt` — la tentative rendue est archivée (`tentativesPassees`), `tentative` avance, réponses auto et semi effacées, manuelles conservées ; l'apprenant corrige et rend de nouveau. **Sans limite** de tentatives, chacune pouvant coûter des points (pénalité par tentative) |
 | Rendu après rechargement pendant le bilan | Compte comme une nouvelle tentative (`examModeValidated` déjà vrai) : on ne contourne pas « Recommencer » |
 | À la correction | L'effet des tentatives est **proposé dans le bonus/pénalité** (avec son explication dans l'appréciation), comme la pénalité de cours ; la formule de la note ne change pas |
@@ -383,7 +383,7 @@ lui appartient et n'est annoncé qu'à la validation.
 ### Le bilan du mode Blind est un écran de décision, pas un bilan
 
 `showBlindBilan()` n'est pas une variante du bilan ordinaire : il s'affiche **au moment de rendre**,
-avec deux boutons — « ✅ Valider définitivement » et « 🔄 Recommencer ». L'apprenant a avancé sans
+avec deux boutons — « 📤 Rendre définitivement » et « 🔄 Recommencer ». L'apprenant a avancé sans
 aucun retour ; on lui montre la fourchette juste avant qu'il tranche.
 
 Sa règle propre : **en Blind, une question auto ratée ou non répondue vaut 0, jamais −points.** On ne
@@ -453,9 +453,15 @@ avec la formule proportionnelle. Seule leur pénalité d'essais est mutualisée.
 trois dates par `recomputeSubmissionStatus()`, appelée à la fin de **chaque** `recomputeChapterStats()`
 — c'est-à-dire à peu près à chaque action de l'apprenant ou du formateur.
 
+> **Vocabulaire.** L'apprenant **rend** sa copie (bouton « 📤 Rendre la copie », statuts « Rendu »,
+> « Rendu en retard », onglet « 📬 Rendus à corriger »). Le formateur **publie la correction**
+> (bouton « ✅ Publier la correction », statut « Correction publiée » = `validated`). Entre les deux,
+> une copie rendue entièrement corrigée s'affiche « 📝 Corrigé, à publier ». Jamais « rendre » ni
+> « valider » pour le geste du formateur : les deux applications (site et XSpro) disent la même chose.
+
 | Date | Posée quand | Statut dérivé |
 |---|---|---|
-| `validatedAt` | le formateur valide la copie | `validated` |
+| `validatedAt` | le formateur publie la correction | `validated` |
 | `revisionRequestedAt` | le formateur la renvoie pour reprise | `returned_for_revision` |
 | `submittedAt` | l'apprenant rend sa copie | `submitted` ou `late_submitted` |
 | *aucune* | — | `not_submitted` |
@@ -497,7 +503,7 @@ C'est le dédoublement qui rendait le défaut possible, et il y en avait **deux 
 
 Deux champs pour une information, chacun lu par une moitié du code : il suffisait qu'un écrivain
 n'en connaisse qu'un pour que l'autre moitié ignore l'événement. `validatedAt` a été gardé parce que
-son nom correspond au statut `validated` et au geste « Valider » ; `revisionRequestedAt` parce qu'il
+son nom correspond au statut `validated` (le geste s'affiche aujourd'hui « Publier la correction ») ; `revisionRequestedAt` parce qu'il
 était déjà celui que la dérivation lisait.
 
 ### Statuts admis

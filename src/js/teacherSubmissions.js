@@ -266,7 +266,7 @@ class TeacherSubmissions {
             ` : `
                 <div class="empty-submissions">
                     <p>🎉 Aucun rendu à corriger !</p>
-                    <small>Tous les chapitres soumis ont été corrigés.</small>
+                    <small>Toutes les copies rendues ont leur correction publiée.</small>
                 </div>
             `;
             return;
@@ -297,8 +297,8 @@ class TeacherSubmissions {
             correction = { cle: 'a-revoir', libelle: '🔄 En attente de l\'apprenant',
                 aide: 'Copie renvoyée à l\'apprenant : vous la retrouverez ici quand il l\'aura rendue de nouveau.' };
         } else if (total === 0) {
-            correction = { cle: 'prete', libelle: '✅ Prête à valider',
-                aide: 'Aucune question à corriger à la main : il ne reste qu\'à valider la note.' };
+            correction = { cle: 'prete', libelle: '✅ Prête à publier',
+                aide: 'Aucune question à corriger à la main : il ne reste qu\'à publier la correction.' };
         } else if (traitees === 0) {
             correction = { cle: 'a-corriger', libelle: '🟠 À corriger',
                 aide: `Aucune des ${total} question${total > 1 ? 's' : ''} à corriger n'est encore traitée.` };
@@ -306,8 +306,8 @@ class TeacherSubmissions {
             correction = { cle: 'en-correction', libelle: '🔵 En correction',
                 aide: `${traitees} question${traitees > 1 ? 's' : ''} traitée${traitees > 1 ? 's' : ''} sur ${total}, ${restantes} restante${restantes > 1 ? 's' : ''}.` };
         } else {
-            correction = { cle: 'prete', libelle: '✅ Prête à valider',
-                aide: `${total > 1 ? `Les ${total} questions sont traitées` : 'La question est traitée'} : il ne reste qu'à valider la note.` };
+            correction = { cle: 'prete', libelle: '✅ Prête à publier',
+                aide: `${total > 1 ? `Les ${total} questions sont traitées` : 'La question est traitée'} : il ne reste qu'à publier la correction.` };
         }
         correction.pourcentage = total === 0 ? 100 : Math.round(traitees / total * 100);
         correction.compteur = total === 0 ? 'aucune question à corriger'
@@ -316,7 +316,7 @@ class TeacherSubmissions {
         let pastille;
         if (sub.isConsigneMode) {
             pastille = { classe: 'badge-consigne', texte: '📋 Consigne',
-                aide: 'Travail sur papier : rien n\'est rendu dans l\'application. La copie reste ici tant qu\'elle n\'est pas validée.' };
+                aide: 'Travail sur papier : rien n\'est rendu dans l\'application. La copie reste ici tant que sa correction n\'est pas publiée.' };
         } else if (renvoyee) {
             pastille = { classe: 'badge-returned', texte: '🔄 À revoir',
                 aide: `Vous avez renvoyé cette copie à l'apprenant pour qu'il la reprenne${date(sub.revisionRequestedAt) ? `, le ${date(sub.revisionRequestedAt)}` : ''}.` };

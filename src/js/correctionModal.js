@@ -473,9 +473,9 @@ class CorrectionModal {
                     </button>
                     <button class="correction-header-btn btn-success" 
                             id="correction-btn-approve" 
-                            title="Valider définitivement ce chapitre"
+                            title="Publier la correction : la note devient visible pour l'apprenant"
                             >
-                        ✅ Valider
+                        ✅ Publier la correction
                     </button>
                     <button class="close-btn" id="correction-btn-close">&times;</button>
                 </div>
@@ -921,8 +921,8 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
             approveBtn.style.opacity = canApprove ? '' : '0.5';
             approveBtn.style.cursor  = canApprove ? '' : 'not-allowed';
             approveBtn.title = canApprove
-                ? 'Valider définitivement ce chapitre'
-                : 'Corriger toutes les questions manuelles d\'abord';
+                ? 'Publier la correction : la note devient visible pour l\'apprenant'
+                : 'Corriger toutes les questions manuelles avant de publier';
         }
     }
 
@@ -1551,7 +1551,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
      */
     async afterSaveUI(approve, studentId, chapterId) {
         if (approve) {
-            alert('✅ Chapitre validé définitivement !');
+            alert('✅ Correction publiée !');
         } else {
             alert('✅ Toutes les corrections ont été sauvegardées !');
         }

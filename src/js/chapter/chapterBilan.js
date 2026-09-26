@@ -674,7 +674,7 @@ ${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
                         ${this.encadreTentatives(chapter, retenue)}
                         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
                             <button class="btn btn-success" id="blind-validate-btn" style="padding: 0.75rem 1.5rem; font-size: 1.1rem;">
-                                ✅ Valider définitivement
+                                📤 Rendre définitivement
                             </button>
                             <button class="btn btn-warning" id="blind-retry-btn" style="padding: 0.75rem 1.5rem; font-size: 1.1rem;">
                                 🔄 Recommencer
@@ -694,9 +694,10 @@ ${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
         const submitBtn = document.getElementById('submit-chapter-btn');
         if (submitBtn) submitBtn.style.display = 'none';
 
-        // Événement "Valider définitivement"
+        // Événement "Rendre définitivement" — un dépôt de l'apprenant : il prend le verbe du
+        // dépôt, « rendre ». « Publier » est réservé au geste du formateur.
         document.getElementById('blind-validate-btn').addEventListener('click', async () => {
-            if (!await ChapterSubmission._confirmModal('✅ Êtes-vous sûr de vouloir VALIDER DÉFINITIVEMENT ce chapitre ?\n\nCette action est irréversible.')) return;
+            if (!await ChapterSubmission._confirmModal('📤 Êtes-vous sûr de vouloir RENDRE DÉFINITIVEMENT votre copie ?\n\nVous ne pourrez plus la modifier.')) return;
             await ChapterSubmission._finalizeBlindSubmission(chapterConfig);
             // Réafficher le bouton de rendu (mis à jour par updateSubmitButton)
             const submitBtn = document.getElementById('submit-chapter-btn');

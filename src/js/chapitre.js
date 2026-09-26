@@ -263,7 +263,7 @@ async function initChapterPage() {
         const submitBtn = document.getElementById('submit-chapter-btn');
         if (submitBtn) {
             if (isValidated) {
-                submitBtn.textContent = '✅ Validé par votre évaluateur';
+                submitBtn.textContent = '✅ Correction publiée';
             } else if (isSubmitted) {
                 submitBtn.textContent = '📝 Rendu - En attente de correction';
             } else {
@@ -281,7 +281,7 @@ async function initChapterPage() {
             if (mainContent) mainContent.insertBefore(msgDiv, mainContent.firstChild);
         }
         if (isValidated) {
-            msgDiv.innerHTML = '✅ <strong>Chapitre validé</strong> - Félicitations !';
+            msgDiv.innerHTML = '✅ <strong>Correction publiée</strong> par votre évaluateur — consultez votre corrigé.';
         } else if (isSubmitted) {
             msgDiv.innerHTML = '📝 <strong>Copie rendue</strong> - Plus de modifications possibles.<br>Votre évaluateur la corrigera prochainement.';
         } else {

@@ -330,7 +330,7 @@ const ChapterSubmission = {
         }
 
         if (submissionStatus === 'validated') {
-            await this._alertModal('✅ Ce chapitre a déjà été validé par votre évaluateur.');
+            await this._alertModal('✅ La correction de ce chapitre a déjà été publiée par votre évaluateur.');
             return;
         }
 
@@ -409,7 +409,7 @@ const ChapterSubmission = {
             this.lockChapterAfterSubmission();
             ChapterUI.updateSubmitButton();
             ChapterUI.updateAllProgressIndicators();
-            await this._alertModal('✅ Chapitre validé définitivement avec succès !');
+            await this._alertModal('📤 Copie rendue définitivement.');
         }
     },
 

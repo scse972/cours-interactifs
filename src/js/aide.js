@@ -75,7 +75,7 @@ au mieux. Chaque question qu'il répond, et chaque question que vous corrigez, r
 fourchette. Quand tout est corrigé, les deux bornes se rejoignent : c'est sa note.</p>
 <p>La fourchette tient compte de la pénalité automatique de cours, mais <strong>jamais du bonus ou
 du malus que vous ajoutez vous-même</strong>. Ce que l'apprenant peut déduire reste donc une note
-théorique — votre geste vous appartient, et ne lui est annoncé qu'à la validation.</p>
+théorique — votre geste vous appartient, et ne lui est annoncé qu'à la publication de la correction.</p>
 `
         },
 
@@ -107,7 +107,7 @@ questions sont fausses</strong> — ou une <strong>fourchette</strong> s'il rest
 rédigées à corriger (de « vous n'accordez rien » à « vous accordez tout »).</p>
 <table class="aide-table">
   <tr><th>Bouton</th><th>Effet</th></tr>
-  <tr><td>✅ Valider définitivement</td><td>La copie vous est rendue et se verrouille, comme en Examen.</td></tr>
+  <tr><td>📤 Rendre définitivement</td><td>La copie vous parvient et se verrouille, comme en Examen.</td></tr>
   <tr><td>🔄 Recommencer</td><td>Les réponses auto et semi-automatiques sont effacées, les manuelles conservées. Il corrige, puis rend de nouveau.</td></tr>
 </table>
 <p><strong>Tentatives illimitées</strong> tant qu'il n'a pas validé — sa copie n'est rendue
@@ -235,7 +235,7 @@ compte immédiatement dans les totaux.</p>
 <p><strong>Rien ne s'affiche sous ses yeux au moment où vous corrigez.</strong> Rien n'est poussé,
 sa page ne se rafraîchit pas.</p>
 <ul>
-  <li>Hors mode Atelier : il ne verra sa note qu'à la <strong>validation du chapitre</strong>. En
+  <li>Hors mode Atelier : il ne verra sa note qu'à la <strong>publication de la correction</strong>. En
       attendant, seule la fourchette de son bilan se resserre.</li>
   <li>En mode Atelier : à son prochain chargement, la consigne affichera « corrigée » avec les
       points — ce mode promet un retour immédiat, on le tient.</li>

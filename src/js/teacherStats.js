@@ -115,7 +115,7 @@ class TeacherStats {
                         <label for="stats-filter-status">Statut:</label>
                         <select id="stats-filter-status" onchange="dashboard.modules.stats.applyFilters()">
                             <option value="all">Tous</option>
-                            <option value="validated">✅ Terminé</option>
+                            <option value="validated">✅ Correction publiée</option>
                             <option value="returned_for_revision">🔄 À revoir</option>
                             <option value="submitted">📤 Rendu</option>
                             <option value="late_submitted">⚠️ Rendu en retard</option>

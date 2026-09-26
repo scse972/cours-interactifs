@@ -132,6 +132,11 @@ Le domaine ne connaît ni « élève » ni « professeur » : on dit **apprenant
 **formateur** (le rôle s'appelle « formateur », l'acte d'évaluer revient à l'évaluateur).
 Des « élève » subsistent dans de vieux commentaires ; ne pas en ajouter.
 
+L'apprenant **rend** sa copie (« Rendu », « Rendu en retard ») ; le formateur **publie la
+correction** (« Corrigé, à publier » → « Correction publiée », `submissionStatus = 'validated'`).
+Jamais « rendre » ni « valider » pour le geste du formateur, dans les deux applications :
+« Corrigé, non rendu » se lisait « non rendu par l'apprenant ».
+
 ## Documentation de référence
 
 À lire avant d'intervenir sur le domaine concerné, plutôt que de déduire du code :
