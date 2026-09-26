@@ -161,7 +161,12 @@ const ChapterSubmission = {
         }
 
         // 🎯 5. Feedback global
-        if (globalFeedback) {
+        // Pas en Blind : ce « Vous ne pouvez plus modifier » y serait faux — le bilan qui
+        // s'ouvre propose encore « Recommencer », et le message resterait affiché après.
+        const context = window.currentExamContext;
+        if (context?.isBlindMode) {
+            if (globalFeedback) globalFeedback.innerHTML = '';
+        } else if (globalFeedback) {
             globalFeedback.className = 'feedback show info';
             globalFeedback.innerHTML = unansweredQuestions.length > 0
                 ? `✅ Validation terminée !<br>
@@ -174,7 +179,6 @@ const ChapterSubmission = {
         }
 
         // 🔒 6. Lock UI (pas en mode blind — c'est géré après le choix)
-        const context = window.currentExamContext;
         if (!context?.isBlindMode) {
             document.querySelectorAll('input, select, textarea, button').forEach(input => {
                 const isNavButton =
