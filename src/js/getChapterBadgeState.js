@@ -65,14 +65,14 @@ function getChapterBadgeState(chapter, chapterConfig = {}) {
     const correctionFinie = chapter.correctionStatus === 'corrected' || chapter.correctionStatus === 'validated';
     if (chapter.submissionStatus === 'submitted') {
         return correctionFinie
-            ? { status: 'submitted', label: 'Corrigé, à publier', icon: '📝', color: 'progress', mode }
+            ? { status: 'submitted', label: 'À publier', icon: '📝', color: 'progress', mode }
             : { status: 'submitted', label: 'Rendu', icon: '📤', color: 'pending', mode };
     }
 
     // PRIORITE 3 BIS — Rendu en retard (ou corrigé, à publier)
     if (chapter.submissionStatus === 'late_submitted') {
         return correctionFinie
-            ? { status: 'late_submitted', label: 'Corrigé, à publier', icon: '📝', color: 'progress', mode }
+            ? { status: 'late_submitted', label: 'À publier', icon: '📝', color: 'progress', mode }
             : { status: 'late_submitted', label: 'Rendu en retard', icon: '⚠️', color: 'warning', mode };
     }
 
