@@ -151,13 +151,18 @@ et le découpage de l'affichage changent**.
 | Option | Modes concernés | Condition | Défaut |
 |---|---|---|---|
 | 🎲 Ordre aléatoire | Examen, Blind, Millionnaire | Chapitre **entièrement auto-corrigé** | coché en Millionnaire, décoché ailleurs |
-| 📄 Questions par questions | Examen, Blind | aucune | décoché |
+| 📄 Question par question | Examen, Blind | aucune | décoché |
+
+Sur la carte du chapitre, elles s'affichent en liste d'interrupteurs sous le menu du mode, et
+seulement quand elles sont proposées. Ajouter une option — le futur **mode anti-IA** notamment —
+se fait par une entrée dans le tableau `optionsMode` de `TeacherChapters.render()` : sa clé de
+config, son libellé et sa condition. La bascule passe par `basculerOption()`, commune à toutes.
 
 **Ordre aléatoire** (`ChapterOrdre`) — questions déjà répondues d'abord, dans l'ordre où elles l'ont
 été, puis les autres mélangées. Rien n'est mémorisé : l'ordre est recalculé à chaque affichage. Les
 blocs de cours ne bougent pas. Les vues formateur gardent toujours l'ordre publié.
 
-**Questions par questions** (`ChapterPagination`) — un écran = un élément, blocs de cours compris,
+**Question par question** (`ChapterPagination`) — un écran = un élément, blocs de cours compris,
 navigation libre dans les deux sens. À l'ouverture, on se place sur la première étape non faite. La
 pagination s'efface dès que le chapitre est rendu ou verrouillé.
 

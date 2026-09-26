@@ -108,11 +108,17 @@
     margin-top: 1rem;
 }
 
+/* Carte d'un chapitre : des sections empilées (mode et ses options, limite de date),
+   puis le verrou en pied. La carte est une colonne flex : le pied est poussé en bas,
+   pour que les verrous d'une même rangée de la grille s'alignent quelle que soit la
+   hauteur des cartes voisines. */
 .chapter-control-card {
+    display: flex;
+    flex-direction: column;
     background: white;
     border: 1px solid #eee;
     border-radius: 8px;
-    padding: 1.5rem;
+    padding: 1.25rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -121,8 +127,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.4rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.6rem;
     border-bottom: 1px solid #eee;
 }
 
@@ -156,7 +161,127 @@
 .control-header h4 {
     margin: 0;
     color: #2c3e50;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
+.carte-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.9rem 0;
+}
+
+/* Le séparateur est en haut : l'en-tête a déjà le sien, et la dernière section n'en
+   trace pas au-dessus du vide qui la sépare du verrou. */
+.carte-section + .carte-section { border-top: 1px solid #f1f3f5; }
+
+.carte-section-titre {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #5d6d7e;
+}
+
+.carte-select,
+.carte-date input,
+.carte-date select {
+    padding: 0.4rem 0.55rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+.carte-select { width: 100%; cursor: pointer; }
+
+.carte-date { display: flex; gap: 0.5rem; }
+.carte-date input { flex: 1; min-width: 0; }
+.carte-date :disabled { background: #f8f9fa; color: #adb5bd; cursor: not-allowed; }
+
+/* Options du mode : une liste, une ligne par option — libellé à gauche, interrupteur
+   à droite. Elle s'allonge d'une ligne par option sans déformer la carte. */
+.carte-options {
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+
+.carte-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+}
+
+.carte-options .carte-option {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+.carte-options .carte-option + .carte-option { border-top: 1px solid #e9ecef; }
+.carte-options .carte-option:hover { background: #eef2f6; }
+
+/* Interrupteur : une vraie case à cocher, seulement redessinée. */
+.interrupteur {
+    appearance: none;
+    -webkit-appearance: none;
+    flex-shrink: 0;
+    position: relative;
+    width: 2.1rem;
+    height: 1.2rem;
+    margin: 0;
+    border-radius: 999px;
+    background: #ced4da;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.interrupteur::after {
+    content: '';
+    position: absolute;
+    top: 0.15rem;
+    left: 0.15rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease;
+}
+
+.interrupteur:checked { background: #27ae60; }
+.interrupteur:checked::after { transform: translateX(0.9rem); }
+.interrupteur:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+.carte-btn-secondaire {
+    align-self: flex-start;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #d6eaf8;
+    border-radius: 6px;
+    background: #f7fbfe;
+    color: #1b4f72;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.carte-btn-secondaire:hover { background: #d6eaf8; }
+
+.carte-pied {
+    margin-top: auto;
+    padding-top: 0.9rem;
+}
+
+.carte-pied .control-btn { width: 100%; }
 
 .control-status {
     padding: 4px 8px;
@@ -205,26 +330,6 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 0.9rem;
-}
-
-.date-limit-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-.date-limit-toggle input {
-    width: auto;
-    cursor: pointer;
-}
-
-.control-actions {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
 }
 
 .control-btn {

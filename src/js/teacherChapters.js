@@ -71,20 +71,36 @@ class TeacherChapters {
                 consistencyBadge = `<span class="control-status status-course-only" title="Chapitre composé uniquement de cours : pas de note, pas de bilan.">ℹ️ Cours uniquement</span>`;
             }
 
-            // 🎲 Ordre aléatoire : proposé aux seuls modes Examen, Blind et Millionnaire,
-            // et seulement si le chapitre est entièrement auto-corrigé. Coché par défaut
-            // en Millionnaire, où l'ordre fait partie du jeu.
-            const ordreProposable = ['exam', 'blind', 'millionnaire'].includes(chapterMode)
-                && window.estChapitreToutAuto(chapter.questions);
-            const ordreActif = config.ordreAleatoire === undefined
-                ? chapterMode === 'millionnaire'
-                : config.ordreAleatoire === true;
-
-            // 📄 Questions par questions : Examen et Blind uniquement, sans condition sur
-            // le type de correction — afficher une question ouverte seule ne pose aucun
-            // problème. Décoché par défaut : ça change toute l'expérience de l'apprenant.
-            const paginationProposable = ['exam', 'blind'].includes(chapterMode);
-            const paginationActive = config.questionParQuestion === true;
+            // Options du mode : une ligne par option, empilées dans un même bloc. Chacune
+            // déclare quand elle est proposée ; une option non proposée n'est pas affichée,
+            // et le bloc disparaît s'il ne reste rien. Ajouter une option = une entrée ici,
+            // sans toucher à la mise en page : la liste s'allonge d'une ligne.
+            const optionsMode = [
+                {
+                    // 🎲 Examen, Blind et Millionnaire, et seulement si le chapitre est
+                    // entièrement auto-corrigé. Coché par défaut en Millionnaire, où l'ordre
+                    // fait partie du jeu.
+                    cle: 'ordreAleatoire',
+                    libelle: '🎲 Ordre aléatoire',
+                    aide: 'Les questions sont présentées dans un ordre tiré au sort, propre à chaque apprenant. Les questions déjà répondues restent regroupées en tête.',
+                    proposable: ['exam', 'blind', 'millionnaire'].includes(chapterMode)
+                        && window.estChapitreToutAuto(chapter.questions),
+                    actif: config.ordreAleatoire === undefined
+                        ? chapterMode === 'millionnaire'
+                        : config.ordreAleatoire === true
+                },
+                {
+                    // 📄 Examen et Blind, sans condition sur le type de correction : afficher
+                    // une question ouverte seule ne pose aucun problème. Décoché par défaut,
+                    // car ça change toute l'expérience de l'apprenant.
+                    cle: 'questionParQuestion',
+                    libelle: '📄 Question par question',
+                    aide: 'Une seule question affichée à la fois, avec navigation libre dans les deux sens. Les blocs de cours comptent comme des étapes.',
+                    proposable: ['exam', 'blind'].includes(chapterMode),
+                    actif: config.questionParQuestion === true
+                }
+                // 🤖 Mode anti-IA : à venir. Il prendra place ici, sur le même modèle.
+            ].filter(option => option.proposable);
 
             html += `
                 <div class="chapter-control-card">
@@ -96,83 +112,75 @@ class TeacherChapters {
                                     title="Tester ce chapitre comme un apprenant — rien n'est conservé"
                                     onclick="dashboard.modules.chapters.simulerChapitre('${chapter.id}')">👁</button>
                         </div>
-                        <h4 style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${this.escapeHtml(chapter.title)}">${this.escapeHtml(chapter.title)}</h4>
+                        <h4 title="${this.escapeHtml(chapter.title)}">${this.escapeHtml(chapter.title)}</h4>
                     </div>
 
-                    <div class="control-actions">
-                        <button class="control-btn ${isLocked ? 'btn-unlock' : 'btn-lock'}" onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">
-                            ${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
-                        </button>
-                    </div>
-
-                    <div class="control-actions" style="margin-top: 1rem;">
+                    <div class="carte-section">
                         ${'' /* Le `for` est indispensable : sans lui, ce <label> s'associe à son
                              premier descendant labelable — c'est-à-dire au <button> de l'icône
-                             d'aide, qui précède le <select>. Cliquer le texte ouvrirait alors
-                             l'aide, et le menu n'aurait plus de nom accessible. */}
-                        <label class="date-limit-toggle" for="mode-chapitre-${chapter.id}"
-                               style="flex-direction: column; align-items: flex-start; gap: 0.3rem;">
-                            <span>🎯 Mode du chapitre ${window.Aide ? Aide.icone('modes') : ''}</span>
-                            <select id="mode-chapitre-${chapter.id}"
-                                    onchange="dashboard.modules.chapters.toggleChapterMode('${chapter.id}', this.value)" 
-                                    style="padding:0.3rem 0.5rem; border-radius:6px; border:1px solid #ccc; font-size:0.9rem; cursor:pointer;">
-                                <option value="normal" ${chapterMode === 'normal' ? 'selected' : ''}>Découverte</option>
-                                <option value="exam" ${chapterMode === 'exam' ? 'selected' : ''}>Examen</option>
-                                <option value="blind" ${chapterMode === 'blind' ? 'selected' : ''}>Blind</option>
-                                <option value="millionnaire" ${chapterMode === 'millionnaire' ? 'selected' : ''}>Millionnaire</option>
-                                <option value="atelier" ${chapterMode === 'atelier' ? 'selected' : ''}>Atelier AR</option>
-                                <option value="consigne" ${chapterMode === 'consigne' ? 'selected' : ''}>📋 Consigne</option>
-                            </select>
+                             d'aide. Cliquer le texte ouvrirait alors l'aide, et le menu n'aurait
+                             plus de nom accessible. */}
+                        <label class="carte-section-titre" for="mode-chapitre-${chapter.id}">
+                            🎯 Mode du chapitre ${window.Aide ? Aide.icone('modes') : ''}
                         </label>
+                        <select id="mode-chapitre-${chapter.id}" class="carte-select"
+                                onchange="dashboard.modules.chapters.toggleChapterMode('${chapter.id}', this.value)">
+                            <option value="normal" ${chapterMode === 'normal' ? 'selected' : ''}>📖 Découverte</option>
+                            <option value="exam" ${chapterMode === 'exam' ? 'selected' : ''}>📝 Examen</option>
+                            <option value="blind" ${chapterMode === 'blind' ? 'selected' : ''}>🥽 Blind</option>
+                            <option value="millionnaire" ${chapterMode === 'millionnaire' ? 'selected' : ''}>💰 Millionnaire</option>
+                            <option value="atelier" ${chapterMode === 'atelier' ? 'selected' : ''}>🧾 Atelier AR</option>
+                            <option value="consigne" ${chapterMode === 'consigne' ? 'selected' : ''}>📋 Consigne</option>
+                        </select>
+                        ${optionsMode.length ? `
+                        <div class="carte-options" role="group" aria-label="Options du mode">
+                            ${optionsMode.map(option => `
+                            <label class="carte-option" title="${this.escapeHtml(option.aide)}">
+                                <span>${option.libelle}</span>
+                                <input type="checkbox" class="interrupteur" ${option.actif ? 'checked' : ''}
+                                       onchange="dashboard.modules.chapters.basculerOption('${chapter.id}', '${option.cle}', this.checked)">
+                            </label>`).join('')}
+                        </div>` : ''}
                         ${chapterMode === 'consigne' ? `
                         ${'' /* Réservé au mode consigne : c'est le seul où l'apprenant répond
                              ailleurs que dans l'application. Le bouton reste visible même hors
                              HTTPS — le module explique alors pourquoi il ne peut pas imprimer,
                              plutôt que de disparaître sans dire pourquoi. */}
-                        <button class="control-btn" style="margin-top:0.6rem;"
+                        <button class="carte-btn-secondaire"
                                 title="Imprimer les énoncés et un QRCode par question, pour chaque apprenant"
                                 onclick="dashboard.modules.chapters.imprimerConsignes('${chapter.id}')">
                             🖨️ Feuille de consignes
                         </button>` : ''}
-                        ${ordreProposable ? `
-                        <label class="date-limit-toggle" style="margin-top:0.5rem;"
-                               title="Les questions sont présentées dans un ordre tiré au sort, propre à chaque apprenant. Les questions déjà répondues restent regroupées en tête.">
-                            <input type="checkbox" ${ordreActif ? 'checked' : ''}
-                                onchange="dashboard.modules.chapters.toggleOrdreAleatoire('${chapter.id}', this.checked)">
-                            🎲 Ordre aléatoire
-                        </label>` : ''}
-                        ${paginationProposable ? `
-                        <label class="date-limit-toggle" style="margin-top:0.4rem;"
-                               title="Une seule question affichée à la fois, avec navigation libre dans les deux sens. Les blocs de cours comptent comme des étapes.">
-                            <input type="checkbox" ${paginationActive ? 'checked' : ''}
-                                onchange="dashboard.modules.chapters.toggleQuestionParQuestion('${chapter.id}', this.checked)">
-                            📄 Questions par questions
-                        </label>` : ''}
                     </div>
 
-                    <div class="control-actions" style="flex-direction: column; gap: 0.5rem;">
-                        <label class="date-limit-toggle">
-                            <input type="checkbox" ${isDateEnabled ? 'checked' : ''} 
-                                onchange="dashboard.modules.chapters.toggleDateLimit('${chapter.id}', this.checked)">
-                            Limite de date
+                    <div class="carte-section">
+                        <label class="carte-option carte-option-titre">
+                            <span class="carte-section-titre">📅 Limite de date</span>
+                            <input type="checkbox" class="interrupteur" ${isDateEnabled ? 'checked' : ''}
+                                   onchange="dashboard.modules.chapters.toggleDateLimit('${chapter.id}', this.checked)">
                         </label>
-
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="date"
+                        <div class="carte-date">
+                            <input type="date" aria-label="Date limite"
                                 id="date-input-${chapter.id}"
                                 value="${dateValue}"
                                 ${isDateEnabled ? '' : 'disabled'}
                                 onchange="dashboard.modules.chapters.updateChapterDate('${chapter.id}')"
                             >
-                            <select id="hour-select-${chapter.id}" 
+                            <select id="hour-select-${chapter.id}" aria-label="Heure limite"
                                 ${isDateEnabled ? '' : 'disabled'}
                                 onchange="dashboard.modules.chapters.updateChapterDate('${chapter.id}')"
                             >
-                                ${[...Array(24).keys()].map(h => 
+                                ${[...Array(24).keys()].map(h =>
                                     `<option value="${h}" ${h == hourValue ? 'selected' : ''}>${h}h</option>`
                                 ).join('')}
                             </select>
                         </div>
+                    </div>
+
+                    <div class="carte-pied">
+                        <button class="control-btn ${isLocked ? 'btn-unlock' : 'btn-lock'}" onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">
+                            ${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
+                        </button>
                     </div>
                 </div>
             `;
@@ -244,16 +252,10 @@ class TeacherChapters {
         window.open(Simulation.url(slug, chapterId), '_blank');
     }
 
-    async toggleOrdreAleatoire(chapterId, actif) {
+    /** Une option du mode (cf. `optionsMode` dans render) : sa clé est celle de la config. */
+    async basculerOption(chapterId, cle, actif) {
         await this.dashboard.updateChapterConfig(chapterId, {
-            ordreAleatoire: actif
-        });
-        this.render();
-    }
-
-    async toggleQuestionParQuestion(chapterId, actif) {
-        await this.dashboard.updateChapterConfig(chapterId, {
-            questionParQuestion: actif
+            [cle]: actif
         });
         this.render();
     }
