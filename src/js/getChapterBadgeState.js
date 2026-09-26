@@ -34,11 +34,13 @@ function getChapterBadgeState(chapter, chapterConfig = {}) {
     // la correction (Corrigé, à publier → Correction publiée). Jamais « rendre » pour le geste
     // du formateur. Même libellés que XSpro (getTeacherSubmissionLikeState).
 
-    // PRIORITE 1 — Correction publiée (prime sur tout)
+    // PRIORITE 1 — Correction publiée (prime sur tout). Libellé court, « Publié » : la
+    // pastille tient dans une ligne de la carte du suivi, « Correction publiée » y passait
+    // sur deux lignes et débordait.
     if (chapter.submissionStatus === 'validated') {
         return {
             status: 'validated',
-            label: 'Correction publiée',
+            label: 'Publié',
             icon: '✅',
             color: 'success',
             mode
