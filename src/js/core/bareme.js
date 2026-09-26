@@ -107,6 +107,102 @@
             const bareme = Number(points) || 0;
             const choix = Math.max(2, Math.round(Number(nbOptions) || OPTIONS_PAR_DEFAUT));
             return Math.round(((2 * bareme) / (choix - 1)) * 100) / 100;
+        },
+
+        // ====================================================================
+        // PÉNALITÉ PAR TENTATIVE (modes Blind et Millionnaire)
+        // ====================================================================
+        //
+        // Une autre pénalité que celle des essais : elle porte sur la NOTE SUR 20 du
+        // chapitre, pas sur les points d'une question. Chaque nouvelle tentative (un
+        // « Recommencer ») coûte `penalite` points sur 20, sans pouvoir faire descendre
+        // la note sous `plancher` — mais une note déjà sous le plancher n'est pas relevée :
+        // le plancher limite la pénalité, il ne garantit pas une note.
+        //
+        //      14/20, 3e tentative, 1 pt, plancher 10  →  12
+        //      14/20, 7e tentative                     →  10   (et pas 8)
+        //       7/20, 5e tentative                     →   7   (déjà sous le plancher)
+        //
+        // Les réglages sont figés sur la progression de l'apprenant à son premier
+        // démarrage (frozenPenaliteTentative, frozenNotePlancher, frozenNoteRetenue —
+        // progressManager.js), comme le mode : c'est aussi ce qui les rend lisibles par
+        // le modal de correction et par XSpro, qui ne voient pas chapter_config.
+        // `chapter.tentative` est le numéro de la tentative en cours (absent = 1) ; il ne
+        // dépasse 1 qu'en Blind et en Millionnaire, d'où l'absence de test de mode ici.
+        //
+        // Ordre dans la note : points → /20 → arrondi → TENTATIVES → choix de la
+        // tentative retenue → bonus/malus du formateur → borne 0..20.
+        //
+        // XSpro en porte une copie (formulaireProgressionApprenant.js) : la modifier avec.
+
+        DEFAUT_PENALITE_TENTATIVE: 1,
+        DEFAUT_NOTE_PLANCHER: 10,
+
+        /** Réglages effectifs d'un chapitre : valeurs figées, ou défauts. */
+        reglesTentatives(chapter) {
+            const nombre = (valeur, defaut) =>
+                (valeur === null || valeur === undefined || valeur === '' || !Number.isFinite(Number(valeur)))
+                    ? defaut : Number(valeur);
+            return {
+                tentative: Math.max(1, Math.round(nombre(chapter?.tentative, 1))),
+                penalite:  Math.max(0, nombre(chapter?.frozenPenaliteTentative, this.DEFAUT_PENALITE_TENTATIVE)),
+                plancher:  nombre(chapter?.frozenNotePlancher, this.DEFAUT_NOTE_PLANCHER),
+                retenue:   chapter?.frozenNoteRetenue === 'meilleure' ? 'meilleure' : 'derniere'
+            };
+        },
+
+        /**
+         * Pénalité d'une note sur 20 obtenue à la tentative n°`tentative`.
+         * @returns {{note: number, retrait: number}}
+         */
+        penaliserTentative(note, tentative, regles) {
+            const brute = Number(note) || 0;
+            const n = Math.max(1, Math.round(Number(tentative) || 1)) - 1;
+            if (n <= 0 || regles.penalite <= 0 || brute <= regles.plancher) {
+                return { note: brute, retrait: 0 };
+            }
+            const apres = Math.max(regles.plancher, brute - regles.penalite * n);
+            return {
+                note: Math.round(apres * 10) / 10,
+                retrait: Math.round((brute - apres) * 10) / 10
+            };
+        },
+
+        /** Pénalité de la tentative EN COURS d'un chapitre. */
+        appliquerTentatives(note, chapter) {
+            const regles = this.reglesTentatives(chapter);
+            return this.penaliserTentative(note, regles.tentative, regles);
+        },
+
+        /**
+         * La meilleure note qu'une tentative SUIVANTE peut encore atteindre : 20/20
+         * pénalisé du rang suivant. Sert à dire à l'apprenant quand recommencer ne peut
+         * plus rien lui apporter.
+         */
+        meilleurePossible(chapter) {
+            const regles = this.reglesTentatives(chapter);
+            return this.penaliserTentative(20, regles.tentative + 1, regles).note;
+        },
+
+        /**
+         * Choisit la tentative retenue parmi des candidates déjà notées sur 20, AVANT
+         * pénalité : `[{ tentative, note }]`. Chacune est pénalisée selon son rang, puis
+         * on garde la dernière (défaut) ou la meilleure, selon le réglage du chapitre.
+         * @returns {{note: number, retrait: number, tentative: number, noteBrute: number}}
+         */
+        retenirTentative(candidates, chapter) {
+            const regles = this.reglesTentatives(chapter);
+            const notees = (candidates || []).map(c => {
+                const p = this.penaliserTentative(c.note, c.tentative, regles);
+                return { tentative: c.tentative, noteBrute: Number(c.note) || 0, note: p.note, retrait: p.retrait };
+            });
+            if (!notees.length) return { note: 0, retrait: 0, tentative: regles.tentative, noteBrute: 0 };
+            const parRang = (a, b) => a.tentative - b.tentative;
+            if (regles.retenue === 'meilleure') {
+                // À note égale, la plus récente : c'est elle que le formateur a sous les yeux.
+                return notees.sort(parRang).reduce((m, c) => (c.note >= m.note ? c : m));
+            }
+            return notees.sort(parRang)[notees.length - 1];
         }
     };
 })();

@@ -289,6 +289,10 @@ class TeacherStats {
                     'Progression': student.progress.chapters[chapter.id] ? `${window.ProgressManager.pourcentageAvancement(chapterData, chapter)}%` : '-',
                     'Note /20': chapterData.noteAttribuee || '-',
                     'Bonus / Pénalité': chapterData.coursePenalty ?? '',
+                    // Déjà comprise dans la note : dit ce que les tentatives ont coûté
+                    // (Blind, Millionnaire), et laquelle a été retenue.
+                    'Pénalité tentatives': chapterData.penaliteTentatives ? -chapterData.penaliteTentatives : '',
+                    'Tentatives': chapterData.tentative > 1 ? `${chapterData.tentative} (retenue n°${chapterData.tentativeRetenue || chapterData.tentative})` : '',
                     'Appréciation suivi / bonus / pénalité': chapterData.coursePenaltyComment || '',
                     'Commentaire global': chapterData.globalComment || '',
                     'Statut': state.label

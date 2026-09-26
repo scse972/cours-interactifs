@@ -93,7 +93,7 @@ différemment d'une classe à l'autre, et se changer sans republier le parcours.
   <tr><td>📖 Découverte</td><td>Retour immédiat, l'apprenant peut réessayer.</td></tr>
   <tr><td>📝 Examen</td><td>Aucun retour, enregistrement en continu, tout se verrouille au rendu.</td></tr>
   <tr><td>🥽 Blind</td><td>Aucun retour. Au rendu, l'apprenant voit sa note sans savoir où il s'est trompé, puis valide ou recommence (voir plus bas).</td></tr>
-  <tr><td>💰 Millionnaire</td><td>Une réponse fausse propose de recommencer (questions auto remises à zéro, manuelles conservées) ou de rendre. Pas de reprise : revenir sur le chapitre repart d'une tentative neuve.</td></tr>
+  <tr><td>💰 Millionnaire</td><td>Une réponse fausse propose de recommencer (questions auto remises à zéro, manuelles conservées) ou de rendre. Pas de reprise : revenir sur le chapitre repart d'une tentative neuve. Chaque tentative peut coûter des points (voir plus bas).</td></tr>
   <tr><td>🧾 Atelier AR</td><td>Les questions ouvertes se valident en main propre, par échange de codes dans l'application.</td></tr>
   <tr><td>📋 Consigne</td><td>Travail sur papier, feuille nominative à QRCodes. L'application reste consultable comme en Découverte ; vous corrigez même sans rendu.</td></tr>
 </table>
@@ -113,6 +113,19 @@ rédigées à corriger (de « vous n'accordez rien » à « vous accordez tout �
 <p><strong>Tentatives illimitées</strong> tant qu'il n'a pas validé — sa copie n'est rendue
 qu'à ce moment. Il sait combien de points il perd, pas où : à lui de se relire.
 Une erreur vaut 0, jamais de points négatifs, et la pénalité de cours n'entre pas dans ce bilan.</p>
+
+<h4>🔁 Ce que coûte une nouvelle tentative (Blind et Millionnaire)</h4>
+<p>Trois réglages sur la carte du chapitre, figés pour chaque apprenant à son premier démarrage :</p>
+<table class="aide-table">
+  <tr><th>Réglage</th><th>Effet</th></tr>
+  <tr><td>🔁 Pénalité par tentative</td><td>Points retirés de la note sur 20 à chaque « Recommencer » (1 par défaut, 0 pour aucune).</td></tr>
+  <tr><td>🛟 Note plancher</td><td>La pénalité ne fait pas descendre sous cette note (10 par défaut). Une note déjà plus basse n'est pas relevée.</td></tr>
+  <tr><td>🏅 Note retenue</td><td>La dernière tentative (défaut), même plus basse ; ou la meilleure, pénalité comprise.</td></tr>
+</table>
+<p>Exemple, 1 point et plancher 10 : 14/20 à la 3e tentative donne 12 ; à la 7e, 10 et pas 8 ;
+7/20 reste 7. Au moment de choisir, l'apprenant voit ce qu'il garde s'il s'arrête, la meilleure
+note qu'il peut encore espérer, et le moment où recommencer ne peut plus rien lui apporter. En
+Millionnaire, revenir sur le chapitre après avoir commencé à répondre compte comme une tentative.</p>
 
 <h4>🖨️ Feuille de consignes (mode Consigne)</h4>
 <p>Le bouton <strong>« 🖨️ Feuille de consignes »</strong> de la carte imprime, par apprenant,
@@ -173,8 +186,12 @@ restent présentes dans le code de la page.</p>
   <li>Les questions <strong>manuelles et semi-automatiques</strong> sont additionnées à part, avec
       les notes que vous attribuez. Même garde-fou.</li>
   <li>La somme des deux est rapportée au barème total du chapitre, puis mise sur 20.</li>
+  <li>En Blind et en Millionnaire, la <strong>pénalité par tentative</strong> est retirée, sans
+      descendre sous la note plancher ; puis la tentative retenue est choisie — la dernière, ou
+      la meilleure selon le réglage du chapitre.</li>
   <li><strong>Enfin seulement</strong>, le bonus ou le malus est ajouté — sur la note, pas sur les
-      points — et le résultat est ramené entre 0 et 20.</li>
+      points — et le résultat est ramené entre 0 et 20. Votre malus, lui, peut passer sous le
+      plancher : c'est votre geste.</li>
 </ol>
 <p>Une question manuelle que vous n'avez pas corrigée compte pour <strong>zéro</strong>, exactement
 comme une question ratée. Les cases « traité » sont là pour que vous n'en oubliiez aucune.</p>

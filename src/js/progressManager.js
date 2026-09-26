@@ -253,6 +253,12 @@ function initChapter(chapterConfig) {
     frozenChapterMode: chapterConfig.chapterMode || (chapterConfig.examMode ? 'exam' : 'normal'),
     frozenDateLimitEnabled: chapterConfig.dateLimitEnabled === true,
     frozenEndDate: chapterConfig.endDate || null,
+    // Règles des tentatives (Blind, Millionnaire) : figées elles aussi, pour qu'on ne
+    // change pas le barème sous les pieds de qui a commencé — et parce que le modal de
+    // correction et XSpro ne lisent pas chapter_config. null = défaut (cf. Bareme).
+    frozenPenaliteTentative: chapterConfig.penaliteTentative ?? null,
+    frozenNotePlancher: chapterConfig.notePlancher ?? null,
+    frozenNoteRetenue: chapterConfig.noteRetenue || null,
     frozenAt: now,
 
     questions
@@ -867,6 +873,9 @@ function gelerContexteChapitre(chapter, config) {
     chapter.frozenChapterMode      = config.chapterMode || (config.examMode ? 'exam' : 'normal');
     chapter.frozenDateLimitEnabled = config.dateLimitEnabled === true;
     chapter.frozenEndDate          = config.endDate || null;
+    chapter.frozenPenaliteTentative = config.penaliteTentative ?? null;
+    chapter.frozenNotePlancher     = config.notePlancher ?? null;
+    chapter.frozenNoteRetenue      = config.noteRetenue || null;
     chapter.frozenAt               = new Date().toISOString();
 }
 
@@ -880,6 +889,9 @@ function degelerContexteChapitre(chapter) {
     chapter.frozenChapterMode      = null;
     chapter.frozenDateLimitEnabled = false;
     chapter.frozenEndDate          = null;
+    chapter.frozenPenaliteTentative = null;
+    chapter.frozenNotePlancher     = null;
+    chapter.frozenNoteRetenue      = null;
     chapter.frozenAt               = null;
 }
 

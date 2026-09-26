@@ -165,8 +165,12 @@ async function reinitialiserTentativeMillionnaire() {
     const chapitre = ChapterSession.progress?.chapters?.[ChapterSession.chapterId];
     if (!chapitre?.questions) return false;
 
+    // Seules les questions auto et semi comptent : ce sont elles que la remise à zéro
+    // efface. Une réponse manuelle, conservée d'une tentative à l'autre, ne signifie pas
+    // que la tentative a commencé — et chaque tentative coûte désormais des points.
     const aDesReponses = Object.entries(chapitre.questions)
-        .some(([id, donnees]) => !id.startsWith('course_') && donnees?.answered);
+        .some(([id, donnees]) => !id.startsWith('course_') && donnees?.answered
+            && ChapterSubmission._typeCorrection(id) !== 'manuel');
     if (!aDesReponses) return false;
 
     await ChapterSubmission._resetAutoQuestions();

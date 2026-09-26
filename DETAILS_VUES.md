@@ -78,7 +78,8 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | Feedback | Aucun, ni à la saisie ni à la restauration (`restoreAllAnswers` sort avant l'affichage) |
 | Rendu | `validateAllQuestions()` puis **bilan min/max** en modale (`ChapterBilan.showBlindBilan`) : la note ou la fourchette, **sans le détail des questions fausses** — rien n'est encore rendu |
 | ✅ Valider définitivement | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé, comme en Examen |
-| 🔄 Recommencer | `_resetBlindAttempt` — réponses auto et semi effacées, manuelles conservées ; l'apprenant corrige et rend de nouveau. **Sans limite** de tentatives |
+| 🔄 Recommencer | `_resetBlindAttempt` — la tentative rendue est archivée (`tentativesPassees`), `tentative` avance, réponses auto et semi effacées, manuelles conservées ; l'apprenant corrige et rend de nouveau. **Sans limite** de tentatives, chacune pouvant coûter des points (pénalité par tentative) |
+| Rendu après rechargement pendant le bilan | Compte comme une nouvelle tentative (`examModeValidated` déjà vrai) : on ne contourne pas « Recommencer » |
 | Message sous le chapitre | Aucun : le « Vous ne pouvez plus modifier » d'Examen serait faux tant que « Recommencer » reste possible |
 
 > Le bilan min/max n'est pas une estimation optimiste : une question auto sans réponse ou fausse
@@ -90,8 +91,9 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 |---|---|
 | Boutons "Vérifier" visibles | ✅ — le mode se joue question par question |
 | Réponse auto **fausse** | Modale de choix : **Recommencer** ou **Rendre la copie** |
-| Recommencer | `_resetAutoQuestions()` — remet à zéro les questions auto **et semi**, conserve les manuelles, puis re-tire l'ordre |
-| Retour sur le chapitre | **Pas de reprise** : la tentative en cours est effacée et l'ordre re-tiré, y compris après un simple rechargement |
+| Recommencer | `_resetAutoQuestions()` — archive la tentative, fait avancer `tentative`, remet à zéro les questions auto **et semi**, conserve les manuelles, puis re-tire l'ordre |
+| Rendre puis Annuler | La modale de choix revient : la question ratée ne se corrige pas gratuitement |
+| Retour sur le chapitre | **Pas de reprise** : la tentative en cours est effacée et l'ordre re-tiré, y compris après un simple rechargement — seulement si une question auto ou semi avait été répondue ; c'est alors une nouvelle tentative |
 | Ordre des questions | Tiré au sort **par défaut** si le chapitre est entièrement auto-corrigé |
 | Question par question | Possible ; « Recommencer » relance la pagination (`ChapterPagination.init()`), qui suit le nouvel ordre depuis la première étape à faire |
 

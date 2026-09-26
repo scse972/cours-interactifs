@@ -253,6 +253,27 @@
 
 .carte-options .carte-option + .carte-option { border-top: 1px solid #e9ecef; }
 
+/* Option chiffrée (🔁 pénalité, 🛟 plancher) : un petit champ numérique et son unité. */
+.carte-option-nombre {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+    font-size: 0.82rem;
+    color: #5d6d7e;
+}
+
+.carte-option-nombre input {
+    width: 4.2rem;
+    padding: 0.2rem 0.35rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.82rem;
+    color: #2c3e50;
+    text-align: right;
+}
+
 /* Option à plusieurs niveaux (🤖 Anti-IA) : un menu compact à la place de l'interrupteur. */
 .carte-option-select {
     flex-shrink: 0;

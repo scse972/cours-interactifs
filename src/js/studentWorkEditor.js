@@ -416,6 +416,19 @@ class StudentWorkEditor {
         const oldModal = document.getElementById('millionnaire-choice-modal');
         if (oldModal) oldModal.remove();
 
+        // Où en est l'apprenant : ce qu'il garde s'il rend maintenant (ce qui n'est pas
+        // répondu vaut alors 0), ce qu'il peut encore espérer s'il recommence — chaque
+        // tentative coûte des points (cf. Bareme, pénalité par tentative).
+        const chapitre = window.ChapterSession?.progress?.chapters?.[window.ChapterSession?.chapterId];
+        const questionsConfig = window.currentChapterConfig?.questions || [];
+        let encadre = '';
+        let cout = '';
+        if (chapitre && window.ChapterBilan && window.Bareme) {
+            const courante = ChapterBilan._fourchetteSur20(questionsConfig, chapitre.questions, { chapitreOuvert: false });
+            encadre = ChapterBilan.encadreTentatives(chapitre, ChapterBilan._noteRetenue(chapitre, questionsConfig, courante));
+            cout = ChapterBilan.coutRecommencer(chapitre);
+        }
+
         const overlay = document.createElement('div');
         overlay.id = 'millionnaire-choice-modal';
         overlay.className = 'modal-overlay';
@@ -428,12 +441,14 @@ class StudentWorkEditor {
                     <p style="margin-bottom:1.5rem;font-size:1.1rem;">
                         ❌ Mauvaise réponse détectée !
                     </p>
-                    <p style="margin-bottom:1.5rem;color:#666;">
-                        Toutes les questions auto-corrigées vont être réinitialisées.<br>
+                    <p style="margin-bottom:1rem;color:#666;">
+                        Recommencer remet à zéro toutes les questions auto-corrigées.<br>
                         Les questions à correction manuelle sont conservées.
                     </p>
-                    <div style="display:flex;gap:1rem;justify-content:center;">
-                        <button id="millionnaire-restart-btn" class="btn btn-primary" style="flex:1;">
+                    ${encadre}
+                    <div style="display:flex;gap:1rem;justify-content:center;margin-top:1.25rem;">
+                        <button id="millionnaire-restart-btn" class="btn btn-primary" style="flex:1;"
+                                title="${cout.trim().replace(/"/g, '&quot;')}">
                             🔄 Recommencer
                         </button>
                         <button id="millionnaire-submit-btn" class="btn btn-secondary" style="flex:1;">
@@ -457,6 +472,12 @@ class StudentWorkEditor {
         document.getElementById('millionnaire-submit-btn').addEventListener('click', async () => {
             overlay.remove();
             await window.ChapterSubmission.handleSubmitChapter();
+            // Rendu annulé à la confirmation : on revient au choix. Sans cela la question
+            // ratée restait modifiable, et l'apprenant la corrigeait sans rien payer.
+            const statut = window.ChapterSession?.progress?.chapters?.[window.ChapterSession?.chapterId]?.submissionStatus;
+            if (statut !== 'submitted' && statut !== 'late_submitted' && statut !== 'validated') {
+                this.showMillionnaireChoiceModal(elementId);
+            }
         });
     }
 

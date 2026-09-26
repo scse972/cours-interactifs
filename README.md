@@ -358,7 +358,7 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 |---|---|---|
 | Découverte | 📖 | Feedback immédiat, l'apprenant peut réessayer |
 | Examen | 📝 | Pas de feedback, enregistrement en temps réel, tout se verrouille au rendu |
-| Blind | 🥽 | Aucun retour pendant la saisie. Au rendu, l'apprenant voit sa note — ou une fourchette, tant que des réponses rédigées attendent la correction — **sans savoir où il s'est trompé**, puis valide définitivement ou recommence, **autant de fois qu'il veut**. Une erreur vaut 0, jamais de points négatifs |
+| Blind | 🥽 | Aucun retour pendant la saisie. Au rendu, l'apprenant voit sa note — ou une fourchette, tant que des réponses rédigées attendent la correction — **sans savoir où il s'est trompé**, puis valide définitivement ou recommence, **autant de fois qu'il veut** — chaque tentative pouvant coûter des points (voir « Pénalité par tentative »). Une erreur vaut 0, jamais de points négatifs |
 | Millionnaire | 💰 | Une réponse fausse ouvre un choix : **recommencer** (questions auto et semi-automatiques remises à zéro, manuelles conservées) ou **rendre la copie**. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
 | Atelier AR | 🧾 | Les questions ouvertes se valident **en main propre**, par échange de codes — dans l'application |
 | Consigne | 📋 | Travail **sur papier** : feuille nominative imprimable avec un QRCode par question. Côté élève, rien ne change (comportement Découverte) ; côté formateur la correction est accessible **même sans rendu**, les champs vides étant normaux |
@@ -432,6 +432,32 @@ a déjà répondu de questions.
 
 Dès que la copie est rendue, ou le chapitre verrouillé, la pagination s'efface : la relecture se fait
 d'un seul tenant. Voir `src/js/chapter/chapterPagination.js`.
+
+## 🔁 Pénalité par tentative (Blind, Millionnaire)
+
+Trois réglages de `chapter_config`, figés sur la progression au premier démarrage comme le mode
+(`frozenPenaliteTentative`, `frozenNotePlancher`, `frozenNoteRetenue`) — c'est aussi ce qui les rend
+lisibles par le modal de correction et par XSpro, qui ne voient pas `chapter_config` :
+
+| Clé | Défaut | Effet |
+|---|---|---|
+| `penaliteTentative` | 1 | points sur 20 retirés par nouvelle tentative |
+| `notePlancher` | 10 | la pénalité ne fait pas descendre sous cette note ; une note déjà plus basse n'est pas relevée |
+| `noteRetenue` | `derniere` | ou `meilleure` : la meilleure tentative, pénalité comprise |
+
+`chapter.tentative` est le numéro de la tentative en cours (absent = 1). Il avance à chaque
+« Recommencer », au rechargement d'un Millionnaire commencé (réponse auto ou semi), et au nouveau
+rendu d'un Blind dont le bilan a déjà été montré. Chaque tentative close est archivée dans
+`chapter.tentativesPassees` (questions auto et semi ; les manuelles, conservées, sont communes à
+toutes) — c'est ce qui permet de retenir la meilleure.
+
+Ordre dans la note : points → /20 → arrondi → **tentatives** (pénalité selon le rang, plancher,
+tentative retenue) → bonus/malus du formateur → borne 0..20. Une seule règle, dans
+`core/bareme.js` (`reglesTentatives`, `penaliserTentative`, `retenirTentative`,
+`meilleurePossible`), appliquée par `correctionModal.calculateNoteSur20` et les bilans ; XSpro en
+porte une copie. L'apprenant voit, au moment de choisir, ce qu'il garde s'il s'arrête et la
+meilleure note encore possible (`ChapterBilan.encadreTentatives`). Limite : en mode meilleure note,
+une semi d'une tentative close restée en attente de correction compte 0.
 
 ## 🤖 Option « anti-IA »
 

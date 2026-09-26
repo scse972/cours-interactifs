@@ -118,6 +118,36 @@ class TeacherChapters {
                         { valeur: 'auto-temporaire', libelle: 'Auto-corrigés temporaires' }
                     ],
                     valeur: config.antiIA || ''
+                },
+                // 🔁 Blind et Millionnaire : chaque nouvelle tentative coûte des points sur
+                // la note sur 20, sans la faire descendre sous le plancher (cf. Bareme,
+                // pénalité par tentative). Figés par apprenant à son premier démarrage.
+                {
+                    cle: 'penaliteTentative',
+                    libelle: '🔁 Pénalité par tentative',
+                    aide: "Points retirés de la note sur 20 à chaque nouvelle tentative (Recommencer). 0 : pas de pénalité. Figé pour chaque apprenant à son premier démarrage.",
+                    proposable: ['blind', 'millionnaire'].includes(chapterMode),
+                    nombre: { min: 0, max: 5, step: 0.5, suffixe: 'pt' },
+                    valeur: config.penaliteTentative ?? Bareme.DEFAUT_PENALITE_TENTATIVE
+                },
+                {
+                    cle: 'notePlancher',
+                    libelle: '🛟 Note plancher',
+                    aide: "La pénalité par tentative ne fait pas descendre la note sous cette valeur. Une note déjà plus basse n'est pas relevée.",
+                    proposable: ['blind', 'millionnaire'].includes(chapterMode),
+                    nombre: { min: 0, max: 20, step: 0.5, suffixe: '/20' },
+                    valeur: config.notePlancher ?? Bareme.DEFAUT_NOTE_PLANCHER
+                },
+                {
+                    cle: 'noteRetenue',
+                    libelle: '🏅 Note retenue',
+                    aide: "Dernière tentative : la note est celle de la dernière tentative, même plus basse. Meilleure tentative : la meilleure note obtenue, pénalité comprise.",
+                    proposable: ['blind', 'millionnaire'].includes(chapterMode),
+                    choix: [
+                        { valeur: 'derniere',  libelle: 'Dernière tentative' },
+                        { valeur: 'meilleure', libelle: 'Meilleure tentative' }
+                    ],
+                    valeur: config.noteRetenue || 'derniere'
                 }
             ].filter(option => option.proposable);
 
@@ -162,7 +192,15 @@ class TeacherChapters {
                             ${optionsMode.map(option => `
                             <label class="carte-option" title="${this.escapeHtml(option.aide)}">
                                 <span>${option.libelle}</span>
-                                ${option.choix ? `
+                                ${option.nombre ? `
+                                <span class="carte-option-nombre">
+                                    <input type="number" min="${option.nombre.min}" max="${option.nombre.max}" step="${option.nombre.step}"
+                                           value="${option.valeur}" aria-label="${this.escapeHtml(option.libelle)}"
+                                           ${'' /* onchange et non oninput : render() redessine toute la grille et
+                                                   volerait le focus à chaque chiffre tapé. */}
+                                           onchange="dashboard.modules.chapters.basculerOption('${chapter.id}', '${option.cle}', this.value === '' ? null : Math.min(${option.nombre.max}, Math.max(${option.nombre.min}, Number(this.value))))">
+                                    <span>${option.nombre.suffixe}</span>
+                                </span>` : option.choix ? `
                                 <select class="carte-option-select"
                                         onchange="dashboard.modules.chapters.basculerOption('${chapter.id}', '${option.cle}', this.value || null)">
                                     ${option.choix.map(c => `<option value="${c.valeur}" ${c.valeur === option.valeur ? 'selected' : ''}>${c.libelle}</option>`).join('')}
