@@ -457,8 +457,16 @@ par la section, et ne reviennent dans la page que révélés — un simple flou 
 portée d'un agent. Le voile est un `div role="button"`, pas un `<button>`, pour survivre au
 verrouillage qui désactive tous les boutons au rendu : la relecture d'une copie rendue reste
 masquée. Rien n'est figé par apprenant ; ni la vue formateur ni les modales de correction ne sont
-concernées. **Limites** : les bonnes réponses (`data-correct-answers`) restent dans la page, et
-`cours.json` est public. Voir `src/js/chapter/chapterAntiIA.js`.
+concernées.
+
+**Captures d'écran** : une page web ne peut pas les empêcher — Windows prend l'image avant de
+prévenir le navigateur, qui ne reçoit que le relâchement d'Impr. écran, et l'Outil Capture de
+Windows 11 fige l'écran dès l'appui. Deux parades : l'énoncé affiché (fenêtre ou affichage en
+place) porte un **filigrane nominatif et daté** (tuile SVG en fond, nom lu dans `.student-name`),
+qui fait d'une capture diffusée une capture signée ; et Impr. écran remasque tout et tente de vider
+le presse-papiers (refusé hors HTTPS ou sans geste utilisateur) — un appoint, sans garantie.
+**Limites** : les bonnes réponses (`data-correct-answers`) restent dans la page, et `cours.json`
+est public. Voir `src/js/chapter/chapterAntiIA.js`.
 
 ## 🧾 Le mode Atelier AR
 

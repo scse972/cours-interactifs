@@ -764,6 +764,13 @@
     text-align: left;
 }
 
+/* Filigrane nominatif et daté sous l'énoncé affiché (fenêtre ou affichage en place) :
+   l'image est posée en ligne par chapterAntiIA.js, seul le pavage est réglé ici. */
+.anti-ia-filigrane {
+    background-repeat: repeat;
+    background-size: 340px 72px;
+}
+
 .anti-ia-fenetre-indication {
     margin-top: 0.6rem;
     padding-top: 0.6rem;

@@ -176,7 +176,9 @@ du DOM. Persistant : un clic l'affiche en place, un clic hors de la question le 
 Temporaire : le survol l'affiche dans une fenêtre posée par-dessus (rien ne se décale), retirée dès
 que le pointeur en sort. Dans les deux cas, tout se remasque quand la fenêtre du navigateur perd le
 focus. Initialisé avant la révélation de la
-page, pour que l'énoncé ne s'affiche jamais. Reste actif sur une copie rendue.
+page, pour que l'énoncé ne s'affiche jamais. Reste actif sur une copie rendue. L'énoncé affiché
+porte un filigrane au nom de l'apprenant, daté ; Impr. écran remasque tout (sans pouvoir empêcher
+la capture, déjà prise).
 
 > La **source unique de vérité des six modes** est `src/js/core/getExamContext.js`. Le mode effectif
 > d'un apprenant est **figé à son premier démarrage** (`frozenChapterMode`) : le formateur qui change

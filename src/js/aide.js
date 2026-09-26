@@ -153,8 +153,12 @@ intégrés au navigateur et les captures d'écran. Les cours ne sont jamais masq
 <p>En temporaire, la page ne bouge pas : la fenêtre recouvre ce qui suit le temps de la lecture.
 Sur tablette, un toucher l'ouvre et un toucher ailleurs la ferme.</p>
 <p>Un énoncé masqué est <strong>retiré de la page</strong>, pas seulement flouté : un agent ne
-peut pas le lire. Limites : une capture prise pendant qu'un énoncé est affiché le montre, et les
-bonnes réponses restent présentes dans le code de la page.</p>
+peut pas le lire.</p>
+<p><strong>Captures d'écran</strong> : aucune page web ne peut les empêcher, Windows prend l'image
+avant que le navigateur le sache. L'énoncé affiché porte donc un <strong>filigrane au nom de
+l'apprenant, avec la date et l'heure</strong> : une capture qui circule désigne son auteur. Impr.
+écran remasque aussitôt l'énoncé, mais la capture est déjà prise. Autre limite : les bonnes réponses
+restent présentes dans le code de la page.</p>
 `
         },
 

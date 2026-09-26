@@ -29,9 +29,17 @@
 // (Millionnaire) ou la page découpée en étapes (pagination) sans que ce module ait à
 // le savoir.
 //
+// CAPTURES D'ÉCRAN. Une page web ne peut pas les empêcher : Windows prend la capture
+// AVANT de prévenir le navigateur, qui ne reçoit que le relâchement d'Impr. écran — et
+// l'Outil Capture de Windows 11 fige l'écran dès l'appui. Deux parades seulement :
+//   - un FILIGRANE nominatif et daté sous l'énoncé affiché : une capture qui circule
+//     désigne son auteur. C'est la vraie parade, par dissuasion ;
+//   - au relâchement d'Impr. écran, tout remasquer et tenter de vider le presse-papiers
+//     (refusé hors HTTPS ou sans geste de l'utilisateur) : un appoint, sans garantie.
+//
 // Limites, dites aussi dans l'aide : les bonnes réponses (data-correct-answers) restent
 // dans la page, cours.json est public, et une capture prise pendant qu'un énoncé est
-// affiché le montre.
+// affiché le montre — filigrane compris.
 //
 // Ni en vue formateur, ni dans les modales de correction : seule la page apprenant
 // (simulation comprise) est concernée — y compris une copie rendue, dont la relecture
@@ -171,6 +179,7 @@ const ChapterAntiIA = {
         const indication = section.querySelector('.hint-content');
         texte.innerHTML = contenu.texte;
         texte.classList.remove('anti-ia-masque');
+        this._poserFiligrane(texte);
         if (indication && contenu.indication !== null) indication.innerHTML = contenu.indication;
 
         this._revelee = section;
@@ -180,8 +189,52 @@ const ChapterAntiIA = {
         if (!section || !this._contenus.has(section)) return;
         const indication = section.querySelector('.hint-content');
         if (indication) indication.innerHTML = '';
+        this._retirerFiligrane(section.querySelector('.question-text'));
         this._voiler(section);
         if (this._revelee === section) this._revelee = null;
+    },
+
+    // ------------------------------------------------------------------------
+    // FILIGRANE NOMINATIF
+    // ------------------------------------------------------------------------
+
+    /**
+     * « Nom — jj/mm/aaaa hh:mm », calculé à chaque affichage : le nom est lu dans l'en-tête
+     * de la page (chapterInit.js le remplit — « Simulation formateur » en simulation), ce
+     * qui ne suppose aucun ordre de chargement. Repli sur le nom du QRCode, puis date seule.
+     */
+    _texteFiligrane() {
+        const nom = (document.querySelector('.student-name')?.textContent
+            || window.QRQuestion?.nom || '').trim();
+        const date = new Date().toLocaleString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        return nom ? `${nom} — ${date}` : date;
+    },
+
+    /**
+     * Une tuile SVG (texte incliné, gris très pâle) répétée en fond. Aucun nœud ajouté :
+     * l'énoncé reste au premier plan, et rien n'est cliquable. Le texte est échappé pour
+     * le XML, puis l'ensemble encodé pour l'URL data:.
+     */
+    _poserFiligrane(element) {
+        if (!element) return;
+        const texte = this._texteFiligrane()
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+        // Tuile basse (72px) et texte peu incliné : même un énoncé d'une ligne, dont la
+        // fenêtre fait la hauteur du voile, porte au moins un filigrane entier.
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="72">`
+            + `<text x="12" y="46" transform="rotate(-8 170 36)" fill="rgba(71,85,105,0.16)" `
+            + `font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600">${texte}</text></svg>`;
+        element.classList.add('anti-ia-filigrane');
+        element.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    },
+
+    _retirerFiligrane(element) {
+        if (!element) return;
+        element.classList.remove('anti-ia-filigrane');
+        element.style.backgroundImage = '';
     },
 
     // ------------------------------------------------------------------------
@@ -206,6 +259,7 @@ const ChapterAntiIA = {
         element.setAttribute('role', 'tooltip');
         element.innerHTML = contenu.texte +
             (indicationOuverte ? `<div class="anti-ia-fenetre-indication">💡 ${contenu.indication}</div>` : '');
+        this._poserFiligrane(element);
         texte.appendChild(element);
 
         this._fenetre = { section, element };
@@ -248,6 +302,19 @@ const ChapterAntiIA = {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) this.masquerTout();
         });
+
+        // Impr. écran : la capture est déjà prise quand la page l'apprend (cf. en-tête).
+        // On remasque tout de même, et on tente d'écraser le presse-papiers — refusé hors
+        // HTTPS ou sans geste de l'utilisateur, ce qui est attendu et sans conséquence.
+        const imprEcran = (evenement) => {
+            if (evenement.key !== 'PrintScreen' && evenement.code !== 'PrintScreen') return;
+            this.masquerTout();
+            try {
+                navigator.clipboard?.writeText(' ').catch(() => {});
+            } catch (_) { /* presse-papiers indisponible */ }
+        };
+        document.addEventListener('keyup', imprEcran, true);
+        document.addEventListener('keydown', imprEcran, true);
     }
 };
 
