@@ -991,29 +991,51 @@
     gap: 1.5rem;
 }
 
+/* Carte d'une copie. La bordure gauche et la barre du bas disent où en est la
+   correction (cf. etatCopie dans teacherSubmissions.js) ; la pastille, elle, dit où en
+   est la copie côté apprenant. */
 .submission-card {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 1.5rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    --teinte-correction: #adb5bd;
     position: relative;
+    overflow: hidden;      /* la barre suit l'arrondi de la carte */
+    background: white;
+    border: 1px solid #e3e7eb;
+    border-left: 4px solid var(--teinte-correction);
+    border-radius: 8px;
+    padding: 1.5rem 1.5rem 1.75rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .submission-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(16, 24, 40, 0.08), 0 10px 24px rgba(16, 24, 40, 0.10);
 }
 
-.submission-card.late {
-    border-left: 4px solid #e74c3c;
+.correction-a-corriger    { --teinte-correction: #f39c12; }
+.correction-en-correction { --teinte-correction: #3498db; }
+.correction-prete         { --teinte-correction: #27ae60; }
+.correction-a-revoir      { --teinte-correction: #c291d5; }
+
+.correction-barre {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: #eef1f4;
 }
 
-.submission-card.pending {
-    border-left: 4px solid #f39c12;
+.correction-barre span {
+    display: block;
+    height: 100%;
+    background: var(--teinte-correction);
+    transition: width 0.3s ease;
 }
 
-.submission-card.returned {
-    border-left: 4px solid #c291d5;
+.submission-actions button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .submission-header {
@@ -1050,6 +1072,15 @@
     background: #c291d5;
     color: white;
 }
+
+/* Tons papier, comme la pastille du mode consigne côté apprenant (index.css). */
+.badge-consigne {
+    background: #f6f1e7;
+    color: #7a5c1e;
+    border: 1px solid #d9c9a3;
+}
+
+.submission-badge { cursor: help; }
 
 .submission-info {
     font-size: 0.9rem;
