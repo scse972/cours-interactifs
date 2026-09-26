@@ -155,7 +155,9 @@ Millionnaire, « Recommencer » repart de la première question, dans le nouvel 
 <h4>🤖 Anti-IA</h4>
 <p>Examen, Blind et Millionnaire. Les énoncés sont masqués et ne se lisent qu'à la demande de
 l'apprenant, une question à la fois ; quitter la fenêtre remasque tout. Contre les agents IA
-intégrés au navigateur et les captures d'écran. Les cours ne sont jamais masqués.</p>
+intégrés au navigateur et les captures d'écran. Les cours ne sont jamais masqués.
+<strong>Actif par défaut</strong>, en « Intitulés temporaires » : choisissez « Désactivé » sur la
+carte pour afficher les énoncés normalement.</p>
 <table class="aide-table">
   <tr><th>Niveau</th><th>Masque</th><th>Pour lire l'énoncé</th></tr>
   <tr><td>Intitulés persistants</td><td>toutes les questions</td><td>un clic l'affiche en place ; il se remasque au clic hors de la question</td></tr>

@@ -117,7 +117,9 @@ class TeacherChapters {
                         { valeur: 'auto-persistant', libelle: 'Auto-corrigés persistants' },
                         { valeur: 'auto-temporaire', libelle: 'Auto-corrigés temporaires' }
                     ],
-                    valeur: config.antiIA || ''
+                    // Actif par défaut (cf. niveauAntiIA, core/utils.js) : sans choix du
+                    // formateur, le menu montre « Intitulés temporaires ».
+                    valeur: window.niveauAntiIA(config) || ''
                 },
                 // 🔁 Blind et Millionnaire : chaque nouvelle tentative coûte des points sur
                 // la note sur 20, sans la faire descendre sous le plancher (cf. Bareme,

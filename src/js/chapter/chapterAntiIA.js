@@ -75,7 +75,11 @@ const ChapterAntiIA = {
     niveau() {
         if (new URLSearchParams(window.location.search).get('teacher_view') === 'true') return null;
         if (!this.estProposable()) return null;
-        return this.NIVEAUX[window.currentChapterConfig?.antiIA] || null;
+        // Actif par défaut, en « Intitulés temporaires » : cf. niveauAntiIA (core/utils.js).
+        const valeur = window.niveauAntiIA
+            ? niveauAntiIA(window.currentChapterConfig)
+            : window.currentChapterConfig?.antiIA;
+        return this.NIVEAUX[valeur] || null;
     },
 
     _enFenetre() {

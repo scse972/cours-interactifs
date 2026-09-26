@@ -461,8 +461,11 @@ une semi d'une tentative close restée en attente de correction compte 0.
 
 ## 🤖 Option « anti-IA »
 
-Proposée aux modes **Examen, Blind et Millionnaire**. Stockée dans `chapter_config` (`antiIA`), avec
-quatre niveaux choisis par un menu sur la carte du chapitre :
+Proposée aux modes **Examen, Blind et Millionnaire**, et **active par défaut** en « Intitulés
+temporaires » : un chapitre dont la clé est absente est protégé, « Désactivé » s'enregistre comme
+`null` — un choix explicite. Le défaut se décide à un seul endroit, `niveauAntiIA()`
+(`core/utils.js`), lu par la page apprenant comme par la carte formateur. Stockée dans
+`chapter_config` (`antiIA`), avec quatre niveaux choisis par un menu sur la carte du chapitre :
 
 | Valeur | Libellé | Questions masquées | Lecture de l'énoncé |
 |---|---|---|---|

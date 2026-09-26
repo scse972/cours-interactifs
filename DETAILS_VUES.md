@@ -157,7 +157,7 @@ l'affichage change** — son ordre, son découpage, et ce qui est lisible sans c
 |---|---|---|---|
 | 🎲 Ordre aléatoire | Examen, Blind, Millionnaire | Chapitre **entièrement auto-corrigé** | coché en Millionnaire, décoché ailleurs |
 | 📄 Question par question | Examen, Blind, Millionnaire | aucune | décoché |
-| 🤖 Anti-IA | Examen, Blind, Millionnaire | aucune | désactivé (menu à quatre niveaux) |
+| 🤖 Anti-IA | Examen, Blind, Millionnaire | aucune | **actif, « Intitulés temporaires »** (menu à quatre niveaux ; « Désactivé » est enregistré comme `null`) |
 
 Sur la carte du chapitre, elles s'affichent en liste sous le menu du mode, et seulement quand elles
 sont proposées : un interrupteur pour une option oui/non, un menu pour une option à niveaux (anti-IA).
