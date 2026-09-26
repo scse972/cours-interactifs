@@ -461,7 +461,10 @@ tentative passée valait mieux), et remplit l'appréciation (« 🔁 4 tentative
 n°4 (1 pt par tentative, plancher 10/20) : −3 pt »). La valeur suit la copie tant que le formateur
 n'y touche pas (`data-auto`), puis sa saisie fait foi ; l'enregistrement la fige dans
 `coursePenalty` / `coursePenaltyComment`. XSpro en porte une copie (`penaliteProposeeXS`), qui
-pré-remplit sa barre Bonus/Pénalité. Avant correction, les bilans de l'apprenant appliquent la même
+pré-remplit sa barre Bonus/Pénalité. L'**historique des tentatives** (date, note, note après
+pénalité, tentative retenue) reste affiché en lecture seule, indépendamment de l'appréciation :
+bloc 🔁 de la section Bonus / Pénalité du modal (`historiqueTentatives`), badge 🔁 avec infobulle
+dans XSpro (`majBadgeTentativesXS`). Avant correction, les bilans de l'apprenant appliquent la même
 règle théorique (`core/bareme.js` : `reglesTentatives`, `penaliserTentative`, `retenirTentative`,
 `meilleurePossible`). L'apprenant voit, au moment de choisir, ce qu'il garde s'il s'arrête et la
 meilleure note encore possible (`ChapterBilan.encadreTentatives`). Limite : en mode meilleure note,

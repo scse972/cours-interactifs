@@ -199,7 +199,9 @@ obligatoire n'est pas lu, plus, en Blind et en Millionnaire, l'effet des tentati
 tentative bornée par la note plancher, ou l'écart avec la meilleure tentative si c'est elle qui est
 retenue (ce peut alors être un bonus). L'appréciation l'explique, par exemple « 🔁 4 tentatives —
 retenue dernière : n°4 (1 pt par tentative, plancher 10/20) : −3 pt ». Vous modifiez l'un et l'autre
-à votre guise : votre saisie fait foi.</p>
+à votre guise : votre saisie fait foi. Le nombre de tentatives et leur historique (date, note,
+note après pénalité, tentative retenue) restent affichés en lecture seule dans la section
+Bonus / Pénalité — et au survol du badge 🔁 dans XSpro —, même si l'appréciation a été effacée.</p>
 <p>Une question manuelle que vous n'avez pas corrigée compte pour <strong>zéro</strong>, exactement
 comme une question ratée. Les cases « traité » sont là pour que vous n'en oubliiez aucune.</p>
 

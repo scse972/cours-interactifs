@@ -577,6 +577,7 @@ class CorrectionModal {
                 <div class="question-correction-header">
                     <h6>🎯 Bonus / Pénalité (validation cours, ...)</h6>
                 </div>
+                ${this.historiqueTentatives(this.viewModel.scoring.tentatives)}
                 <div class="correction-row">
                     <div class="correction-label">⚖️ Statut:</div>
                     <div class="correction-value ${hasUnreadRequired ? 'incorrect' : 'correct'}">
@@ -1122,8 +1123,12 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         const archives = chapter.tentativesPassees || [];
         if (regles.tentative <= 1 && !archives.length) return { ...neutre, regles };
 
-        const candidates = [{ tentative: regles.tentative, note: noteBrute }];
-        if (regles.retenue === 'meilleure' && archives.length && maxTotalScore > 0) {
+        const chapitreRendu = chapter.submittedAt || chapter.examModeValidatedAt || null;
+        const candidates = [{ tentative: regles.tentative, note: noteBrute, fermeeLe: chapitreRendu }];
+        // Toutes les tentatives archivées sont notées, même en mode « dernière » : leur
+        // historique reste sous les yeux du formateur (historiqueTentatives), quoi que
+        // devienne l'appréciation.
+        if (archives.length && maxTotalScore > 0) {
             const questions = this.context.chapterConfig?.questions || [];
             const valeur = valeurManuelle || (() => 0);
             archives.forEach(archive => {
@@ -1140,11 +1145,21 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
                     }
                 });
                 const brute = (Math.max(0, auto) + Math.max(0, manuel)) / maxTotalScore * 20;
-                candidates.push({ tentative: archive.tentative, note: Math.round(brute * 10) / 10 });
+                candidates.push({ tentative: archive.tentative, note: Math.round(brute * 10) / 10, fermeeLe: archive.fermeeLe || null });
             });
         }
 
         const retenue = Bareme.retenirTentative(candidates, chapter);
+        const historique = candidates
+            .map(c => ({
+                tentative: c.tentative,
+                fermeeLe: c.fermeeLe,
+                noteBrute: c.note,
+                note: Bareme.penaliserTentative(c.note, c.tentative, regles).note,
+                enCours: c.tentative === regles.tentative,
+                retenue: c.tentative === retenue.tentative
+            }))
+            .sort((a, b) => a.tentative - b.tentative);
         const ajustement = Math.round((retenue.note - noteBrute) * 10) / 10;
         const n = v => String(Math.round(v * 10) / 10).replace('.', ',');
         const texte = `🔁 ${regles.tentative} tentative${regles.tentative > 1 ? 's' : ''} — retenue `
@@ -1152,7 +1167,38 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
             + `(${n(regles.penalite)} pt par tentative, plancher ${n(regles.plancher)}/20)`
             + (ajustement ? ` : ${ajustement > 0 ? '+' : ''}${n(ajustement)} pt` : '');
 
-        return { ajustement, tentative: retenue.tentative, texte, regles };
+        return { ajustement, tentative: retenue.tentative, texte, regles, historique };
+    }
+
+    /**
+     * Historique des tentatives, en lecture seule : ce que le formateur doit pouvoir
+     * retrouver même s'il a effacé ou réécrit l'appréciation du bonus/pénalité.
+     * Rien quand il n'y a eu qu'une tentative.
+     */
+    historiqueTentatives(tentatives) {
+        const liste = tentatives?.historique || [];
+        if (!tentatives?.regles || liste.length < 2 && tentatives.regles.tentative <= 1) return '';
+        const r = tentatives.regles;
+        const n = v => String(Math.round(v * 10) / 10).replace('.', ',');
+        const date = d => d ? new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+        const lignes = liste.map(t => `
+            <tr${t.retenue ? ' style="font-weight:600;"' : ''}>
+                <td>n°${t.tentative}${t.enCours ? ' (rendue)' : ''}</td>
+                <td>${date(t.fermeeLe)}</td>
+                <td>${n(t.noteBrute)}/20</td>
+                <td>${n(t.note)}/20</td>
+                <td>${t.retenue ? '✅ retenue' : ''}</td>
+            </tr>`).join('');
+        return `
+            <div class="correction-row" style="display:block;">
+                <div class="correction-label">🔁 Tentatives : ${r.tentative} — retenue ${r.retenue === 'meilleure' ? 'la meilleure' : 'la dernière'}
+                    (${n(r.penalite)} pt par tentative, plancher ${n(r.plancher)}/20)</div>
+                <table style="width:100%; border-collapse:collapse; margin-top:0.4rem; font-size:0.85rem;">
+                    <tr style="text-align:left; color:#555;"><th>Tentative</th><th>Terminée le</th><th>Note</th><th>Après pénalité</th><th></th></tr>
+                    ${lignes}
+                </table>
+                <div style="font-size:0.8rem; color:#777; margin-top:0.3rem;">Information permanente, indépendante de l'appréciation ci-dessous. Les questions manuelles, communes à toutes les tentatives, y comptent avec vos notes actuelles.</div>
+            </div>`;
     }
 
     /** Valeurs des questions telles que saisies dans le modal, pour le calcul en direct. */
