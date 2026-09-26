@@ -451,11 +451,19 @@ rendu d'un Blind dont le bilan a déjà été montré. Chaque tentative close es
 `chapter.tentativesPassees` (questions auto et semi ; les manuelles, conservées, sont communes à
 toutes) — c'est ce qui permet de retenir la meilleure.
 
-Ordre dans la note : points → /20 → arrondi → **tentatives** (pénalité selon le rang, plancher,
-tentative retenue) → bonus/malus du formateur → borne 0..20. Une seule règle, dans
-`core/bareme.js` (`reglesTentatives`, `penaliserTentative`, `retenirTentative`,
-`meilleurePossible`), appliquée par `correctionModal.calculateNoteSur20` et les bilans ; XSpro en
-porte une copie. L'apprenant voit, au moment de choisir, ce qu'il garde s'il s'arrête et la
+**À la correction, la formule de la note ne change pas** (points → /20 → arrondi → bonus/pénalité
+→ borne 0..20) : l'effet des tentatives est **proposé dans le bonus/pénalité**, comme la pénalité de
+cours, et c'est par là seulement qu'il compte. Tant que le formateur n'a rien saisi,
+`correctionModal.penaliteAutomatique()` propose −2 (cours obligatoire non lu) + l'ajustement des
+tentatives (`ajustementTentatives()` : note de la tentative retenue, pénalisée et bornée par le
+plancher, moins la note de la copie affichée — un **bonus** en mode meilleure note quand une
+tentative passée valait mieux), et remplit l'appréciation (« 🔁 4 tentatives — retenue dernière :
+n°4 (1 pt par tentative, plancher 10/20) : −3 pt »). La valeur suit la copie tant que le formateur
+n'y touche pas (`data-auto`), puis sa saisie fait foi ; l'enregistrement la fige dans
+`coursePenalty` / `coursePenaltyComment`. XSpro en porte une copie (`penaliteProposeeXS`), qui
+pré-remplit sa barre Bonus/Pénalité. Avant correction, les bilans de l'apprenant appliquent la même
+règle théorique (`core/bareme.js` : `reglesTentatives`, `penaliserTentative`, `retenirTentative`,
+`meilleurePossible`). L'apprenant voit, au moment de choisir, ce qu'il garde s'il s'arrête et la
 meilleure note encore possible (`ChapterBilan.encadreTentatives`). Limite : en mode meilleure note,
 une semi d'une tentative close restée en attente de correction compte 0.
 

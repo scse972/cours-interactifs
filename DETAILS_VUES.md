@@ -80,6 +80,7 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 | ✅ Valider définitivement | `_finalizeBlindSubmission` — rendu définitif, tout verrouillé, comme en Examen |
 | 🔄 Recommencer | `_resetBlindAttempt` — la tentative rendue est archivée (`tentativesPassees`), `tentative` avance, réponses auto et semi effacées, manuelles conservées ; l'apprenant corrige et rend de nouveau. **Sans limite** de tentatives, chacune pouvant coûter des points (pénalité par tentative) |
 | Rendu après rechargement pendant le bilan | Compte comme une nouvelle tentative (`examModeValidated` déjà vrai) : on ne contourne pas « Recommencer » |
+| À la correction | L'effet des tentatives est **proposé dans le bonus/pénalité** (avec son explication dans l'appréciation), comme la pénalité de cours ; la formule de la note ne change pas |
 | Message sous le chapitre | Aucun : le « Vous ne pouvez plus modifier » d'Examen serait faux tant que « Recommencer » reste possible |
 
 > Le bilan min/max n'est pas une estimation optimiste : une question auto sans réponse ou fausse

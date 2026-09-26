@@ -545,7 +545,6 @@ class CorrectionModal {
             <span id="summary-total" style="font-size:1.1em;">${noteSur20} / 20</span>
         </div>
     </div>
-    <div id="summary-tentatives" style="padding: 0 1rem 0.6rem; text-align: center; font-size: 0.9em; color: #1b4f72;">${this.escapeHtml(this.texteTentatives(this.viewModel.scoring.tentatives))}</div>
 </div>
 `;
 
@@ -561,8 +560,14 @@ class CorrectionModal {
         // il ne passera jamais par la validation in-app, donc le compter comme « non lu »
         // punirait l'apprenant pour un geste qu'on ne lui a pas demandé de faire. La formule
         // ne change pas et le formateur garde la main : une valeur qu'il saisit prime toujours.
-        const penaltyDefault = (hasUnreadRequired && !this.isConsigne()) ? -2 : 0;
-        const existingPenalty = this.context.chapter.coursePenalty !== undefined ? this.context.chapter.coursePenalty : penaltyDefault;
+        // Rien de saisi : la valeur proposée (cours + tentatives, cf. penaliteAutomatique),
+        // qui suit la copie tant que le formateur n'y touche pas (data-auto).
+        const penaliteAuto = this.viewModel.scoring.penaliteAuto || { valeur: 0, commentaire: '' };
+        const penaliteProposee = this.context.chapter.coursePenalty === undefined;
+        const existingPenalty = penaliteProposee ? penaliteAuto.valeur : this.context.chapter.coursePenalty;
+        const commentaireSaisi = this.context.chapter.coursePenaltyComment;
+        const commentaireProposee = !commentaireSaisi && penaliteProposee && !!penaliteAuto.commentaire;
+        const commentairePenalite = commentaireSaisi || (commentaireProposee ? penaliteAuto.commentaire : '');
 
         // Appréciations : pénalité/bonus (valeur + statut cours) ET commentaires, regroupés
         // ensemble comme un seul bloc (pas de séparation) — visible sous l'onglet "Appréciations"
@@ -583,12 +588,12 @@ class CorrectionModal {
                         <label>Valeur du bonus (+) ou pénalité (-) sur la note finale</label>
                         <input type="number" class="question-score"
                                id="course-penalty" min="-10" max="10"
-                               value="${existingPenalty}" step="0.5">
+                               value="${existingPenalty}" step="0.5" data-auto="${penaliteProposee ? '1' : '0'}">
                     </div>
                     <div class="form-group">
                         <label>Appréciation / Commentaire</label>
-                        <textarea class="question-comment" id="course-penalty-comment"
-                                  placeholder="Ajouter une appréciation concernant cette pénalité...">${this.escapeHtml(this.context.chapter.coursePenaltyComment || '')}</textarea>
+                        <textarea class="question-comment" id="course-penalty-comment" data-auto="${commentaireProposee ? '1' : '0'}"
+                                  placeholder="Ajouter une appréciation concernant cette pénalité...">${this.escapeHtml(commentairePenalite)}</textarea>
                     </div>
                     <div class="form-group">
                         <label>💬 Commentaire GÉNÉRAL sur la prestation</label>
@@ -597,7 +602,7 @@ class CorrectionModal {
                     </div>
                 </div>
                 <div class="correction-note">
-                    ℹ️ Cette pénalité est appliquée UNE SEULE FOIS si au moins un cours obligatoire n'est pas lu. Vous pouvez modifier cette valeur ou la mettre à 0 pour annuler complètement la pénalité.
+                    ℹ️ Valeur proposée : −2 si au moins un cours obligatoire n'est pas lu (une seule fois), plus, en Blind et Millionnaire, l'effet des tentatives (pénalité par tentative, plancher, tentative retenue — expliqué dans l'appréciation). Vous pouvez la modifier ou la mettre à 0 : votre saisie fait foi.
                 </div>
             </div>
         `;
@@ -946,7 +951,13 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         });
 
         // Pénalité de cours → recalcul live du header
-        document.getElementById('course-penalty')?.addEventListener('input', () => this.calculateScoreLive());
+        document.getElementById('course-penalty')?.addEventListener('input', (evenement) => {
+            evenement.target.dataset.auto = '0';   // sa saisie fait foi, on ne la recalcule plus
+            this.calculateScoreLive();
+        });
+        document.getElementById('course-penalty-comment')?.addEventListener('input', (evenement) => {
+            evenement.target.dataset.auto = '0';
+        });
 
         // Initialiser l'état du bouton Valider au chargement
         this.updateTreatedCount();
@@ -978,13 +989,11 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         autoScore = Math.max(0, autoScore);
         manualScore = Math.max(0, manualScore);
 
-        const coursePenalty = parseFloat(document.getElementById('course-penalty')?.value) || 0;
         const maxTotal = this.viewModel.scoring.auto.max + this.viewModel.scoring.manual.max;
-        // La formule officielle, et non une copie : celle-ci ignorait déjà un cas limite, et
-        // aurait ignoré la pénalité par tentative.
-        const noteSur20 = this.calculateNoteSur20(autoScore, manualScore, maxTotal, coursePenalty, this.valeursDepuisDOM());
-        const tentativesEl = document.getElementById('summary-tentatives');
-        if (tentativesEl) tentativesEl.textContent = this.texteTentatives(this.derniereTentative);
+        this.majPenaliteAutomatique(autoScore, manualScore, maxTotal);
+        const coursePenalty = parseFloat(document.getElementById('course-penalty')?.value) || 0;
+        // La formule officielle, et non une copie : celle-ci ignorait déjà un cas limite.
+        const noteSur20 = this.calculateNoteSur20(autoScore, manualScore, maxTotal, coursePenalty);
 
         // ✅ Mettre à jour uniquement les spans dynamiques
         const treated = document.querySelectorAll('.treated-checkbox:checked').length;
@@ -1048,7 +1057,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
     /**
      * Calcule la note sur 20 (SOURCE DE VÉRITÉ UNIQUE)
      */
-    calculateNoteSur20(autoScore, manualScore, maxTotalScore, coursePenalty = 0, valeurManuelle = null) {
+    calculateNoteSur20(autoScore, manualScore, maxTotalScore, coursePenalty = 0) {
         // Le retour anticipé « maxTotalScore <= 0 → 0 » ignorait la pénalité/bonus, alors que
         // le résumé live updateGlobalSummary() l'appliquait déjà dans ce cas. Un chapitre
         // cours-seul (aucune question notée, bonus saisi) affichait donc un total dans le
@@ -1058,44 +1067,65 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         // au moins une question notée ; seul le cas « aucune question » change, et le bonus
         // s'y exprime enfin. Changement général, valable dans tous les modes : ce n'est pas
         // une exception consigne, c'est la correction d'une incohérence déjà présente.
+        //
+        // La pénalité par tentative n'a PAS d'étape ici : comme celle des cours, elle est
+        // proposée dans le bonus/pénalité (cf. penaliteAutomatique), que le formateur voit
+        // et peut modifier. La formule de la note ne change pas.
         const raw = maxTotalScore > 0 ? (autoScore + manualScore) / maxTotalScore * 20 : 0;
         const rounded = Math.round(raw * 10) / 10;
 
-        // Pénalité par tentative (Blind, Millionnaire) et choix de la tentative retenue,
-        // AVANT le bonus/malus du formateur : son geste passe en dernier et peut, lui,
-        // descendre sous le plancher. Cf. Bareme et la fiche « notation » de aide.js.
-        const tentatives = this.appliquerTentatives(rounded, maxTotalScore, valeurManuelle);
-        this.derniereTentative = tentatives;
-
-        return Math.min(20, Math.max(0, tentatives.note + coursePenalty));
+        return Math.min(20, Math.max(0, rounded + coursePenalty));
     }
 
     /**
-     * La note de la tentative en cours, pénalisée selon son rang ; en mode « meilleure
-     * note », comparée aux tentatives archivées (chapter.tentativesPassees).
+     * Le bonus/pénalité proposé tant que le formateur n'a rien saisi : la pénalité de cours
+     * (−2 si un cours obligatoire n'est pas lu, 0 en consigne) PLUS l'ajustement dû aux
+     * tentatives (Blind, Millionnaire), avec l'appréciation qui l'explique. Tout ce qui est
+     * retiré de la note l'est par cette case, et nulle part ailleurs.
      *
-     * Une tentative archivée est notée comme celle d'aujourd'hui, ses réponses auto et
-     * semi remplaçant les actuelles. Les questions manuelles, conservées d'une tentative
-     * à l'autre, gardent la valeur que le formateur leur donne en ce moment —
-     * `valeurManuelle(id)`. Limite assumée : une semi d'une tentative archivée restée en
-     * attente de correction compte 0, le formateur ne corrigeant que la tentative en cours.
+     * @param {number} noteBrute  note sur 20 de la copie, avant tout bonus/pénalité
+     * @returns {{valeur: number, commentaire: string, tentatives: Object}}
      */
-    appliquerTentatives(noteCourante, maxTotalScore, valeurManuelle) {
+    penaliteAutomatique(noteBrute, maxTotalScore, valeurManuelle, hasUnreadRequired) {
+        const cours = (hasUnreadRequired && !this.isConsigne()) ? -2 : 0;
+        const tentatives = this.ajustementTentatives(noteBrute, maxTotalScore, valeurManuelle);
+        const valeur = Math.round((cours + tentatives.ajustement) * 10) / 10;
+
+        // L'appréciation n'est proposée que s'il y a des tentatives à expliquer : sans elles,
+        // rien ne change par rapport à avant (le −2 des cours se passait de commentaire).
+        const lignes = [];
+        if (tentatives.texte) {
+            if (cours) lignes.push(`📚 Cours obligatoire non lu : ${cours} pt`);
+            lignes.push(tentatives.texte);
+        }
+        return { valeur, commentaire: lignes.join('\n'), tentatives };
+    }
+
+    /**
+     * Ce que les tentatives changent à la note : la tentative retenue (la dernière, ou la
+     * meilleure en mode « meilleure note »), pénalisée selon son rang et bornée par le
+     * plancher (cf. Bareme), moins la note de la copie affichée. Négatif le plus souvent ;
+     * POSITIF en mode meilleure note quand une tentative passée valait mieux que la dernière.
+     *
+     * Une tentative archivée est notée comme la copie affichée, ses réponses auto et semi
+     * remplaçant les actuelles. Les questions manuelles, conservées d'une tentative à
+     * l'autre, gardent la valeur que le formateur leur donne — `valeurManuelle(id)`.
+     * Limite assumée : une semi d'une tentative archivée restée en attente de correction
+     * compte 0, le formateur ne corrigeant que la dernière tentative.
+     */
+    ajustementTentatives(noteBrute, maxTotalScore, valeurManuelle) {
         const chapter = this.context?.chapter;
-        if (!chapter || !window.Bareme) return { note: noteCourante, retrait: 0, tentative: 1, noteBrute: noteCourante };
+        const neutre = { ajustement: 0, tentative: 1, texte: '', regles: null };
+        if (!chapter || !window.Bareme) return neutre;
 
         const regles = Bareme.reglesTentatives(chapter);
-        const candidates = [{ tentative: regles.tentative, note: noteCourante }];
-
         const archives = chapter.tentativesPassees || [];
+        if (regles.tentative <= 1 && !archives.length) return { ...neutre, regles };
+
+        const candidates = [{ tentative: regles.tentative, note: noteBrute }];
         if (regles.retenue === 'meilleure' && archives.length && maxTotalScore > 0) {
             const questions = this.context.chapterConfig?.questions || [];
-            const valeur = valeurManuelle || (id => {
-                const q = this.viewModel?.questions?.find(x => x.id === id);
-                if (!q) return 0;
-                return (typeof q.teacherScore === 'number' && !isNaN(q.teacherScore))
-                    ? q.teacherScore : this.toNumber(q.theoreticalScore ?? q.score);
-            });
+            const valeur = valeurManuelle || (() => 0);
             archives.forEach(archive => {
                 let auto = 0;
                 let manuel = 0;
@@ -1114,7 +1144,15 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
             });
         }
 
-        return { ...Bareme.retenirTentative(candidates, chapter), regles };
+        const retenue = Bareme.retenirTentative(candidates, chapter);
+        const ajustement = Math.round((retenue.note - noteBrute) * 10) / 10;
+        const n = v => String(Math.round(v * 10) / 10).replace('.', ',');
+        const texte = `🔁 ${regles.tentative} tentative${regles.tentative > 1 ? 's' : ''} — retenue `
+            + `${regles.retenue === 'meilleure' ? 'meilleure' : 'dernière'} : n°${retenue.tentative} `
+            + `(${n(regles.penalite)} pt par tentative, plancher ${n(regles.plancher)}/20)`
+            + (ajustement ? ` : ${ajustement > 0 ? '+' : ''}${n(ajustement)} pt` : '');
+
+        return { ajustement, tentative: retenue.tentative, texte, regles };
     }
 
     /** Valeurs des questions telles que saisies dans le modal, pour le calcul en direct. */
@@ -1126,14 +1164,21 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         return id => valeurs.get(id) ?? 0;
     }
 
-    /** Ligne « tentatives » du résumé : rien à dire tant qu'il n'y a eu qu'une tentative. */
-    texteTentatives(t) {
-        if (!t?.regles || (t.regles.tentative <= 1 && !(this.context?.chapter?.tentativesPassees || []).length)) return '';
-        const n = v => String(Math.round(v * 10) / 10).replace('.', ',');
-        const retenue = t.regles.retenue === 'meilleure' ? `meilleure : n°${t.tentative}` : `dernière : n°${t.tentative}`;
-        return `🔁 ${t.regles.tentative} tentative${t.regles.tentative > 1 ? 's' : ''} — retenue ${retenue}`
-            + (t.retrait > 0 ? `, ${n(t.noteBrute)} − ${n(t.retrait)} pt` : '')
-            + ` (${n(t.regles.penalite)} pt par tentative, plancher ${n(t.regles.plancher)}/20)`;
+    /**
+     * Tant que le formateur n'a pas touché au bonus/pénalité (ni à son appréciation), la
+     * valeur proposée suit la copie : une note manuelle qui change peut faire jouer le
+     * plancher autrement. Dès qu'il y touche, sa saisie fait foi.
+     */
+    majPenaliteAutomatique(autoScore, manualScore, maxTotalScore) {
+        const champ = document.getElementById('course-penalty');
+        if (!champ || champ.dataset.auto !== '1') return;
+        const noteBrute = maxTotalScore > 0
+            ? Math.round((autoScore + manualScore) / maxTotalScore * 20 * 10) / 10 : 0;
+        const nonLu = this.viewModel.questions.some(q => q.isCourse && q.isRequired && !q.isCorrect);
+        const proposee = this.penaliteAutomatique(noteBrute, maxTotalScore, this.valeursDepuisDOM(), nonLu);
+        champ.value = proposee.valeur;
+        const commentaire = document.getElementById('course-penalty-comment');
+        if (commentaire && commentaire.dataset.auto === '1') commentaire.value = proposee.commentaire;
     }
 
     /**
@@ -1201,20 +1246,20 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         autoScore = Math.max(0, autoScore);
         manualScore = Math.max(0, manualScore);
 
-        const coursePenalty = this.toNumber(
-            document.getElementById('course-penalty')?.value
-        );
-
         const maxTotalScore =
             this.viewModel.scoring.auto.max +
             this.viewModel.scoring.manual.max;
+
+        this.majPenaliteAutomatique(autoScore, manualScore, maxTotalScore);
+        const coursePenalty = this.toNumber(
+            document.getElementById('course-penalty')?.value
+        );
 
         const noteSur20 = this.calculateNoteSur20(
             autoScore,
             manualScore,
             maxTotalScore,
-            coursePenalty,
-            this.valeursDepuisDOM()
+            coursePenalty
         );
 
         this.updateHeaderNote(noteSur20);
@@ -1289,27 +1334,29 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         // ✅ Calculer la pénalité par défaut SI pas déjà sauvegardée
         const hasUnreadRequired = questions.some(q => q.isCourse && q.isRequired && !q.isCorrect);
 
-        // Même défaut qu'au rendu (voir renderQuestionList) : 0 en consigne au lieu de -2.
-        // Les deux endroits doivent rester d'accord, sinon la note affichée dans l'en-tête et
-        // la note sauvegardée divergent.
-        const coursePenalty = this.context.chapter.coursePenalty ??
-            ((hasUnreadRequired && !this.isConsigne()) ? -2 : 0);
+        // Bonus/pénalité proposé tant que rien n'est saisi : cours (0 en consigne au lieu
+        // de −2) et tentatives (Blind, Millionnaire). Le rendu (renderQuestionList) affiche
+        // cette même valeur : les deux doivent rester d'accord, sinon la note de l'en-tête
+        // et la note sauvegardée divergent.
+        const parId = new Map(questions.map(q => [q.id, q]));
+        const valeurManuelle = id => {
+            const q = parId.get(id);
+            if (!q) return 0;
+            return (typeof q.teacherScore === 'number' && !isNaN(q.teacherScore))
+                ? q.teacherScore : this.toNumber(q.theoreticalScore ?? q.score);
+        };
+        const noteBrute = maxTotalScore > 0 ? Math.round(totalScore / maxTotalScore * 20 * 10) / 10 : 0;
+        const penaliteAuto = this.penaliteAutomatique(noteBrute, maxTotalScore, valeurManuelle, hasUnreadRequired);
+        const coursePenalty = this.context.chapter.coursePenalty ?? penaliteAuto.valeur;
 
         // ✅ Utilisation de la fonction SOURCE DE VÉRITÉ UNIQUE
-        const parId = new Map(questions.map(q => [q.id, q]));
         const noteSur20 = this.calculateNoteSur20(
             autoScore,
             manualScore,
             maxTotalScore,
-            coursePenalty,
-            id => {
-                const q = parId.get(id);
-                if (!q) return 0;
-                return (typeof q.teacherScore === 'number' && !isNaN(q.teacherScore))
-                    ? q.teacherScore : this.toNumber(q.theoreticalScore ?? q.score);
-            }
+            coursePenalty
         );
-        const tentatives = this.derniereTentative;
+        const tentatives = penaliteAuto.tentatives;
 
         return {
             auto: {
@@ -1324,6 +1371,7 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
             totalScore,
             maxTotalScore,
             coursePenalty,
+            penaliteAuto,
             tentatives,
             noteSur20
         };
@@ -1438,9 +1486,8 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         chapter.finalScore = result.totalScore;
         chapter.noteAttribuee = Math.round(result.noteSur20 * 10) / 10; // ✅ Arrondi garanti 1 décimale
         chapter.coursePenalty = result.coursePenalty;
-        // Pénalité par tentative déjà comprise dans noteAttribuee ; gardée à part pour
-        // l'expliquer (export, suivi). Absente si une seule tentative.
-        chapter.penaliteTentatives = result.tentatives?.retrait || 0;
+        // La pénalité par tentative est dans coursePenalty (bonus/pénalité), comme celle des
+        // cours ; on garde seulement la tentative retenue, pour l'expliquer (export, suivi).
         chapter.tentativeRetenue = result.tentatives?.tentative || 1;
 
         chapter.correctionStatus = approve ? 'validated' : 'in_progress';

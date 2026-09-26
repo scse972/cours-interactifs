@@ -126,6 +126,9 @@ Une erreur vaut 0, jamais de points négatifs, et la pénalité de cours n'entre
 7/20 reste 7. Au moment de choisir, l'apprenant voit ce qu'il garde s'il s'arrête, la meilleure
 note qu'il peut encore espérer, et le moment où recommencer ne peut plus rien lui apporter. En
 Millionnaire, revenir sur le chapitre après avoir commencé à répondre compte comme une tentative.</p>
+<p>À la correction, cet effet des tentatives est <strong>proposé dans la case « Bonus / Pénalité »</strong>,
+comme la pénalité d'un cours non lu, avec son explication dans l'appréciation : c'est là, et
+seulement là, qu'il compte. Vous pouvez le modifier.</p>
 
 <h4>🖨️ Feuille de consignes (mode Consigne)</h4>
 <p>Le bouton <strong>« 🖨️ Feuille de consignes »</strong> de la carte imprime, par apprenant,
@@ -188,13 +191,15 @@ restent présentes dans le code de la page.</p>
   <li>Les questions <strong>manuelles et semi-automatiques</strong> sont additionnées à part, avec
       les notes que vous attribuez. Même garde-fou.</li>
   <li>La somme des deux est rapportée au barème total du chapitre, puis mise sur 20.</li>
-  <li>En Blind et en Millionnaire, la <strong>pénalité par tentative</strong> est retirée, sans
-      descendre sous la note plancher ; puis la tentative retenue est choisie — la dernière, ou
-      la meilleure selon le réglage du chapitre.</li>
   <li><strong>Enfin seulement</strong>, le bonus ou le malus est ajouté — sur la note, pas sur les
-      points — et le résultat est ramené entre 0 et 20. Votre malus, lui, peut passer sous le
-      plancher : c'est votre geste.</li>
+      points — et le résultat est ramené entre 0 et 20.</li>
 </ol>
+<p>Tant que vous n'avez rien saisi, le bonus/malus est <strong>proposé</strong> : −2 si un cours
+obligatoire n'est pas lu, plus, en Blind et en Millionnaire, l'effet des tentatives — la pénalité par
+tentative bornée par la note plancher, ou l'écart avec la meilleure tentative si c'est elle qui est
+retenue (ce peut alors être un bonus). L'appréciation l'explique, par exemple « 🔁 4 tentatives —
+retenue dernière : n°4 (1 pt par tentative, plancher 10/20) : −3 pt ». Vous modifiez l'un et l'autre
+à votre guise : votre saisie fait foi.</p>
 <p>Une question manuelle que vous n'avez pas corrigée compte pour <strong>zéro</strong>, exactement
 comme une question ratée. Les cases « traité » sont là pour que vous n'en oubliiez aucune.</p>
 

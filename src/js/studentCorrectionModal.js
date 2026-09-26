@@ -431,10 +431,7 @@ class StudentCorrectionModal extends CorrectionModal {
                 <span class="scm-summary-label">Note finale</span>
                 <span class="scm-summary-value">${note} / 20</span>
             </div>
-        </div>
-        ${this.texteTentatives(scoring.tentatives)
-            ? `<p style="text-align:center; font-size:0.85rem; color:#1b4f72; margin:0.4rem 0 0;">${this.escapeHtml(this.texteTentatives(scoring.tentatives))}</p>`
-            : ''}`;
+        </div>`;
     }
 
     _buildQuestions() {

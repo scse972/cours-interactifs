@@ -130,8 +130,12 @@
         // `chapter.tentative` est le numéro de la tentative en cours (absent = 1) ; il ne
         // dépasse 1 qu'en Blind et en Millionnaire, d'où l'absence de test de mode ici.
         //
-        // Ordre dans la note : points → /20 → arrondi → TENTATIVES → choix de la
-        // tentative retenue → bonus/malus du formateur → borne 0..20.
+        // À LA CORRECTION, la formule de la note ne change pas (points → /20 → arrondi →
+        // bonus/pénalité → borne 0..20) : l'effet des tentatives est PROPOSÉ dans le
+        // bonus/pénalité, comme la pénalité de cours, avec son explication dans
+        // l'appréciation (correctionModal.penaliteAutomatique) — le formateur le voit et le
+        // modifie. Les bilans de l'apprenant, avant correction, l'appliquent directement,
+        // entre l'arrondi et la pénalité de cours : même résultat.
         //
         // XSpro en porte une copie (formulaireProgressionApprenant.js) : la modifier avec.
 
