@@ -80,7 +80,9 @@ théorique — votre geste vous appartient, et ne lui est annoncé qu'à la vali
         },
 
         // Appliquée par : core/getExamContext.js (résolution du mode et gel au premier
-        // démarrage), chapter/chapterOrdre.js et chapter/chapterPagination.js.
+        // démarrage), chapter/chapterOrdre.js et chapter/chapterPagination.js. Le rendu
+        // Blind : chapter/chapterBilan.js (showBlindBilan) et chapter/chapterSubmission.js
+        // (_finalizeBlindSubmission, _resetBlindAttempt).
         modes: {
             titre: '🎛️ Les modes de chapitre et leurs options',
             html: `
@@ -91,7 +93,7 @@ republier le parcours.</p>
   <tr><th>Mode</th><th>Principe</th></tr>
   <tr><td>📖 Découverte</td><td>Retour immédiat, l'apprenant peut réessayer.</td></tr>
   <tr><td>📝 Examen</td><td>Aucun retour, enregistrement en temps réel, tout se verrouille au rendu.</td></tr>
-  <tr><td>🥽 Blind</td><td>Saisie silencieuse, bilan minimal / maximal à la validation.</td></tr>
+  <tr><td>🥽 Blind</td><td>Aucun retour pendant la saisie. Au rendu, l'apprenant voit sa note sans savoir où il s'est trompé, et choisit : valider ou recommencer. Détail plus bas.</td></tr>
   <tr><td>💰 Millionnaire</td><td>Une erreur réinitialise les questions auto-corrigées. Pas de reprise : revenir sur le chapitre repart d'une tentative neuve.</td></tr>
   <tr><td>🧾 Atelier AR</td><td>Les questions ouvertes se valident en main propre, par échange de codes — dans l'application.</td></tr>
   <tr><td>📋 Consigne</td><td>Travail sur papier : vous imprimez une feuille nominative avec un QRCode par question. L'application reste consultable comme en Découverte, et vous corrigez même sans rendu.</td></tr>
@@ -99,6 +101,35 @@ republier le parcours.</p>
 <p><strong>Le mode est figé au premier démarrage de chaque apprenant.</strong> Si vous en changez
 ensuite, cela ne concerne que ceux qui n'ont pas commencé — on ne change pas les règles sous les
 pieds de quelqu'un qui joue.</p>
+
+<h4>🥽 Ce qui se passe au rendu en Blind</h4>
+<p>Pendant le travail, Blind ressemble à Examen : pas de bouton « Vérifier », aucune indication
+juste ou faux, les réponses s'enregistrent en silence. <strong>Tout se joue au moment de
+rendre.</strong> En Examen, « Rendre » envoie la copie aussitôt, définitivement. En Blind, il
+ouvre d'abord un écran de bilan :</p>
+<ul>
+  <li>l'apprenant y voit <strong>sa note sur 20</strong>, mais <strong>pas quelles questions sont
+      justes ou fausses</strong> ;</li>
+  <li>si des questions attendent votre correction (réponses rédigées), il voit une
+      <strong>fourchette</strong> : la note si vous ne leur accordez rien, et celle si vous leur
+      accordez tout ;</li>
+  <li>il choisit ensuite entre deux boutons.</li>
+</ul>
+<table class="aide-table">
+  <tr><th>Bouton</th><th>Effet</th></tr>
+  <tr><td>✅ Valider définitivement</td><td>La copie vous est rendue et se verrouille, exactement
+      comme en Examen.</td></tr>
+  <tr><td>🔄 Recommencer</td><td>Ses réponses aux questions auto-corrigées et semi-automatiques
+      sont effacées ; celles à correction manuelle sont conservées. Il refait les questions
+      effacées, puis peut rendre de nouveau.</td></tr>
+</table>
+<p><strong>Il peut recommencer autant de fois qu'il le veut</strong>, tant qu'il n'a pas validé :
+d'ici là, sa copie n'est pas rendue. Le mode ne juge donc pas un premier jet. Il oblige
+l'apprenant à se relire et à trouver lui-même ses erreurs, puisqu'il sait combien de points il
+perd sans savoir où.</p>
+<p>Rien n'est retiré pour une erreur : en Blind, une question auto-corrigée fausse ou sans réponse
+vaut 0, jamais des points négatifs. On ne sanctionne pas une erreur commise sans retour. La
+pénalité de cours n'entre pas non plus dans ce bilan.</p>
 
 <h4>🖨️ Feuille de consignes (mode Consigne)</h4>
 <p>En mode 📋 Consigne, la carte du chapitre porte un bouton <strong>« 🖨️ Feuille de
