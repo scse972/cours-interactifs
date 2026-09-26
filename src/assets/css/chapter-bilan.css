@@ -31,10 +31,13 @@
     min-height: 750px;
 }
 
-/* Bilan réduit (mode blind, contenu succinct) */
+/* Bilan réduit (mode blind, contenu succinct). Plus de plafond fixe à 450px : depuis
+   l'encadré des tentatives, le contenu le dépassait de peu et faisait apparaître un
+   ascenseur pour une ou deux lignes. La fenêtre prend la hauteur de son contenu, dans
+   la limite de l'écran. */
 .modal-content.bilan-reduit {
     min-height: auto;
-    max-height: 450px;
+    max-height: 90vh;
 }
 
 .modal-header {
