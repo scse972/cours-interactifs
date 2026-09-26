@@ -111,6 +111,12 @@ class TeacherChapters {
                             <button class="btn-simuler"
                                     title="Tester ce chapitre comme un apprenant — rien n'est conservé"
                                     onclick="dashboard.modules.chapters.simulerChapitre('${chapter.id}')">👁</button>
+                            ${'' /* Le cadenas montre l'état, le clic l'inverse : ouvert quand le
+                                 chapitre est disponible, fermé quand il est verrouillé. */}
+                            <button class="btn-simuler btn-verrou ${isLocked ? 'est-verrouille' : ''}"
+                                    title="${isLocked ? 'Verrouillé — cliquer pour déverrouiller' : 'Disponible — cliquer pour verrouiller'}"
+                                    aria-label="${isLocked ? 'Déverrouiller le chapitre' : 'Verrouiller le chapitre'}"
+                                    onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">${isLocked ? '🔒' : '🔓'}</button>
                         </div>
                         <h4 title="${this.escapeHtml(chapter.title)}">${this.escapeHtml(chapter.title)}</h4>
                     </div>
@@ -175,12 +181,6 @@ class TeacherChapters {
                                 ).join('')}
                             </select>
                         </div>
-                    </div>
-
-                    <div class="carte-pied">
-                        <button class="control-btn ${isLocked ? 'btn-unlock' : 'btn-lock'}" onclick="dashboard.modules.chapters.toggleChapterLock('${chapter.id}')">
-                            ${isLocked ? '🔓 Déverrouiller' : '🔒 Verrouiller'}
-                        </button>
                     </div>
                 </div>
             `;

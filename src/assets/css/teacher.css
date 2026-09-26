@@ -108,13 +108,9 @@
     margin-top: 1rem;
 }
 
-/* Carte d'un chapitre : des sections empilées (mode et ses options, limite de date),
-   puis le verrou en pied. La carte est une colonne flex : le pied est poussé en bas,
-   pour que les verrous d'une même rangée de la grille s'alignent quelle que soit la
-   hauteur des cartes voisines. */
+/* Carte d'un chapitre : l'en-tête (pastilles, 👁 et cadenas, titre), puis des sections
+   empilées — le mode et ses options, la limite de date. */
 .chapter-control-card {
-    display: flex;
-    flex-direction: column;
     background: white;
     border: 1px solid #eee;
     border-radius: 8px;
@@ -139,8 +135,9 @@
     gap: 0.4rem;
 }
 
-/* 👁 Simuler le chapitre — calibré sur la hauteur d'une pastille pour tenir dans la
-   rangée de badges sans la déformer, y compris quand « ⚠️ Incohérence » est présente. */
+/* 👁 Simuler le chapitre, et le cadenas qui le suit — calibrés sur la hauteur d'une
+   pastille pour tenir dans la rangée de badges sans la déformer, y compris quand
+   « ⚠️ Incohérence » est présente. */
 .btn-simuler {
     flex-shrink: 0;
     border: 1px solid #d6eaf8;
@@ -156,6 +153,16 @@
 
 .btn-simuler:hover {
     background: #d6eaf8;
+}
+
+/* 🔒 Verrouillé : teinte de la pastille « Verrouillé », pour que l'état se lise d'un coup. */
+.btn-verrou.est-verrouille {
+    border-color: #34495e;
+    background: #eaecee;
+}
+
+.btn-verrou.est-verrouille:hover {
+    background: #d5d8dc;
 }
 
 .control-header h4 {
@@ -176,6 +183,7 @@
 /* Le séparateur est en haut : l'en-tête a déjà le sien, et la dernière section n'en
    trace pas au-dessus du vide qui la sépare du verrou. */
 .carte-section + .carte-section { border-top: 1px solid #f1f3f5; }
+.carte-section:last-child { padding-bottom: 0; }
 
 .carte-section-titre {
     display: flex;
@@ -276,13 +284,6 @@
 
 .carte-btn-secondaire:hover { background: #d6eaf8; }
 
-.carte-pied {
-    margin-top: auto;
-    padding-top: 0.9rem;
-}
-
-.carte-pied .control-btn { width: 100%; }
-
 .control-status {
     padding: 4px 8px;
     border-radius: 12px;
@@ -350,14 +351,6 @@
     background: #2ecc71;
 }
 
-.btn-lock {
-    background: #e74c3c;
-    color: white;
-}
-
-.btn-lock:hover {
-    background: #c0392b;
-}
 
 .date-display {
     font-size: 0.9rem;
