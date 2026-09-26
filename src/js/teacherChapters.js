@@ -74,7 +74,8 @@ class TeacherChapters {
             // Options du mode : une ligne par option, empilées dans un même bloc. Chacune
             // déclare quand elle est proposée ; une option non proposée n'est pas affichée,
             // et le bloc disparaît s'il ne reste rien. Ajouter une option = une entrée ici,
-            // sans toucher à la mise en page : la liste s'allonge d'une ligne.
+            // sans toucher à la mise en page : la liste s'allonge d'une ligne. Une option
+            // porte soit `actif` (interrupteur), soit `choix` + `valeur` (menu).
             const optionsMode = [
                 {
                     // 🎲 Examen, Blind et Millionnaire, et seulement si le chapitre est
@@ -98,8 +99,25 @@ class TeacherChapters {
                     aide: 'Une seule question affichée à la fois, avec navigation libre dans les deux sens. Les blocs de cours comptent comme des étapes.',
                     proposable: ['exam', 'blind', 'millionnaire'].includes(chapterMode),
                     actif: config.questionParQuestion === true
+                },
+                {
+                    // 🤖 Examen, Blind et Millionnaire. Les intitulés sont masqués jusqu'au
+                    // clic de l'apprenant (cf. chapter/chapterAntiIA.js) : « persistant »
+                    // les laisse visibles tant qu'il travaille dans la question,
+                    // « temporaire » les remasque dès qu'il clique hors de l'intitulé.
+                    cle: 'antiIA',
+                    libelle: '🤖 Anti-IA',
+                    aide: "Les énoncés sont masqués : l'apprenant clique dessus pour les lire, ils se remasquent dès qu'il clique ailleurs. Contre les agents IA du navigateur et les captures d'écran.",
+                    proposable: ['exam', 'blind', 'millionnaire'].includes(chapterMode),
+                    choix: [
+                        { valeur: '',                libelle: 'Désactivé' },
+                        { valeur: 'tous-persistant', libelle: 'Intitulés persistants' },
+                        { valeur: 'tous-temporaire', libelle: 'Intitulés temporaires' },
+                        { valeur: 'auto-persistant', libelle: 'Auto-corrigés persistants' },
+                        { valeur: 'auto-temporaire', libelle: 'Auto-corrigés temporaires' }
+                    ],
+                    valeur: config.antiIA || ''
                 }
-                // 🤖 Mode anti-IA : à venir. Il prendra place ici, sur le même modèle.
             ].filter(option => option.proposable);
 
             html += `
@@ -143,8 +161,13 @@ class TeacherChapters {
                             ${optionsMode.map(option => `
                             <label class="carte-option" title="${this.escapeHtml(option.aide)}">
                                 <span>${option.libelle}</span>
+                                ${option.choix ? `
+                                <select class="carte-option-select"
+                                        onchange="dashboard.modules.chapters.basculerOption('${chapter.id}', '${option.cle}', this.value || null)">
+                                    ${option.choix.map(c => `<option value="${c.valeur}" ${c.valeur === option.valeur ? 'selected' : ''}>${c.libelle}</option>`).join('')}
+                                </select>` : `
                                 <input type="checkbox" class="interrupteur" ${option.actif ? 'checked' : ''}
-                                       onchange="dashboard.modules.chapters.basculerOption('${chapter.id}', '${option.cle}', this.checked)">
+                                       onchange="dashboard.modules.chapters.basculerOption('${chapter.id}', '${option.cle}', this.checked)">`}
                             </label>`).join('')}
                         </div>` : ''}
                         ${chapterMode === 'consigne' ? `
@@ -252,10 +275,13 @@ class TeacherChapters {
         window.open(Simulation.url(slug, chapterId), '_blank');
     }
 
-    /** Une option du mode (cf. `optionsMode` dans render) : sa clé est celle de la config. */
-    async basculerOption(chapterId, cle, actif) {
+    /**
+     * Une option du mode (cf. `optionsMode` dans render) : sa clé est celle de la config.
+     * Un interrupteur passe true/false, un menu sa valeur — null pour « Désactivé ».
+     */
+    async basculerOption(chapterId, cle, valeur) {
         await this.dashboard.updateChapterConfig(chapterId, {
-            [cle]: actif
+            [cle]: valeur
         });
         this.render();
     }

@@ -706,6 +706,40 @@
 }
 
 /* ============================================
+   ANTI-IA : ÉNONCÉ MASQUÉ JUSQU'AU CLIC
+   Voir chapterAntiIA.js
+   ============================================ */
+.anti-ia-voile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.9rem 1rem;
+    border: 2px dashed #b8c4d0;
+    border-radius: 8px;
+    background: repeating-linear-gradient(135deg, #f4f6f8 0 10px, #eef1f4 10px 20px);
+    color: #5d6d7e;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.anti-ia-voile small {
+    font-weight: 400;
+    font-size: 0.8rem;
+    color: #85929e;
+}
+
+.anti-ia-voile:hover,
+.anti-ia-voile:focus-visible {
+    border-color: #3498db;
+    color: #1b4f72;
+    outline: none;
+}
+
+/* ============================================
    AFFICHAGE QUESTION PAR QUESTION
    Voir chapterPagination.js
    ============================================ */

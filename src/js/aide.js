@@ -142,6 +142,21 @@ l'ordre publié.</p>
 <p>Examen, Blind et Millionnaire. Un écran par élément, cours compris, navigation libre. On s'ouvre
 sur la première étape non faite ; la pagination disparaît une fois la copie rendue. En
 Millionnaire, « Recommencer » repart de la première question, dans le nouvel ordre.</p>
+
+<h4>🤖 Anti-IA</h4>
+<p>Examen, Blind et Millionnaire. Les énoncés sont masqués : l'apprenant clique dessus pour les
+lire, et ils se remasquent dès qu'il clique ailleurs ou quitte la fenêtre. Contre les agents IA
+intégrés au navigateur et les captures d'écran. Les cours ne sont jamais masqués.</p>
+<table class="aide-table">
+  <tr><th>Niveau</th><th>Masque</th><th>Se remasque au clic…</th></tr>
+  <tr><td>Intitulés persistants</td><td>toutes les questions</td><td>hors de la question</td></tr>
+  <tr><td>Intitulés temporaires</td><td>toutes les questions</td><td>hors de l'intitulé, réponse comprise</td></tr>
+  <tr><td>Auto-corrigés persistants</td><td>questions auto et semi</td><td>hors de la question</td></tr>
+  <tr><td>Auto-corrigés temporaires</td><td>questions auto et semi</td><td>hors de l'intitulé, réponse comprise</td></tr>
+</table>
+<p>Un énoncé masqué est <strong>retiré de la page</strong>, pas seulement flouté : un agent ne
+peut pas le lire. Limites : une capture prise pendant qu'un énoncé est affiché le montre, et les
+bonnes réponses restent présentes dans le code de la page.</p>
 `
         },
 

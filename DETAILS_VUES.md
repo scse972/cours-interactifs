@@ -147,19 +147,21 @@ Ce tableau est la **règle absolue** à respecter en toute circonstance. Toute d
 
 ## 🎛️ Options d'affichage, indépendantes du mode
 
-Deux réglages de chapitre s'ajoutent au mode, cochés par le formateur dans le tableau de bord. Ils sont
-stockés dans `slug:config:chapter_config` et ne touchent ni les réponses ni les scores : **seul l'ordre
-et le découpage de l'affichage changent**.
+Trois réglages de chapitre s'ajoutent au mode, choisis par le formateur dans le tableau de bord. Ils
+sont stockés dans `slug:config:chapter_config` et ne touchent ni les réponses ni les scores : **seul
+l'affichage change** — son ordre, son découpage, et ce qui est lisible sans clic.
 
 | Option | Modes concernés | Condition | Défaut |
 |---|---|---|---|
 | 🎲 Ordre aléatoire | Examen, Blind, Millionnaire | Chapitre **entièrement auto-corrigé** | coché en Millionnaire, décoché ailleurs |
 | 📄 Question par question | Examen, Blind, Millionnaire | aucune | décoché |
+| 🤖 Anti-IA | Examen, Blind, Millionnaire | aucune | désactivé (menu à quatre niveaux) |
 
-Sur la carte du chapitre, elles s'affichent en liste d'interrupteurs sous le menu du mode, et
-seulement quand elles sont proposées. Ajouter une option — le futur **mode anti-IA** notamment —
-se fait par une entrée dans le tableau `optionsMode` de `TeacherChapters.render()` : sa clé de
-config, son libellé et sa condition. La bascule passe par `basculerOption()`, commune à toutes.
+Sur la carte du chapitre, elles s'affichent en liste sous le menu du mode, et seulement quand elles
+sont proposées : un interrupteur pour une option oui/non, un menu pour une option à niveaux (anti-IA).
+Ajouter une option se fait par une entrée dans le tableau `optionsMode` de
+`TeacherChapters.render()` : sa clé de config, son libellé, sa condition, et `actif` ou
+`choix` + `valeur`. L'enregistrement passe par `basculerOption()`, commune à toutes.
 
 **Ordre aléatoire** (`ChapterOrdre`) — questions déjà répondues d'abord, dans l'ordre où elles l'ont
 été, puis les autres mélangées. Rien n'est mémorisé : l'ordre est recalculé à chaque affichage. Les
@@ -168,6 +170,11 @@ blocs de cours ne bougent pas. Les vues formateur gardent toujours l'ordre publi
 **Question par question** (`ChapterPagination`) — un écran = un élément, blocs de cours compris,
 navigation libre dans les deux sens. À l'ouverture, on se place sur la première étape non faite. La
 pagination s'efface dès que le chapitre est rendu ou verrouillé.
+
+**Anti-IA** (`ChapterAntiIA`) — l'intitulé des questions visées (toutes, ou auto et semi) est retiré
+du DOM jusqu'au clic de l'apprenant, puis remasqué au clic hors de la question (persistant) ou hors
+de l'intitulé (temporaire), et dès que la fenêtre perd le focus. Initialisé avant la révélation de la
+page, pour que l'énoncé ne s'affiche jamais. Reste actif sur une copie rendue.
 
 > La **source unique de vérité des six modes** est `src/js/core/getExamContext.js`. Le mode effectif
 > d'un apprenant est **figé à son premier démarrage** (`frozenChapterMode`) : le formateur qui change

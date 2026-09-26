@@ -433,6 +433,30 @@ a déjà répondu de questions.
 Dès que la copie est rendue, ou le chapitre verrouillé, la pagination s'efface : la relecture se fait
 d'un seul tenant. Voir `src/js/chapter/chapterPagination.js`.
 
+## 🤖 Option « anti-IA »
+
+Proposée aux modes **Examen, Blind et Millionnaire**. Stockée dans `chapter_config` (`antiIA`), avec
+quatre niveaux choisis par un menu sur la carte du chapitre :
+
+| Valeur | Libellé | Questions masquées | Remasquée au clic… |
+|---|---|---|---|
+| `tous-persistant` | Intitulés persistants | toutes | hors de la question |
+| `tous-temporaire` | Intitulés temporaires | toutes | hors de l'intitulé (et de l'indication), réponse comprise |
+| `auto-persistant` | Auto-corrigés persistants | auto et semi | hors de la question |
+| `auto-temporaire` | Auto-corrigés temporaires | auto et semi | hors de l'intitulé, réponse comprise |
+
+L'apprenant clique sur l'énoncé pour le lire ; une seule question est révélée à la fois, et quitter
+la fenêtre ou l'onglet remasque tout. Les blocs de cours ne sont jamais masqués. Le but : priver
+un agent IA intégré au navigateur, ou une capture d'écran, de l'énoncé complet du chapitre.
+
+**Masquer, c'est retirer du DOM** : l'intitulé et l'indication partent dans une `WeakMap` indexée
+par la section, et ne reviennent dans la page que révélés — un simple flou laisserait le texte à la
+portée d'un agent. Le voile est un `div role="button"`, pas un `<button>`, pour survivre au
+verrouillage qui désactive tous les boutons au rendu : la relecture d'une copie rendue reste
+masquée. Rien n'est figé par apprenant ; ni la vue formateur ni les modales de correction ne sont
+concernées. **Limites** : les bonnes réponses (`data-correct-answers`) restent dans la page, et
+`cours.json` est public. Voir `src/js/chapter/chapterAntiIA.js`.
+
 ## 🧾 Le mode Atelier AR
 
 C'est un mode Découverte dans lequel les questions **ouvertes à correction manuelle** deviennent des

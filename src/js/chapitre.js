@@ -298,6 +298,9 @@ async function initChapterPage() {
     //    rendu/validé/verrouillé et en vue formateur, l'ordre conçu est conservé
     //    (cf. chapter/choixOrdre.js) — le mélange y est donc sans effet.
     window.ChoixOrdre?.appliquer();
+    // 🤖 Anti-IA : les énoncés quittent la page avant qu'elle soit révélée — ils ne
+    //    doivent jamais s'afficher, même un instant (cf. chapter/chapterAntiIA.js).
+    window.ChapterAntiIA?.init();
     window.ChapterPagination?.init();
     window.ChapterOrdre?.reveler();
 
