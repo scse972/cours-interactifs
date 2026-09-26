@@ -230,11 +230,32 @@ const Simulation = {
             '👁 <strong>Simulation</strong> — vous voyez ce chapitre comme un apprenant. ' +
             'Vos réponses sont enregistrées pour que tout se comporte normalement, ' +
             'puis effacées au lancement de la prochaine simulation. ' +
-            '<button type="button" id="fermer-simulation">Fermer</button>';
+            // ⚠️ Un lien, JAMAIS un <button> : trois routines désactivent tous les boutons
+            //    de la page (chapitre verrouillé ou rendu au chargement, validateAllQuestions,
+            //    lockChapterAfterSubmission). Un <button> y devenait grisé et inerte — le
+            //    formateur n'avait plus aucun moyen de fermer la simulation.
+            '<a href="#" role="button" id="fermer-simulation">Fermer</a>';
         document.body.prepend(bandeau);
 
-        document.getElementById('fermer-simulation')
-            ?.addEventListener('click', () => window.close());
+        const fermer = document.getElementById('fermer-simulation');
+        const fermerOnglet = (evenement) => {
+            evenement.preventDefault();
+            window.close();
+            // window.close() est sans effet sur un onglet que le navigateur n'a pas ouvert
+            // par script (lien rouvert, ouverture externe depuis XSpro) : dire quoi faire
+            // plutôt que laisser un clic sans réponse.
+            setTimeout(() => {
+                if (!window.closed) {
+                    bandeau.textContent = '👁 Votre navigateur n\'autorise pas la fermeture ' +
+                        'automatique de cet onglet : fermez-le vous-même (Ctrl+W).';
+                }
+            }, 300);
+        };
+        fermer?.addEventListener('click', fermerOnglet);
+        // Un lien réagit déjà à Entrée ; Espace est attendu d'un role="button".
+        fermer?.addEventListener('keydown', (evenement) => {
+            if (evenement.key === ' ') fermerOnglet(evenement);
+        });
 
         // L'onglet de simulation est autonome : « Retour au menu » renverrait vers la
         // page d'accueil du parcours, qui exige une session élève et redirigerait donc

@@ -890,7 +890,11 @@
     color: white;
 }
 
-.bandeau-simulation button {
+/* Un lien et non un <button> : il doit échapper aux routines qui désactivent tous les
+   boutons de la page (voir simulation.js). */
+.bandeau-simulation #fermer-simulation {
+    display: inline-block;
+    text-decoration: none;
     margin-left: 0.75rem;
     background: rgba(255,255,255,0.2);
     color: white;
@@ -901,7 +905,8 @@
     cursor: pointer;
 }
 
-.bandeau-simulation button:hover {
+.bandeau-simulation #fermer-simulation:hover,
+.bandeau-simulation #fermer-simulation:focus-visible {
     background: rgba(255,255,255,0.32);
 }
 
