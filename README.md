@@ -389,11 +389,11 @@ Deux choses à savoir :
 * **Les QRCodes sont optionnels** : la case « Imprimer les QRCodes » est cochée par défaut
   et se décoche. Sans eux, la feuille reste nominative par sa page de garde, le nom accolé
   disparaît avec les QRCodes, et la correction passe par les voies habituelles. Le mode
-  garde donc tout son intérêt pour qui ne veut pas du scan — et dans ce cas l'impression
-  ne dépend plus d'HTTPS.
-* **À imprimer en HTTPS** (ou `localhost`) : l'empreinte des QRCodes passe par
-  `crypto.subtle`, indisponible sur une adresse LAN en `http://192.168.…`. Le bouton reste
-  visible et explique le refus plutôt que de sortir une feuille inutilisable.
+  garde donc tout son intérêt pour qui ne veut pas du scan.
+* **Depuis n'importe quelle adresse** : l'empreinte des QRCodes passe par `sha256Hex()`
+  (`storage.js`), qui retombe sur un SHA-256 en JavaScript pur là où `crypto.subtle` manque
+  (adresse locale en `http://192.168.…`). Même empreinte, donc mêmes QRCodes. Seul le scan
+  par **caméra** exige encore HTTPS.
 * **Imprimer crée le suivi** des apprenants qui n'ont pas ouvert le chapitre, via
   `ProgressManager.initChapter()` — donc avec `frozenAt` et `frozenChapterMode` posés
   ensemble. C'est indispensable : sans cette entrée, la copie papier n'est visible d'aucune

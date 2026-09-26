@@ -99,8 +99,9 @@
             try {
                 return await new DataStorage().findUserByToken(token);
             } catch (e) {
-                // Le nom n'est qu'un confort d'affichage : une panne du service
-                // ne doit pas empecher le QRCode de se construire.
+                // Sans fiche, pas de nom — et init() s'abstient alors entièrement : un
+                // QRCode sans nom ne permettrait pas de vérifier devant quel écran on est.
+                // Une panne du service masque donc les QRCodes de la page.
                 console.warn('[qrQuestion] nom indisponible :', e.message);
                 return null;
             }

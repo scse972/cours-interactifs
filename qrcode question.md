@@ -63,8 +63,10 @@ dans `src/js/atelier/suiviAtelier.js` fait la même chose sur les clés de stora
 hexadécimaux valent 48 bits : aucune collision à l'échelle d'un établissement.
 
 Le condensat est calculé par `QRCharge.empreinte()`, bâtie sur `AtelierCodes.condensat()`
-(`src/js/atelier/atelierCodes.js`) — SHA-256 via `crypto.subtle`, déjà éprouvé sur GitHub Pages, en
-local et en Electron sur `file:`.
+(`src/js/atelier/atelierCodes.js`), qui délègue à `sha256Hex()` (`src/js/storage.js`) :
+`crypto.subtle` quand le navigateur le fournit, sinon un SHA-256 en JavaScript pur, qui rend la
+**même** empreinte. `crypto.subtle` n'existe qu'en HTTPS ou sur `localhost` ; sans ce repli, une
+adresse de salle en `http://192.168…` n'avait aucun QRCode, sans le moindre message.
 
 `QRCharge` expose les quatre gestes du format : `empreinte()`, `construire()`, `lire()` — qui refuse
 tout ce qui n'a pas le préfixe et les cinq segments — et `resoudre()`, qui retrouve le token en
@@ -121,7 +123,8 @@ fond, ou Échap. Une seule modale, réutilisée : douze questions ne doivent pas
 | Simulation apprenant (`SIMU001`) | affiché | l'interface y est vivante à dessein — le formateur doit voir ce que l'apprenant voit ; le nom affiché est « Simulation formateur » |
 | Vue formateur (`teacher_view=true`) | **masqué** | prévisualisation en lecture seule, sur l'écran du formateur : il n'a rien à se scanner à lui-même |
 | Sans token (`_guest`, `anonymous`) | **masqué** | rien à résoudre côté formateur |
-| Apprenant absent de `users_list` | **masqué** | pas de nom, donc pas d'identification possible : le module s'abstient entièrement plutôt que d'afficher un QRCode anonyme |
+| Adresse locale sans HTTPS (`http://192.168…`) | affiché | l'empreinte passe par le SHA-256 en JavaScript pur (cf. § 2) |
+| Apprenant absent de `users_list`, ou liste illisible (panne réseau) | **masqué** | pas de nom, donc pas d'identification possible : le module s'abstient entièrement plutôt que d'afficher un QRCode anonyme |
 | Impression | **masqué** | `@media print` |
 
 Toute erreur pendant la décoration est avalée avec un `console.warn` : **un QRCode absent ne doit

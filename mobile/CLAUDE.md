@@ -142,20 +142,21 @@ ne teste ni le protocole ni `isSecureContext` : il teste `!IS_ELECTRON && !!navi
 ?.getUserMedia`. C'est `mediaDevices`, absent hors contexte sécurisé, qui produit le bon résultat
 — par effet de bord, jamais par un test nommé.
 
-**Et le QRCode dépend d'autre chose encore.** La charge porte une empreinte SHA-256
-(`qrCharge.js`), calculée par `AtelierCodes.condensat()` via **`crypto.subtle`**, lui aussi réservé
-aux contextes sécurisés. Conséquence à retenir :
+**Le QRCode et l'AR, eux, ne dépendent plus du contexte.** La charge porte une empreinte SHA-256
+(`qrCharge.js`), calculée par `AtelierCodes.condensat()`, qui délègue à `sha256Hex()`
+(`storage.js`) : `crypto.subtle` en contexte sécurisé, sinon un SHA-256 en JavaScript pur, même
+empreinte. Conséquence à retenir :
 
 | Contexte | Données | Caméra | QRCode & AR | Installation |
 |---|---|---|---|---|
 | GitHub Pages (HTTPS) | oui | **oui** | **oui** | **oui** |
 | `localhost` (poste de dev) | oui | oui | oui | oui |
-| Réseau local (`http://192.168…`) | oui | non | **non** | non |
-| Dans XSpro (`file:`) | base SQLite locale | non | non | non |
+| Réseau local (`http://192.168…`) | oui | non | **oui** | non |
+| Dans XSpro (`file:`) | base SQLite locale | non | oui | non |
 
-Sur une adresse locale en HTTP, **coller la charge à la main ne contourne rien** : c'est
-l'empreinte qui manque, pas la caméra. Il reste le code de validation dicté et la navigation par
-liste, qui ne calculent aucune empreinte.
+Sur une adresse locale en HTTP, seule la **caméra** manque : coller la charge d'un QRCode scanné
+avec l'application photo du téléphone, le code de validation dicté, la navigation par liste et
+l'AR fonctionnent.
 
 **Le fournisseur de données est choisi par l'adresse et par `storage/config.json`.** Sur GitHub
 Pages, `window.BASE` vaut `/cours-interactifs`. Le worker n'y a pas accès : il déduit sa racine de

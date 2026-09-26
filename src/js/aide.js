@@ -126,10 +126,6 @@ en vertical à côté : on sait à qui est une feuille ramassée, et on dissuade
   <li><strong>Les QRCodes sont optionnels</strong> (case cochée par défaut). Sans eux, la feuille
       ne porte que les énoncés, et vous corrigez depuis « 📬 Rendus à corriger » ou XSpro.
       La page de garde reste nominative, le suivi s'ouvre pareil.</li>
-  <li>⚠️ <strong>QRCodes = site publié, en HTTPS.</strong> Leur empreinte est calculée par
-      <code>crypto.subtle</code>, absent en <code>http://192.168.…</code> : la case y est
-      verrouillée et seuls les énoncés s'impriment. Même contrainte que le scan
-      (fiche « 📱 Installer et utiliser en salle »).</li>
 </ul>
 
 <h4>🎲 Ordre aléatoire</h4>
@@ -231,16 +227,14 @@ d'accueil</strong>.</p>
 <p>Une icône apparaît alors sur l'écran d'accueil, et l'outil s'ouvre en plein écran sans barre
 d'adresse. C'est la même page : rien ne vient d'un magasin d'applications.</p>
 
-<h4>⚠️ Le scan du QRCode exige la base distante</h4>
-<p><strong>Le scan ne fonctionne que depuis le site publié</strong>, en HTTPS. Ni depuis une adresse
-locale du réseau (<code>http://192.168…</code>), ni dans XSpro.</p>
-<p>Et ce n'est pas la caméra qui est en cause, ou pas seulement. Le QRCode ne porte pas l'identité
-de l'apprenant en clair, mais une <strong>empreinte chiffrée</strong> ; la fonction qui permet de
-la recalculer n'existe pas dans un navigateur servi sans HTTPS. Scanner avec l'application photo du
-téléphone puis coller le contenu échoue donc exactement au même endroit.</p>
-<p>Sur une adresse locale il vous reste le <strong>code de validation dicté</strong> et la
-<strong>navigation par liste</strong>, qui ne calculent aucune empreinte. L'AR, lui, exige aussi
-l'adresse publiée.</p>
+<h4>⚠️ La caméra exige l'adresse publiée</h4>
+<p><strong>Scanner avec la caméra ne fonctionne que depuis le site publié</strong>, en HTTPS : le
+navigateur refuse la caméra sur une adresse locale du réseau (<code>http://192.168…</code>), et
+XSpro n'en propose pas.</p>
+<p>Tout le reste marche partout, adresse locale comprise : <strong>coller le contenu d'un
+QRCode</strong> scanné avec l'application photo du téléphone, le <strong>code de validation
+dicté</strong>, la <strong>navigation par liste</strong> et l'<strong>AR</strong> du mode
+Atelier.</p>
 
 <h4>Quand le réseau tombe</h4>
 <p>L'outil continue de s'ouvrir et de fonctionner : ses fichiers sont gardés sur le téléphone. Les
