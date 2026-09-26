@@ -247,11 +247,15 @@ l'application. Travaillez dans l'une ou dans l'autre, pas dans les deux.</p>
 
         FICHES,
 
-        /** À insérer dans un template. L'écouteur est délégué, posé une fois pour toutes. */
+        /**
+         * À insérer dans un template. L'écouteur est délégué, posé une fois pour toutes.
+         * Un « i » simple, pas le glyphe cerclé « ⓘ » : celui-ci porte déjà son cercle, et
+         * dans la pastille ronde il en faisait deux, lus comme un bouton marche/arrêt.
+         */
         icone(cle, libelle) {
             const titre = libelle || FICHES[cle]?.titre || 'Aide';
             return `<button type="button" class="aide-icone" data-aide="${cle}"
-                            title="${titre.replace(/"/g, '&quot;')}" aria-label="${titre.replace(/"/g, '&quot;')}">ⓘ</button>`;
+                            title="${titre.replace(/"/g, '&quot;')}" aria-label="${titre.replace(/"/g, '&quot;')}">i</button>`;
         },
 
         ouvrir(cle) {
@@ -288,11 +292,13 @@ l'application. Travaillez dans l'une ou dans l'autre, pas dans les deux.</p>
             style.id = 'aide-style';
             style.textContent = `
 .aide-icone { display:inline-flex; align-items:center; justify-content:center;
-    width:1.35rem; height:1.35rem; margin-left:0.4rem; padding:0;
-    border:1px solid #cbd5e1; border-radius:50%; background:#fff; color:#475569;
-    font-size:0.8rem; line-height:1; cursor:pointer; vertical-align:middle;
-    transition:background .15s ease, border-color .15s ease; }
-.aide-icone:hover, .aide-icone:focus-visible { background:#e0f2fe; border-color:#2563eb; color:#1e40af; }
+    width:1.25rem; height:1.25rem; margin-left:0.4rem; padding:0; flex-shrink:0;
+    border:none; border-radius:50%; background:#dbeafe; color:#1d4ed8;
+    font:700 0.8rem/1 Georgia, 'Times New Roman', serif; font-style:normal;
+    text-transform:none; letter-spacing:0; cursor:pointer; vertical-align:middle;
+    transition:background .15s ease, color .15s ease; }
+.aide-icone:hover, .aide-icone:focus-visible { background:#2563eb; color:#fff; outline:none; }
+.aide-icone:focus-visible { box-shadow:0 0 0 2px #fff, 0 0 0 4px #2563eb; }
 .aide-overlay { position:fixed; inset:0; z-index:30000; display:flex; align-items:center;
     justify-content:center; padding:1rem; background:rgba(15,23,42,.6); }
 .aide-contenu { background:#fff; border-radius:12px; max-width:640px; width:100%;
