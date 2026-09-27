@@ -574,8 +574,16 @@ const SuiviAtelier = {
         const liste = this._niveau('Choisir un apprenant', '', null);
         liste.innerHTML = '<p>Chargement…</p>';
 
-        const apprenants = (await storage.get(`${this.slug}:teacher:users_list`) || [])
+        const inscrits = (await storage.get(`${this.slug}:teacher:users_list`) || [])
             .filter(u => u.type !== 'teacher');
+
+        // 👁 Même règle qu'au tableau de bord : l'apprenant de simulation ne figure dans
+        // une liste À CHOISIR que s'il a réellement quelque chose. Le repli sert à
+        // retrouver un élève quand le QRCode n'a pas pu être lu ; une entrée qui ne
+        // désigne personne n'y a rien à faire.
+        const apprenants = window.Simulation
+            ? await Simulation.masquerSiVide(this.slug, inscrits)
+            : inscrits;
 
         if (!apprenants.length) {
             liste.innerHTML = '<p class="sa-message sa-message-erreur">Aucun apprenant dans ce parcours.</p>';
