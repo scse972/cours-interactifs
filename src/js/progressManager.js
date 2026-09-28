@@ -553,6 +553,24 @@ function aUnVerdictFormateur(question, mode) {
  * @param {Object} [config] - configuration du chapitre (cours.json fusionné), si connue
  * @returns {{repondues:number, coursValides:number, faits:number, total:number, pourcentage:number}}
  */
+/**
+ * UN POURCENTAGE D'AVANCEMENT EST UN ENTIER : 0 VEUT DIRE « RIEN DE FAIT », 100 « TOUT EST
+ * FAIT », ET TOUT LE RESTE TOMBE ENTRE 1 ET 99.
+ *
+ * Plafonné : un questionnaire modifié après que l'apprenant a commencé (question retirée
+ * depuis) laisse dans sa progression des réponses qui ne sont plus attendues, et « 68 faits
+ * sur 67 » s'affichait « 101 % ». Arrondi par défaut : l'arrondi au plus proche montrait
+ * 100 % dès 99,5 %, une copie incomplète présentée comme complète. Au moins 1 dès qu'une
+ * chose est faite : chapterState.js lit « > 0 » comme « commencé », et un seul élément sur
+ * plus de cent donnait 0 %, donc « Non commencé ». Jamais de décimale, donc jamais de 99,9.
+ * Même règle côté XSpro (pourcentageEntier, formulaireProgressionApprenant.js).
+ */
+function pourcentageEntier(faits, total) {
+    if (!(total > 0) || !(faits > 0)) return 0;
+    if (faits >= total) return 100;
+    return Math.max(1, Math.floor((faits * 100) / total));
+}
+
 function compterAvancement(chapitre, config = {}) {
     const entrees = Object.entries(chapitre?.questions || {});
 
@@ -579,7 +597,7 @@ function compterAvancement(chapitre, config = {}) {
         coursValides,
         faits,
         total,
-        pourcentage: total > 0 ? Math.round((faits / total) * 100) : 0
+        pourcentage: pourcentageEntier(faits, total)
     };
 }
 
@@ -1451,6 +1469,7 @@ window.ProgressManager = {
     // Avancement — le seul calcul, partagé par tous les écrans
     compterAvancement,
     pourcentageAvancement,
+    pourcentageEntier,
 
     // Recalcul des statistiques
     recomputeChapterStats,

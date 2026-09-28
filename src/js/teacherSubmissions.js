@@ -309,7 +309,8 @@ class TeacherSubmissions {
             correction = { cle: 'prete', libelle: '✅ Prête à publier',
                 aide: `${total > 1 ? `Les ${total} questions sont traitées` : 'La question est traitée'} : il ne reste qu'à publier la correction.` };
         }
-        correction.pourcentage = total === 0 ? 100 : Math.round(traitees / total * 100);
+        // Même règle que l'avancement (pourcentageEntier) : 100 % seulement quand tout est traité.
+        correction.pourcentage = total === 0 ? 100 : window.ProgressManager.pourcentageEntier(traitees, total);
         correction.compteur = total === 0 ? 'aucune question à corriger'
             : `${traitees}/${total} traitée${traitees > 1 ? 's' : ''}${restantes > 0 ? ` (${restantes} restante${restantes > 1 ? 's' : ''})` : ''}`;
 
