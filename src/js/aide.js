@@ -119,13 +119,19 @@ Une erreur vaut 0, jamais de points négatifs, et la pénalité de cours n'entre
 <table class="aide-table">
   <tr><th>Réglage</th><th>Effet</th></tr>
   <tr><td>🔁 Pénalité par tentative</td><td>Points retirés de la note sur 20 à chaque « Recommencer » (1 par défaut, 0 pour aucune).</td></tr>
-  <tr><td>🛟 Note plancher</td><td>La pénalité ne fait pas descendre sous cette note (10 par défaut). Une note déjà plus basse n'est pas relevée.</td></tr>
+  <tr><td>🛟 Note plancher</td><td>Un filet qui se gagne (10 par défaut) : tant qu'aucune tentative n'a atteint cette note, rien n'est garanti. Dès qu'une tentative l'a atteinte, les suivantes ne peuvent plus descendre dessous, ni par la pénalité ni par un moins bon résultat. 0 : pas de filet.</td></tr>
   <tr><td>🏅 Note retenue</td><td>La dernière tentative (défaut), même plus basse ; ou la meilleure, pénalité comprise.</td></tr>
 </table>
-<p>Exemple, 1 point et plancher 10 : 14/20 à la 3e tentative donne 12 ; à la 7e, 10 et pas 8 ;
-7/20 reste 7. Au moment de choisir, l'apprenant voit ce qu'il garde s'il s'arrête, la meilleure
+<p>Exemple, 1 point et plancher 10, note retenue « dernière » : un apprenant qui a fait 18 puis 5
+garde 10 (le plancher était acquis) ; celui qui a fait 6 puis 5 garde 4 (5 moins 1 point : rien
+n'était acquis). Avec une tentative ≥ 10 avant elle, 14/20 à la 7e tentative donne 10 et pas 8.
+Au moment de choisir, l'apprenant voit ce qu'il garde s'il s'arrête, la meilleure
 note qu'il peut encore espérer, et le moment où recommencer ne peut plus rien lui apporter. En
 Millionnaire, revenir sur le chapitre après avoir commencé à répondre compte comme une tentative.</p>
+<p><strong>Remettre le compteur plus bas :</strong> dans le suivi des apprenants, le menu ✏️ de la
+ligne du chapitre propose <em>« 🔁 Réinitialiser le compteur d'essais »</em> dès que l'apprenant en
+est à sa 2e tentative. Vous choisissez le nouveau numéro (inférieur à l'actuel) ; les tentatives
+archivées de ce rang ou au-delà sont effacées. Une correction déjà publiée n'est pas recalculée.</p>
 <p>À la correction, cet effet des tentatives est <strong>proposé dans la case « Bonus / Pénalité »</strong>,
 comme la pénalité d'un cours non lu, avec son explication dans l'appréciation : c'est là, et
 seulement là, qu'il compte. Vous pouvez le modifier.</p>
@@ -196,9 +202,10 @@ restent présentes dans le code de la page.</p>
 </ol>
 <p>Tant que vous n'avez rien saisi, le bonus/malus est <strong>proposé</strong> : −2 si un cours
 obligatoire n'est pas lu, plus, en Blind et en Millionnaire, l'effet des tentatives — la pénalité par
-tentative bornée par la note plancher, ou l'écart avec la meilleure tentative si c'est elle qui est
-retenue (ce peut alors être un bonus). L'appréciation l'explique, par exemple « 🔁 4 tentatives —
-retenue dernière : n°4 (1 pt par tentative, plancher 10/20) : −3 pt ». Vous modifiez l'un et l'autre
+tentative, relevée au plancher si une tentative antérieure l'avait atteint, ou l'écart avec la
+meilleure tentative si c'est elle qui est retenue (ce peut alors être un bonus). L'appréciation
+l'explique, par exemple « 🔁 4 tentatives — retenue dernière : n°4 (1 pt par tentative, plancher
+10/20) : −3 pt ». Vous modifiez l'un et l'autre
 à votre guise : votre saisie fait foi. Le nombre de tentatives et leur historique (date, note,
 note après pénalité, tentative retenue) restent affichés en lecture seule dans la section
 Bonus / Pénalité — et au survol du badge 🔁 dans XSpro —, même si l'appréciation a été effacée.</p>

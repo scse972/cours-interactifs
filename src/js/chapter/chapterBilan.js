@@ -120,8 +120,9 @@ const ChapterBilan = {
 
     /**
      * Note retenue parmi les tentatives. `courante` est la fourchette de la tentative en
-     * cours, déjà calculée par l'appelant (sur 20, avant pénalité). En mode « meilleure
-     * note », les tentatives archivées sont notées avec la même règle — leurs réponses
+     * cours, déjà calculée par l'appelant (sur 20, avant pénalité). Les tentatives
+     * archivées sont toujours notées, même en mode « dernière » : le plancher n'est
+     * acquis que si l'une d'elles l'a atteint (Bareme.noterTentatives). Leurs réponses
      * auto et semi remplacent celles d'aujourd'hui, les manuelles étant communes à toutes.
      */
     _noteRetenue(chapter, questions, courante, { blind = false } = {}) {
@@ -129,32 +130,38 @@ const ChapterBilan = {
         const candidatesMin = [{ tentative: regles.tentative, note: courante.min }];
         const candidatesMax = [{ tentative: regles.tentative, note: courante.max }];
 
-        if (regles.retenue === 'meilleure') {
-            (chapter?.tentativesPassees || []).forEach(t => {
-                const donnees = { ...(chapter.questions || {}), ...(t.questions || {}) };
-                const f = this._fourchetteSur20(questions, donnees, { blind, chapitreOuvert: false });
-                candidatesMin.push({ tentative: t.tentative, note: f.min });
-                candidatesMax.push({ tentative: t.tentative, note: f.max });
-            });
-        }
+        (chapter?.tentativesPassees || []).forEach(t => {
+            const donnees = { ...(chapter.questions || {}), ...(t.questions || {}) };
+            const f = this._fourchetteSur20(questions, donnees, { blind, chapitreOuvert: false });
+            candidatesMin.push({ tentative: t.tentative, note: f.min });
+            candidatesMax.push({ tentative: t.tentative, note: f.max });
+        });
 
         const retenueMin = Bareme.retenirTentative(candidatesMin, chapter);
         const retenueMax = Bareme.retenirTentative(candidatesMax, chapter);
+        const courantePenalisee = Bareme.noterTentatives(candidatesMax, chapter)
+            .find(c => c.tentative === regles.tentative);
         return {
             min: retenueMin.note,
             max: retenueMax.note,
             tentativeRetenue: retenueMax.tentative,
-            retraitCourant: Bareme.penaliserTentative(courante.max, regles.tentative, regles).retrait,
+            retraitCourant: courantePenalisee ? courantePenalisee.retrait : 0,
+            // En borne haute : « au mieux », c'est avec la meilleure issue de la tentative en cours.
+            plancherAcquis: Bareme.plancherAcquis(candidatesMax, chapter),
             regles
         };
     },
 
-    /** Ligne ajoutée aux confirmations de « Recommencer » : ce que coûte la suite. */
-    coutRecommencer(chapter) {
+    /**
+     * Ligne ajoutée aux confirmations de « Recommencer » : ce que coûte la suite.
+     * `plancherAcquis` vient de _noteRetenue ; la mention du plancher n'a de sens que s'il l'est.
+     */
+    coutRecommencer(chapter, plancherAcquis = false) {
         const r = Bareme.reglesTentatives(chapter);
         if (!(r.penalite > 0)) return '';
-        return `\n\nLa tentative n°${r.tentative + 1} coûtera ${this._nombre(r.penalite * r.tentative)} pt sur 20 `
-            + `(sans descendre sous ${this._nombre(r.plancher)}/20) : au mieux ${this._nombre(Bareme.meilleurePossible(chapter))}/20.`;
+        const filet = plancherAcquis ? ` (sans descendre sous ${this._nombre(r.plancher)}/20)` : '';
+        return `\n\nLa tentative n°${r.tentative + 1} coûtera ${this._nombre(r.penalite * r.tentative)} pt sur 20`
+            + `${filet} : au mieux ${this._nombre(Bareme.meilleurePossible(chapter, plancherAcquis))}/20.`;
     },
 
     /**
@@ -166,11 +173,13 @@ const ChapterBilan = {
         const r = retenue.regles;
         const n = valeur => this._nombre(valeur);
         const plage = (a, b) => a === b ? `${n(a)}/20` : `entre ${n(a)} et ${n(b)}/20`;
-        const possible = Bareme.meilleurePossible(chapter);
+        const possible = Bareme.meilleurePossible(chapter, retenue.plancherAcquis);
         const inutile = possible <= retenue.min;
 
+        // Le plancher n'est un filet qu'une fois atteint : avant, le promettre serait faux.
+        const filet = retenue.plancherAcquis ? `, sans descendre sous ${n(r.plancher)}/20` : '';
         const regle = r.penalite > 0
-            ? ` — chaque nouvelle tentative coûte ${n(r.penalite)} pt sur 20, sans descendre sous ${n(r.plancher)}/20`
+            ? ` — chaque nouvelle tentative coûte ${n(r.penalite)} pt sur 20${filet}`
             : '';
         const retrait = retenue.retraitCourant > 0 ? ` Celle-ci : −${n(retenue.retraitCourant)} pt.` : '';
 
@@ -183,7 +192,8 @@ const ChapterBilan = {
                 <div>Si vous recommencez : au mieux <strong>${n(possible)}/20</strong>${
                     r.retenue === 'meilleure'
                         ? ' — votre meilleure note reste acquise.'
-                        : ' — la note retenue sera celle de la nouvelle tentative, même plus basse.'}</div>
+                        : ` — la note retenue sera celle de la nouvelle tentative, même plus basse${
+                            retenue.plancherAcquis ? `, mais jamais sous ${n(r.plancher)}/20` : ''}.`}</div>
                 ${inutile ? '<div class="bilan-tentatives-alerte">⚠️ Recommencer ne peut plus améliorer votre note.</div>' : ''}
             </div>`;
     },
@@ -392,7 +402,7 @@ const ChapterBilan = {
         const ligneTentatives = retenue.regles.tentative > 1
             ? `<p style="text-align:center; font-size:0.85rem; color:#666; margin-top:0.5rem;">
                    🔁 Tentative n°${retenue.regles.tentative}${retenue.retraitCourant > 0
-                       ? ` : −${this._nombre(retenue.retraitCourant)} pt sur la note (plancher ${this._nombre(retenue.regles.plancher)}/20)` : ''}.
+                       ? ` : −${this._nombre(retenue.retraitCourant)} pt sur la note${retenue.plancherAcquis ? ` (sans descendre sous ${this._nombre(retenue.regles.plancher)}/20)` : ''}` : ''}.
                </p>`
             : '';
 
@@ -711,7 +721,7 @@ ${'' /* Les bornes se rejoignent d'elles-mêmes à mesure que les intervalles se
             if (!await ChapterSubmission._confirmModal('🔄 Êtes-vous sûr de vouloir RECOMMENCER ?\n\n'
                 + 'Toutes les questions auto-corrigées seront remises à zéro.\n'
                 + 'Les questions à correction manuelle seront conservées.'
-                + ChapterBilan.coutRecommencer(chapter))) return;
+                + ChapterBilan.coutRecommencer(chapter, retenue.plancherAcquis))) return;
             await ChapterSubmission._resetBlindAttempt();
             document.getElementById('auto-correct-details-modal')?.remove();
             ChapterBilan._restoreFocus();

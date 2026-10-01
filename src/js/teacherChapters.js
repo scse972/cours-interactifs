@@ -135,7 +135,7 @@ class TeacherChapters {
                 {
                     cle: 'notePlancher',
                     libelle: '🛟 Note plancher',
-                    aide: "La pénalité par tentative ne fait pas descendre la note sous cette valeur. Une note déjà plus basse n'est pas relevée.",
+                    aide: "Filet de sécurité qui se gagne : tant qu'aucune tentative n'a atteint cette note, rien n'est garanti (c'est la règle « Note retenue » qui joue). Dès qu'une tentative l'a atteinte, les suivantes ne peuvent plus descendre dessous — ni par la pénalité, ni par un moins bon résultat. 0 : pas de filet.",
                     proposable: ['blind', 'millionnaire'].includes(chapterMode),
                     nombre: { min: 0, max: 20, step: 0.5, suffixe: '/20' },
                     valeur: config.notePlancher ?? Bareme.DEFAUT_NOTE_PLANCHER

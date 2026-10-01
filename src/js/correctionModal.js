@@ -1104,9 +1104,10 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
 
     /**
      * Ce que les tentatives changent à la note : la tentative retenue (la dernière, ou la
-     * meilleure en mode « meilleure note »), pénalisée selon son rang et bornée par le
-     * plancher (cf. Bareme), moins la note de la copie affichée. Négatif le plus souvent ;
-     * POSITIF en mode meilleure note quand une tentative passée valait mieux que la dernière.
+     * meilleure en mode « meilleure note »), pénalisée selon son rang et, si une tentative
+     * antérieure a atteint le plancher, relevée à ce plancher (cf. Bareme), moins la note de
+     * la copie affichée. Négatif le plus souvent ; POSITIF en mode meilleure note quand une
+     * tentative passée valait mieux que la dernière, et quand le filet du plancher relève.
      *
      * Une tentative archivée est notée comme la copie affichée, ses réponses auto et semi
      * remplaçant les actuelles. Les questions manuelles, conservées d'une tentative à
@@ -1150,21 +1151,23 @@ ${(typeof question.teacherScore === 'number' && !isNaN(question.teacherScore) &&
         }
 
         const retenue = Bareme.retenirTentative(candidates, chapter);
-        const historique = candidates
+        // Le filet du plancher se lit sur les tentatives de rang inférieur : la note de
+        // chaque ligne vient de noterTentatives, qui suit son acquisition.
+        const fermeeLe = new Map(candidates.map(c => [c.tentative, c.fermeeLe]));
+        const historique = Bareme.noterTentatives(candidates, chapter)
             .map(c => ({
                 tentative: c.tentative,
-                fermeeLe: c.fermeeLe,
-                noteBrute: c.note,
-                note: Bareme.penaliserTentative(c.note, c.tentative, regles).note,
+                fermeeLe: fermeeLe.get(c.tentative),
+                noteBrute: c.noteBrute,
+                note: c.note,
                 enCours: c.tentative === regles.tentative,
                 retenue: c.tentative === retenue.tentative
-            }))
-            .sort((a, b) => a.tentative - b.tentative);
+            }));
         const ajustement = Math.round((retenue.note - noteBrute) * 10) / 10;
         const n = v => String(Math.round(v * 10) / 10).replace('.', ',');
         const texte = `🔁 ${regles.tentative} tentative${regles.tentative > 1 ? 's' : ''} — retenue `
             + `${regles.retenue === 'meilleure' ? 'meilleure' : 'dernière'} : n°${retenue.tentative} `
-            + `(${n(regles.penalite)} pt par tentative, plancher ${n(regles.plancher)}/20)`
+            + `(${n(regles.penalite)} pt par tentative, plancher ${n(regles.plancher)}/20${retenue.plancherActif ? ' acquis' : ''})`
             + (ajustement ? ` : ${ajustement > 0 ? '+' : ''}${n(ajustement)} pt` : '');
 
         return { ajustement, tentative: retenue.tentative, texte, regles, historique };

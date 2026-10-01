@@ -425,8 +425,9 @@ class StudentWorkEditor {
         let cout = '';
         if (chapitre && window.ChapterBilan && window.Bareme) {
             const courante = ChapterBilan._fourchetteSur20(questionsConfig, chapitre.questions, { chapitreOuvert: false });
-            encadre = ChapterBilan.encadreTentatives(chapitre, ChapterBilan._noteRetenue(chapitre, questionsConfig, courante));
-            cout = ChapterBilan.coutRecommencer(chapitre);
+            const retenue = ChapterBilan._noteRetenue(chapitre, questionsConfig, courante);
+            encadre = ChapterBilan.encadreTentatives(chapitre, retenue);
+            cout = ChapterBilan.coutRecommencer(chapitre, retenue.plancherAcquis);
         }
 
         const overlay = document.createElement('div');

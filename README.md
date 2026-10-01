@@ -442,7 +442,7 @@ lisibles par le modal de correction et par XSpro, qui ne voient pas `chapter_con
 | Clé | Défaut | Effet |
 |---|---|---|
 | `penaliteTentative` | 1 | points sur 20 retirés par nouvelle tentative |
-| `notePlancher` | 10 | la pénalité ne fait pas descendre sous cette note ; une note déjà plus basse n'est pas relevée |
+| `notePlancher` | 10 | filet **conditionnel** : acquis seulement si une tentative de rang inférieur a atteint cette note (brute) ; alors toute tentative suivante vaut au moins le plancher. Sinon, règle pure de `noteRetenue`. 0 : pas de filet |
 | `noteRetenue` | `derniere` | ou `meilleure` : la meilleure tentative, pénalité comprise |
 
 `chapter.tentative` est le numéro de la tentative en cours (absent = 1). Il avance à chaque
@@ -455,9 +455,9 @@ toutes) — c'est ce qui permet de retenir la meilleure.
 → borne 0..20) : l'effet des tentatives est **proposé dans le bonus/pénalité**, comme la pénalité de
 cours, et c'est par là seulement qu'il compte. Tant que le formateur n'a rien saisi,
 `correctionModal.penaliteAutomatique()` propose −2 (cours obligatoire non lu) + l'ajustement des
-tentatives (`ajustementTentatives()` : note de la tentative retenue, pénalisée et bornée par le
-plancher, moins la note de la copie affichée — un **bonus** en mode meilleure note quand une
-tentative passée valait mieux), et remplit l'appréciation (« 🔁 4 tentatives — retenue dernière :
+tentatives (`ajustementTentatives()` : note de la tentative retenue, pénalisée et relevée au
+plancher s'il est acquis, moins la note de la copie affichée — un **bonus** en mode meilleure note
+quand une tentative passée valait mieux, ou quand le filet relève), et remplit l'appréciation (« 🔁 4 tentatives — retenue dernière :
 n°4 (1 pt par tentative, plancher 10/20) : −3 pt »). La valeur suit la copie tant que le formateur
 n'y touche pas (`data-auto`), puis sa saisie fait foi ; l'enregistrement la fige dans
 `coursePenalty` / `coursePenaltyComment`. XSpro en porte une copie (`penaliteProposeeXS`), qui
@@ -465,10 +465,19 @@ pré-remplit sa barre Bonus/Pénalité. L'**historique des tentatives** (date, n
 pénalité, tentative retenue) reste affiché en lecture seule, indépendamment de l'appréciation :
 bloc 🔁 de la section Bonus / Pénalité du modal (`historiqueTentatives`), badge 🔁 avec infobulle
 dans XSpro (`majBadgeTentativesXS`). Avant correction, les bilans de l'apprenant appliquent la même
-règle théorique (`core/bareme.js` : `reglesTentatives`, `penaliserTentative`, `retenirTentative`,
-`meilleurePossible`). L'apprenant voit, au moment de choisir, ce qu'il garde s'il s'arrête et la
+règle théorique (`core/bareme.js` : `reglesTentatives`, `penaliserTentative`, `noterTentatives`,
+`retenirTentative`, `plancherAcquis`, `meilleurePossible`) — le filet se décide dans
+`noterTentatives`, qui parcourt les tentatives par rang (les archives sont donc notées dans les deux
+modes). L'apprenant voit, au moment de choisir, ce qu'il garde s'il s'arrête et la
 meilleure note encore possible (`ChapterBilan.encadreTentatives`). Limite : en mode meilleure note,
 une semi d'une tentative close restée en attente de correction compte 0.
+
+**Remettre le compteur plus bas** : le menu ✏️ du suivi des apprenants
+(`TeacherStudents.resetAttemptCounter`) propose « 🔁 Réinitialiser le compteur d'essais » quand
+`chapter.tentative > 1`. Le formateur choisit un numéro N inférieur ; `chapter.tentative` devient N
+(absent si N = 1), les archives de rang ≥ N et `tentativeRetenue` sont supprimées. Ni `updatedAt`
+(il appartient à l'apprenant), ni `frozen*`, ni le statut de rendu ne bougent ; une correction déjà
+enregistrée n'est pas recalculée.
 
 ## 🤖 Option « anti-IA »
 
