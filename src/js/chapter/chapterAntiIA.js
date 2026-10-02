@@ -22,6 +22,9 @@
 //
 // Les blocs de cours ne sont jamais masqués.
 //
+// Le NUMÉRO de la question (« Question 3 ») est retiré du titre avec l'énoncé, pour les
+// questions masquées, et ne réapparaît pas à la lecture (cf. _retirerNumero).
+//
 // MASQUER, C'EST RETIRER DU DOM. Un agent lit la page, pas l'écran : un simple flou
 // laisserait tout le texte à sa portée. L'intitulé et l'indication partent donc dans
 // une WeakMap indexée par la section, et ne reviennent dans la page que le temps de
@@ -122,8 +125,24 @@ const ChapterAntiIA = {
         });
         if (indication) indication.innerHTML = '';
 
+        this._retirerNumero(section);
         if (this._enFenetre()) this._brancherSurvol(section, texte);
         this._voiler(section);
+    },
+
+    /**
+     * Le numéro du titre (« Question 3 » → « Question ») part avec l'énoncé. Il ne revient
+     * JAMAIS, même quand l'énoncé est affiché : dans la WeakMap on ne met que ce qui doit
+     * pouvoir se relire, et le numéro n'en fait pas partie. Il trahirait sinon la place de
+     * la question dans la copie d'origine (l'ordre peut être tiré au sort), et permettrait
+     * de désigner « la question 3 » à un tiers ou à un agent.
+     * Seules les sections masquées sont touchées : un titre sans chiffre reste intact.
+     */
+    _retirerNumero(section) {
+        const titre = section.querySelector('.question-title h3');
+        if (!titre) return;
+        const sans = titre.textContent.replace(/\s*\d+/g, '').trim();
+        titre.textContent = sans || 'Question';
     },
 
     _voiler(section) {

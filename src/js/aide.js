@@ -177,7 +177,8 @@ carte pour afficher les énoncés normalement.</p>
 <p>En temporaire, la page ne bouge pas : la fenêtre recouvre ce qui suit le temps de la lecture.
 Sur tablette, un toucher l'ouvre et un toucher ailleurs la ferme.</p>
 <p>Un énoncé masqué est <strong>retiré de la page</strong>, pas seulement flouté : un agent ne
-peut pas le lire.</p>
+peut pas le lire. Le <strong>numéro de la question</strong> est retiré avec lui (le titre se lit
+« Question », sans chiffre, même quand l'énoncé est affiché).</p>
 <p><strong>Captures d'écran</strong> : aucune page web ne peut les empêcher, Windows prend l'image
 avant que le navigateur le sache. L'énoncé affiché porte donc un <strong>filigrane au nom de
 l'apprenant, avec la date et l'heure</strong> : une capture qui circule désigne son auteur. Impr.

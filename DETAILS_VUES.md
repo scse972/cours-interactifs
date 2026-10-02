@@ -175,7 +175,8 @@ navigation libre dans les deux sens. À l'ouverture, on se place sur la premièr
 pagination s'efface dès que le chapitre est rendu ou verrouillé.
 
 **Anti-IA** (`ChapterAntiIA`) — l'intitulé des questions visées (toutes, ou auto et semi) est retiré
-du DOM. Persistant : un clic l'affiche en place, un clic hors de la question le remasque.
+du DOM, et le numéro du titre (« Question 3 » → « Question ») avec lui — définitivement, il ne revient
+pas à la lecture (`_retirerNumero`). Persistant : un clic l'affiche en place, un clic hors de la question le remasque.
 Temporaire : le survol l'affiche dans une fenêtre posée par-dessus (rien ne se décale), retirée dès
 que le pointeur en sort. Dans les deux cas, tout se remasque quand la fenêtre du navigateur perd le
 focus. Initialisé avant la révélation de la
