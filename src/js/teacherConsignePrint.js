@@ -228,7 +228,7 @@
                 <p style="margin-top:0.5rem; font-size:0.9em; background:#f6f1e7; border-left:4px solid #d9c9a3; color:#7a5c1e; padding:0.5rem 0.75rem;">
                     ℹ️ Imprimer ouvre aussi le <strong>suivi de correction</strong> des apprenants
                     concernés qui n'ont pas encore ouvert le chapitre. Sans cela leur copie papier
-                    n'apparaîtrait nulle part : ni dans « 📬 Rendus à corriger », ni dans XSpro.
+                    n'apparaîtrait nulle part : ni dans « 📬 Rendus à corriger », ni dans l'application de bureau.
                 </p>
                 <div style="margin-top:1rem; display:flex; gap:0.75rem; justify-content:flex-end;">
                     <button class="btn btn-primary" id="consigne-print-go">🖨️ Préparer l'impression</button>

@@ -144,9 +144,9 @@ en vertical à côté : on sait à qui est une feuille ramassée, et on dissuade
 <ul>
   <li><strong>Imprimer ouvre le suivi de correction</strong> des apprenants qui n'ont pas ouvert
       le chapitre. Sans cela, une copie faite sur papier n'apparaîtrait ni dans
-      « 📬 Rendus à corriger » ni dans XSpro.</li>
+      « 📬 Rendus à corriger » ni dans l'application de bureau.</li>
   <li><strong>Les QRCodes sont optionnels</strong> (case cochée par défaut). Sans eux, la feuille
-      ne porte que les énoncés, et vous corrigez depuis « 📬 Rendus à corriger » ou XSpro.
+      ne porte que les énoncés, et vous corrigez depuis « 📬 Rendus à corriger » ou depuis l'application de bureau.
       La page de garde reste nominative, le suivi s'ouvre pareil.</li>
 </ul>
 
@@ -209,7 +209,7 @@ l'explique, par exemple « 🔁 4 tentatives — retenue dernière : n°4 (1 pt 
 10/20) : −3 pt ». Vous modifiez l'un et l'autre
 à votre guise : votre saisie fait foi. Le nombre de tentatives et leur historique (date, note,
 note après pénalité, tentative retenue) restent affichés en lecture seule dans la section
-Bonus / Pénalité — et au survol du badge 🔁 dans XSpro —, même si l'appréciation a été effacée.</p>
+Bonus / Pénalité — et au survol du badge 🔁 dans l'application de bureau —, même si l'appréciation a été effacée.</p>
 <p>Une question manuelle que vous n'avez pas corrigée compte pour <strong>zéro</strong>, exactement
 comme une question ratée. Les cases « traité » sont là pour que vous n'en oubliiez aucune.</p>
 
@@ -268,7 +268,7 @@ d'adresse. C'est la même page : rien ne vient d'un magasin d'applications.</p>
 <h4>⚠️ La caméra exige l'adresse publiée</h4>
 <p><strong>Scanner avec la caméra ne fonctionne que depuis le site publié</strong>, en HTTPS : le
 navigateur refuse la caméra sur une adresse locale du réseau (<code>http://192.168…</code>), et
-XSpro n'en propose pas.</p>
+l'application de bureau n'en propose pas.</p>
 <p>Tout le reste marche partout, adresse locale comprise : <strong>coller le contenu d'un
 QRCode</strong> scanné avec l'application photo du téléphone, le <strong>code de validation
 dicté</strong>, la <strong>navigation par liste</strong> et l'<strong>AR</strong> du mode
