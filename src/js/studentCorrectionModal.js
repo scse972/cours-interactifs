@@ -485,6 +485,13 @@ class StudentCorrectionModal extends CorrectionModal {
             }
         }
 
+        // Explication de la correction : le seul endroit où l'élève la voit. Elle n'est
+        // jamais dans la page du chapitre (publishParcours.js ne la met pas dans le HTML
+        // de la question) ; explicationHtml est déjà converti et filtré à la publication.
+        const explicationRow = q.explicationHtml
+            ? `<div class="scm-row"><span class="scm-row-label">Explication</span><span class="scm-row-value">${q.explicationHtml}</span></div>`
+            : '';
+
         let sysNote = '';
         if (isAuto && typeof q.attempts === 'number') {
             sysNote = `<div class="scm-sys-note">Nombre d'essais: ${q.attempts}</div>`;
@@ -511,6 +518,7 @@ class StudentCorrectionModal extends CorrectionModal {
                 <span class="scm-row-value ${answerClass}">${studentAnswer}</span>
             </div>
             ${expectedRow}
+            ${explicationRow}
             ${sysNote}
             ${commentHtml}
         </div>`;
