@@ -829,6 +829,13 @@ class CorrectionModal {
                 </div>
                 ` : ''}
 
+                ${question.explicationHtml ? `
+                <div class="correction-row">
+                    <div class="correction-label">💡 Explication:</div>
+                    <div class="correction-value">${question.explicationHtml}</div>
+                </div>
+                ` : ''}
+
                 ${question.correctionType === 'semi' ? `
                 <div class="auto-correction-note">
                     <span>
