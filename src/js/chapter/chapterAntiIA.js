@@ -123,7 +123,11 @@ const ChapterAntiIA = {
             texte: texte.innerHTML,
             indication: indication ? indication.innerHTML : null
         });
-        if (indication) indication.innerHTML = '';
+        if (indication) {
+            indication.innerHTML = '';
+            // Ouverte vide, la boîte dit où lire l'indication (cf. style.css).
+            indication.dataset.antiIa = this._enFenetre() ? 'survol' : 'clic';
+        }
 
         this._retirerNumero(section);
         if (this._enFenetre()) this._brancherSurvol(section, texte);
@@ -206,6 +210,24 @@ const ChapterAntiIA = {
         if (indication && contenu.indication !== null) indication.innerHTML = contenu.indication;
 
         this._revelee = section;
+    },
+
+    /**
+     * Le bouton « 💡 Indication » d'une question masquée : son texte est hors de la page
+     * (cf. _retirer), la boîte s'ouvrirait vide. Même règle que pour l'énoncé — lire
+     * l'indication, c'est lire l'énoncé : affichée en place avec lui au niveau persistant,
+     * dans la fenêtre au niveau temporaire (la boîte étant ouverte, la fenêtre l'inclut).
+     * Renvoie true si la question est masquée et que le module s'en est chargé.
+     */
+    afficherIndication(section) {
+        if (!section || !this._contenus.has(section)) return false;
+        if (this._enFenetre()) {
+            this.fermerFenetre();
+            this.ouvrirFenetre(section);
+        } else {
+            this.reveler(section);
+        }
+        return true;
     },
 
     masquer(section) {

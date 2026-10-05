@@ -210,6 +210,14 @@ body:has(#correction-modal) {
     flex: 1;
 }
 
+/* Énoncé converti depuis le Markdown (questionTextHtml) : paragraphes et listes sans les
+   marges par défaut, qui espaceraient la ligne « Consigne » plus que les autres. */
+.correction-value > p,
+.correction-value > ul,
+.correction-value > ol { margin: 0 0 0.4em; }
+.correction-value > :last-child { margin-bottom: 0; }
+.correction-value pre { margin: 0.4em 0; white-space: pre-wrap; }
+
 .correction-value.correct {
     color: #2e7d32;
     font-weight: 600;

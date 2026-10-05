@@ -427,6 +427,16 @@ class CorrectionModal {
     }
 
     /**
+     * Énoncé d'une question tel que l'apprenant l'a vu : questionTextHtml est produit à la
+     * publication (marked puis sanitize-html, cf. publishParcours.js), comme pour le suivi
+     * Atelier et l'impression des consignes. L'énoncé brut échappé n'est qu'un repli, pour
+     * un chapitre publié avant que ce champ existe — le Markdown y resterait visible.
+     */
+    enonceHtml(question) {
+        return question.questionTextHtml || this.escapeHtml(question.questionText);
+    }
+
+    /**
      * Bandeau du mode consigne. Il dit au formateur pourquoi les champs sont vides : sans
      * lui, une copie papier ressemble à une copie bâclée, et les « ⏳ À corriger » à un bug.
      */
@@ -803,7 +813,7 @@ class CorrectionModal {
                 ${question.questionText ? `
                 <div class="correction-row">
                     <div class="correction-label">📝 Consigne:</div>
-                    <div class="correction-value">${this.escapeHtml(question.questionText)}</div>
+                    <div class="correction-value">${this.enonceHtml(question)}</div>
                 </div>
                 ` : ''}
 

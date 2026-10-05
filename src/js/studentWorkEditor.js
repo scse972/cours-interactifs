@@ -578,7 +578,11 @@ class StudentWorkEditor {
     toggleHint(hintId) {
         const hint = document.getElementById(hintId);
         if (hint) {
-            hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+            const ouvrir = hint.style.display === 'none';
+            hint.style.display = ouvrir ? 'block' : 'none';
+            // Question masquée par l'Anti-IA : son indication est hors de la page, elle se
+            // montre avec l'énoncé (cf. ChapterAntiIA.afficherIndication).
+            if (ouvrir) window.ChapterAntiIA?.afficherIndication?.(hint.closest('.question-section'));
         }
     }
 
