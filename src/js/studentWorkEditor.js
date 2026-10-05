@@ -250,7 +250,42 @@ class StudentWorkEditor {
 
                 element.addEventListener(eventType, () => this.onInputChanged(question, element));
             });
+
+            if (question.dataset.rule === 'nombre') {
+                question.querySelectorAll('input[type="text"]').forEach(champ => this.filtrerNombre(champ));
+            }
         });
+    }
+
+    /**
+     * Réponse courte en règle « nombre » : seuls les chiffres, la virgule, le point, le
+     * signe et les espaces passent, à la frappe comme au collage. Un caractère retiré fait
+     * apparaître un court message sous le champ. La correction lit ensuite la valeur
+     * (QuestionEngine.lireNombre) : « 3 », « 3,0 » et « 3.0 » se valent.
+     */
+    filtrerNombre(champ) {
+        champ.addEventListener('input', () => {
+            const propre = champ.value.replace(/[^0-9.,+\-\s]/g, '');
+            if (propre === champ.value) return;
+            const retires = champ.value.length - propre.length;
+            const curseur = Math.max(0, (champ.selectionStart ?? champ.value.length) - retires);
+            champ.value = propre;
+            champ.setSelectionRange(curseur, curseur);
+            this.signalerSaisieNombre(champ);
+        });
+    }
+
+    signalerSaisieNombre(champ) {
+        let aide = champ.parentElement.querySelector('.saisie-nombre-aide');
+        if (!aide) {
+            aide = document.createElement('small');
+            aide.className = 'saisie-nombre-aide';
+            aide.textContent = 'Réponse attendue : un nombre (des chiffres, avec une virgule ou un point si besoin).';
+            champ.insertAdjacentElement('afterend', aide);
+        }
+        aide.hidden = false;
+        clearTimeout(aide._minuterie);
+        aide._minuterie = setTimeout(() => { aide.hidden = true; }, 3000);
     }
 
     onInputChanged(questionElement, inputElement) {
