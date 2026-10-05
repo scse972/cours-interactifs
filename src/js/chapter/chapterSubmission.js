@@ -211,8 +211,8 @@ const ChapterSubmission = {
      * La comparaison passe par QuestionEngine.extract des deux côtés. C'est
      * essentiel : extract est le seul endroit qui lit un champ, et la valeur
      * enregistrée en vient. Comparer textarea.value à question.answer
-     * réintroduirait des faux écarts — une réponse courte est stockée en
-     * trim().toLowerCase().
+     * réintroduirait des faux écarts — une réponse courte est stockée après
+     * trim() (en minuscules avant le 2026-10-05, la casse comptant depuis).
      */
     _recupererSaisiesNonEnvoyees() {
         if (window.viderLesBrouillonsEnAttente) window.viderLesBrouillonsEnAttente();

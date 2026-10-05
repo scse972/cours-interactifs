@@ -42,6 +42,9 @@ class QuestionEngine {
             if (Array.isArray(correct) && Array.isArray(answer.value)) {
                 return normalized(correct) === normalized(answer.value);
             }
+            if (answer.type === 'input' && Array.isArray(correct)) {
+                return this.comparerSaisie(question, correct, answer.value);
+            }
             if (Array.isArray(correct)) {
                 return correct.includes(answer.value);
             }
@@ -122,10 +125,11 @@ class QuestionEngine {
 
         const input = question.querySelector('input[type="text"], input[type="number"]');
         if (input && input.value.trim()) {
+            // Saisie gardée telle quelle : la casse compte (cf. comparerSaisie).
             return {
                 hasAnswer: true,
                 type: 'input',
-                value: input.value.trim().toLowerCase()
+                value: input.value.trim()
             };
         }
 
@@ -155,11 +159,42 @@ class QuestionEngine {
             const parsed = JSON.parse(dataAnswers);
             if (type === 'radio' || type === 'select') return +parsed[0];
             if (type === 'checkbox') return parsed.map(x => +x);
-            return parsed.map(x => String(x).trim().toLowerCase());
+            return parsed.map(x => String(x).trim());
         } catch(e) {
             console.warn(`[QuestionEngine] data-correct-answers invalide sur question`, question);
             return [];
         }
+    }
+
+    /**
+     * Réponse courte. La règle publiée (data-rule) décide de la comparaison :
+     * - « nombre » : on compare des valeurs — 3, 3,0, 3.0 et 03 se valent ; « 3 octets » ou
+     *   « trois » ne sont pas des nombres ;
+     * - « texte » : à l'identique, casse comprise — elle fait partie de ce qui est évalué
+     *   (ce qu'affiche exactement la console Python).
+     * Sans data-rule, la question vient d'une publication antérieure, dont les réponses
+     * attendues sont en minuscules : on garde la comparaison d'alors, insensible à la casse.
+     */
+    static comparerSaisie(question, attendues, saisie) {
+        const regle = question.dataset.rule;
+        if (regle === undefined) {
+            const s = saisie.toLowerCase();
+            return attendues.some(a => a.toLowerCase() === s);
+        }
+        if (regle === 'nombre') {
+            const n = this.lireNombre(saisie);
+            return !isNaN(n) && attendues.some(a => this.lireNombre(a) === n);
+        }
+        return attendues.includes(saisie);
+    }
+
+    /**
+     * Un nombre écrit à la française ou à l'anglaise, espaces ignorés ; NaN pour tout le
+     * reste. Pas Number() : il lirait « 0x10 » comme 16 et une chaîne vide comme 0.
+     */
+    static lireNombre(texte) {
+        const t = String(texte).replace(/\s/g, '').replace(',', '.');
+        return /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t) ? parseFloat(t) : NaN;
     }
 }
 
