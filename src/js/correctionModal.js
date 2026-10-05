@@ -628,10 +628,9 @@ class CorrectionModal {
      * Ligne d'état du mode Atelier AR.
      *
      * Dit au formateur ce qui s'est déjà passé en main propre, pour qu'il ne refasse
-     * pas une évaluation déjà faite — et pour qu'il comprenne pourquoi une consigne
-     * évaluée peut n'avoir encore rapporté aucun point : les points attendent dans
-     * `arPoints` et ne sont promus en `teacherScore` qu'à la saisie de l'AR par
-     * l'apprenant (voir "mode atelier AR.md" §7).
+     * pas une évaluation déjà faite. Depuis le 2026-10-05 l'émission de l'AR inscrit
+     * aussi `teacherScore` ; un AR émis AVANT cette date n'a posé que `arPoints`, promu
+     * à la saisie de l'AR par l'apprenant (voir "mode atelier AR.md" §7).
      *
      * Affichée dès que les champs existent, indépendamment du mode courant du
      * chapitre : ce qui compte est ce qui a eu lieu, pas la configuration du moment.
@@ -655,6 +654,10 @@ class CorrectionModal {
             const points = nombre(question.teacherScore ?? question.arPoints);
             etat = `✅ Validé en main propre — ${points} / ${maxPts} pt attribué(s) par ${par}, ` +
                    `AR saisi par l'apprenant le ${date(question.arSaisiAt)}`;
+        } else if (question.arEmisAt && question.manualCorrectionStatus === 'corrected') {
+            // Depuis le 2026-10-05, émettre l'AR inscrit la correction : les points comptent déjà.
+            etat = `📤 AR émis le ${date(question.arEmisAt)} par ${par} — ${nombre(question.teacherScore ?? question.arPoints)} / ${maxPts} pt ` +
+                   `enregistré(s) ; l'apprenant n'a pas encore saisi son AR`;
         } else if (question.arEmisAt) {
             etat = `📤 AR émis le ${date(question.arEmisAt)} par ${par} — ${nombre(question.arPoints)} / ${maxPts} pt ` +
                    `<strong>en attente</strong> : l'apprenant n'a pas encore saisi son AR, les points ne comptent pas`;

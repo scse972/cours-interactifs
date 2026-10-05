@@ -97,6 +97,60 @@ async function loadProgress(studentId) {
 
 
 
+// Champs d'une question écrits par le FORMATEUR depuis un autre appareil (correction en
+// salle, tableau de bord). arSaisiAt suit l'AR : un nouvel AR le remet à null.
+const CHAMPS_CORRECTION_FORMATEUR = [
+    'teacherScore', 'teacherComment', 'teacherFeedback', 'manualCorrectionStatus',
+    'correctedBy', 'correctedAt',
+    'arPoints', 'arAppreciation', 'arHash', 'arEmisAt', 'arEmisPar', 'arSaisiAt'
+];
+
+/** Date de la dernière intervention du formateur sur une question ('' si aucune). */
+function dateCorrection(question) {
+    const dates = [question?.correctedAt, question?.arEmisAt].filter(Boolean).sort();
+    return dates.length ? dates[dates.length - 1] : '';
+}
+
+/**
+ * La progression s'enregistre en objet entier : la page de l'apprenant, restée ouverte
+ * pendant que le formateur corrige sur son téléphone, écraserait cette correction à sa
+ * sauvegarde suivante (un brouillon d'une autre question suffit). Avant d'écrire, on
+ * relit la version enregistrée et on reprend, question par question, la correction du
+ * formateur quand elle est plus récente que celle connue ici.
+ *
+ * Indispensable depuis que l'émission de l'AR inscrit la note (2026-10-05). Une relecture
+ * impossible n'empêche pas d'enregistrer : on écrit comme avant.
+ */
+async function conserverCorrectionsFormateur(studentId, progress) {
+    let enregistree = null;
+    try {
+        enregistree = await loadProgress(studentId);
+    } catch (_) {
+        return;
+    }
+    if (!enregistree?.chapters || enregistree === progress) return;
+
+    let reprise = false;
+    Object.entries(enregistree.chapters).forEach(([chapterId, chapitreEnregistre]) => {
+        const chapitreLocal = progress.chapters?.[chapterId];
+        if (!chapitreLocal?.questions) return;
+        let touche = false;
+        Object.entries(chapitreEnregistre?.questions || {}).forEach(([questionId, distante]) => {
+            const locale = chapitreLocal.questions[questionId];
+            if (!locale || dateCorrection(distante) <= dateCorrection(locale)) return;
+            CHAMPS_CORRECTION_FORMATEUR.forEach(champ => {
+                if (distante[champ] !== undefined) locale[champ] = distante[champ];
+            });
+            touche = true;
+        });
+        if (touche) {
+            recomputeChapterStats(chapitreLocal);
+            reprise = true;
+        }
+    });
+    if (reprise) recomputeGlobalStats(progress);
+}
+
 /**
  * Sauvegarde la progression d'un apprenant dans le stockage
  * @param {string} studentId - L'ID de l'apprenant
@@ -105,7 +159,8 @@ async function loadProgress(studentId) {
 async function saveProgress(studentId, progress) {
     try {
         progress.lastUpdated = new Date().toISOString();
-        
+        await conserverCorrectionsFormateur(studentId, progress);
+
         // Utiliser Parcours.scoped.student si disponible
         if (window.Parcours && Parcours.scoped && Parcours.scoped.student) {
             await Parcours.scoped.student.set(`student_${studentId}_progress`, progress);

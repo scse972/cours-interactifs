@@ -227,7 +227,7 @@ const ChapterSubmission = {
             const enregistree = chapitre.questions[questionId];
             if (!enregistree) return;
 
-            const champ = question.querySelector('textarea, input[type="text"], input[type="number"]');
+            const [champ] = QuestionEngine.champsReponse(question, 'textarea, input[type="text"], input[type="number"]');
             if (!champ || champ.disabled) return;
 
             const extraite = QuestionEngine.extract(question);

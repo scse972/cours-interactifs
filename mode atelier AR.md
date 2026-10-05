@@ -295,7 +295,23 @@ progression de toutes les questions de tous les parcours.
 | `arSaisiAt` | apprenant | Date de saisie de l'AR — trace de la rencontre |
 | `arCode` | apprenant | L'AR en clair, une fois validé, pour recopie sur le carnet |
 
-### La promotion — c'est le cœur du dispositif
+### Changement du 2026-10-05 — l'émission de l'AR enregistre la correction
+
+À la demande du formateur, l'enregistrement est désormais **systématique dès la génération de l'AR** : l'outil
+écrit `teacherScore` / `teacherComment` / `manualCorrectionStatus: 'corrected'` (via `_inscrireCorrection`, la même
+séquence que la correction directe), avec `correctedAt` = `arEmisAt`. Il n'y a plus qu'un bouton visible par
+question. La saisie de l'AR par l'apprenant reste le geste qui **confirme** l'échange (`arSaisiAt`, état `validee`)
+et réinscrit les mêmes points.
+
+Conséquences :
+- `AtelierQuestion._etat` garde l'état `demandee` (champ de saisie de l'AR) tant que `arHash` est posé et qu'aucune
+  correction directe plus récente (`correctedAt > arEmisAt`) ne l'a tranché ;
+- `saveProgress` relit la progression enregistrée et reprend les champs de correction du formateur plus récents
+  (`conserverCorrectionsFormateur`) : la page de l'apprenant restée ouverte ne peut plus écraser la note.
+
+La section qui suit décrit le fonctionnement d'origine ; elle reste vraie pour les AR émis avant cette date.
+
+### La promotion — fonctionnement d'origine
 
 L'outil de validation **n'écrit pas** `teacherScore`. S'il le faisait, les points entreraient immédiatement dans
 `manualScore` et l'apprenant verrait sa note sans jamais venir chercher son AR : le dispositif serait vide.

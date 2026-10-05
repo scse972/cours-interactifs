@@ -102,6 +102,18 @@ class QuestionEngine {
         };
     }
 
+    /**
+     * Les champs de la RÉPONSE, à l'exclusion de ceux que le mode Atelier ajoute dans la
+     * question (auto-positionnement, saisie de l'AR — voir atelierQuestion.js).
+     *
+     * Sans ce filtre, le <select> d'auto-positionnement, lu avant la zone de texte,
+     * devenait la réponse : le compte rendu était remplacé par « acquis » à la première
+     * frappe suivante, et l'IA de correction de l'application recevait ce mot à noter.
+     */
+    static champsReponse(question, selecteur) {
+        return [...question.querySelectorAll(selecteur)].filter(el => !el.closest('.atelier-bloc'));
+    }
+
     static extract(question) {
 
         const radio = question.querySelector('input[type="radio"]:checked');
@@ -114,7 +126,7 @@ class QuestionEngine {
             value: checkbox.map(x => +x.value)
         };
 
-        const select = question.querySelector('select');
+        const [select] = this.champsReponse(question, 'select');
         if (select && select.value !== '') {
             return {
                 hasAnswer: true,
@@ -123,7 +135,7 @@ class QuestionEngine {
             };
         }
 
-        const input = question.querySelector('input[type="text"], input[type="number"]');
+        const [input] = this.champsReponse(question, 'input[type="text"], input[type="number"]');
         if (input && input.value.trim()) {
             // Saisie gardée telle quelle : la casse compte (cf. comparerSaisie).
             return {
@@ -133,7 +145,7 @@ class QuestionEngine {
             };
         }
 
-        const textarea = question.querySelector('textarea');
+        const [textarea] = this.champsReponse(question, 'textarea');
         if (textarea && textarea.value.trim()) {
             // En NSI l'indentation FAIT PARTIE de la réponse : on enregistre la saisie
             // brute. Le trim ne sert qu'au test de vacuité ci-dessus (pour qu'une
@@ -241,9 +253,9 @@ class StudentWorkEditor {
     attachEventListeners() {
         document.querySelectorAll('.question-section').forEach(question => {
 
-            question.querySelectorAll('input, select, textarea').forEach(element => {
+            QuestionEngine.champsReponse(question, 'input, select, textarea').forEach(element => {
 
-                const eventType = 
+                const eventType =
                     element.tagName === 'TEXTAREA' ? 'input' :
                     element.tagName === 'SELECT' ? 'change' :
                     'change';

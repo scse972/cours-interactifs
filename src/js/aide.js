@@ -227,17 +227,16 @@ tentatives dans la note.</p>
             titre: '✍️ Les deux façons de corriger ici',
             html: `
 <h4>Valider et générer l'AR</h4>
-<p>Réservé aux consignes d'un chapitre joué en <strong>Atelier AR</strong>. Vous n'inscrivez pas
-directement des points : vous produisez un accusé de réception que l'apprenant doit saisir chez lui
-pour que les points comptent.</p>
-<p><strong>Cette lenteur est le dispositif</strong>, pas son coût d'usage. Elle oblige à l'échange
-en présence. Ne cherchez pas à la contourner : c'est exactement ce que le mode Atelier est censé
-produire.</p>
+<p>Réservé aux consignes d'un chapitre joué en <strong>Atelier AR</strong>. Un seul geste : la note
+et l'appréciation sont <strong>enregistrées aussitôt</strong>, et vous obtenez un accusé de réception
+à dicter. Quand l'apprenant le saisit, la consigne passe « validée » sur sa page : l'échange en
+présence est confirmé.</p>
 
 <h4>Enregistrer la correction</h4>
-<p>Disponible partout. La note et l'appréciation sont écrites tout de suite, exactement comme
-depuis le tableau de bord après le rendu d'une copie. Pas d'accusé de réception : ce qui est écrit
-compte immédiatement dans les totaux.</p>
+<p>Pour toutes les autres questions. La note et l'appréciation sont écrites tout de suite, exactement
+comme depuis le tableau de bord après le rendu d'une copie, sans accusé de réception.</p>
+<p>Un seul de ces deux boutons s'affiche, selon la question : il n'y a jamais d'enregistrement à faire
+en plus.</p>
 
 <h4>Ce que l'apprenant voit</h4>
 <p><strong>Rien ne s'affiche sous ses yeux au moment où vous corrigez.</strong> Rien n'est poussé,
