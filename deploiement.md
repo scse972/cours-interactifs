@@ -182,10 +182,9 @@ https://scse972.github.io/cours-interactifs/parcours/src/math-2de?token=STU001
 5. Gérez les utilisateurs de chaque parcours (import/export CSV)
 6. Exportez les données en JSON
 
-**Changer le mot de passe formateur** (dans la console du navigateur) :
-```javascript
-localStorage.setItem('teacher:password', 'nouveau-mot-de-passe')
-```
+**Changer le mot de passe formateur** : bouton « Changer le mot de passe » du
+tableau de bord. Seule son empreinte est enregistrée (clé `teacher_password`) ;
+un ancien mot de passe encore en clair est converti à la connexion suivante.
 
 ---
 
@@ -194,7 +193,7 @@ localStorage.setItem('teacher:password', 'nouveau-mot-de-passe')
 | Élément | Stockage | Notes |
 |---------|----------|-------|
 | Token élève | `sessionStorage` | Effacé à la fermeture du navigateur |
-| Mot de passe formateur | `localStorage` | Modifiable via console |
+| Mot de passe formateur | Stockage cloud, clé `teacher_password` | Empreinte PBKDF2-SHA256 salée (100 000 itérations), jamais la valeur. La clé reste lisible et modifiable par tout visiteur (mode personnel) : l'empreinte protège le mot de passe, pas l'accès au tableau de bord |
 | Jeton de récupération | Empreinte SHA-256 dans `storage.js` | Contournement total, mais côté client seulement. La valeur n'est plus publiée ; le secret `RECOVERY_TOKEN` de la fonction `superadmin` doit porter la même |
 | Clé Supabase | Code source | Clé anon publique, RLS activé |
 
