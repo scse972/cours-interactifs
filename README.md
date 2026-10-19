@@ -496,26 +496,49 @@ temporaires » : un chapitre dont la clé est absente est protégé, « Désacti
 
 Une seule question est lisible à la fois, et quitter la fenêtre ou l'onglet remasque tout. La
 fenêtre du niveau temporaire ne décale rien : la mise en page reste celle du voile, la fenêtre
-recouvre ce qui suit. Sans survol possible (tactile), un toucher l'ouvre et un toucher ailleurs la
+recouvre ce qui suit. Elle ne s'ouvre qu'après un court arrêt du pointeur (`DELAI_SURVOL_MS`,
+300 ms) : un balayage de la souris — vidéo de l'écran, agent qui déplace le pointeur — ne révèle
+rien. Sans survol possible (tactile), un toucher l'ouvre et un toucher ailleurs la
 ferme ; au clavier, elle suit le focus du voile. L'indication n'y figure que si l'apprenant l'a
 ouverte. Les blocs de cours ne sont jamais masqués. Le but : priver
 un agent IA intégré au navigateur, ou une capture d'écran, de l'énoncé complet du chapitre.
 
 **Masquer, c'est retirer du DOM** : l'intitulé et l'indication partent dans une `WeakMap` indexée
-par la section, et ne reviennent dans la page que révélés — un simple flou laisserait le texte à la
-portée d'un agent. Le voile est un `div role="button"`, pas un `<button>`, pour survivre au
-verrouillage qui désactive tous les boutons au rendu : la relecture d'une copie rendue reste
-masquée. Rien n'est figé par apprenant ; ni la vue formateur ni les modales de correction ne sont
-concernées.
+par la section, **privée** (fermeture du module, rien sur `window` ne la rend), et ne reviennent
+dans la page que révélés — un simple flou laisserait le texte à la portée d'un agent. Le voile est
+un `div role="button"`, pas un `<button>`, pour survivre au verrouillage qui désactive tous les
+boutons au rendu : la relecture d'une copie rendue reste masquée. L'énoncé affiché ne se
+sélectionne pas (`user-select: none`). Rien n'est figé par apprenant ; ni la vue formateur ni les
+modales de correction ne sont concernées.
+
+**Vue formateur et simulation** : `teacher_view=true` et `simulation=true` ne valent qu'avec une
+session formateur dans l'onglet (`sessionStorage.teacher_authenticated`, posé par
+`teacher-login.html`) — seul juge `Parcours.estVueFormateur()` / `identiteParUrl()`
+(`parcours.js`), relayé par `chapterInit.js`, `chapitre.js`, `chapterAntiIA.js`, `choixOrdre.js`,
+`qrQuestion.js`, `progressManager.js` et `Simulation.active()`. Sans session, le paramètre est
+ignoré et la page se comporte en élève. Avant le 19/10/2026, un élève qui ajoutait le paramètre à
+l'URL avec son jeton obtenait sa copie en clair sur le site personnel (où `users_list` se lit sans
+session).
 
 **Captures d'écran** : une page web ne peut pas les empêcher — Windows prend l'image avant de
-prévenir le navigateur, qui ne reçoit que le relâchement d'Impr. écran, et l'Outil Capture de
-Windows 11 fige l'écran dès l'appui. Deux parades : l'énoncé affiché (fenêtre ou affichage en
-place) porte un **filigrane nominatif et daté** (tuile SVG en fond, nom lu dans `.student-name`),
-qui fait d'une capture diffusée une capture signée ; et Impr. écran remasque tout et tente de vider
-le presse-papiers (refusé hors HTTPS ou sans geste utilisateur) — un appoint, sans garantie.
-**Limites** : les bonnes réponses (`data-correct-answers`) restent dans la page, et `cours.json`
-est public. Voir `src/js/chapter/chapterAntiIA.js`.
+prévenir le navigateur. Trois parades, dans `chapterAntiIA.js` :
+- l'énoncé affiché (fenêtre ou affichage en place) porte un **filigrane nominatif et daté** (tuile
+  SVG en fond : nom et classe lus dans `.student-name` / `.student-class`), qui fait d'une capture
+  diffusée une capture signée ;
+- le **presse-papiers est écrasé** par le message du blocage copier (`window.ANTI_COPY_MSG`,
+  `chapterInit.js`) à chaque affichage d'un énoncé, au relâchement d'Impr. écran (la capture y est
+  déjà : perdue) et au retour du focus quand la page l'a perdu pendant qu'un énoncé était affiché,
+  ou dans les 1,5 s qui suivent sa fermeture (Win+Shift+S et l'Outil Capture volent le focus avant
+  de remplir le presse-papiers). Chrome et Edge acceptent l'écriture dès que la page a le focus ;
+  Firefox et Safari exigent un geste, l'écriture refusée est rejouée au prochain clic ou touche.
+  Coût assumé : un texte copié ailleurs se colle avant de relire un énoncé. Jamais en simulation ;
+- tout se remasque à la perte du focus, à l'onglet caché et avant impression (`beforeprint`,
+  `@media print`).
+Un navigateur piloté (`navigator.webdriver`) n'affiche jamais les énoncés.
+**Limites** : la photo au téléphone, l'enregistrement vidéo (le délai de survol en limite le
+rendement), le fichier que l'Outil Capture enregistre de lui-même, les bonnes réponses
+(`data-correct-answers`) dans la page, et `cours.json`, public et en clair — un script a tout.
+Voir `src/js/chapter/chapterAntiIA.js`.
 
 ## 🧾 Le mode Atelier AR
 

@@ -177,12 +177,15 @@ pagination s'efface dès que le chapitre est rendu ou verrouillé.
 **Anti-IA** (`ChapterAntiIA`) — l'intitulé des questions visées (toutes, ou auto et semi) est retiré
 du DOM, et le numéro du titre (« Question 3 » → « Question ») avec lui — définitivement, il ne revient
 pas à la lecture (`_retirerNumero`). Persistant : un clic l'affiche en place, un clic hors de la question le remasque.
-Temporaire : le survol l'affiche dans une fenêtre posée par-dessus (rien ne se décale), retirée dès
-que le pointeur en sort. Dans les deux cas, tout se remasque quand la fenêtre du navigateur perd le
-focus. Initialisé avant la révélation de la
+Temporaire : un court arrêt du pointeur (300 ms) l'affiche dans une fenêtre posée par-dessus (rien
+ne se décale), retirée dès que le pointeur en sort. Dans les deux cas, tout se remasque quand la
+fenêtre du navigateur perd le focus, et avant impression. Initialisé avant la révélation de la
 page, pour que l'énoncé ne s'affiche jamais. Reste actif sur une copie rendue. L'énoncé affiché
-porte un filigrane au nom de l'apprenant, daté ; Impr. écran remasque tout (sans pouvoir empêcher
-la capture, déjà prise).
+porte un filigrane au nom de l'apprenant, avec sa classe, daté, et ne se sélectionne pas ; le
+presse-papiers est écrasé par le message « contenu protégé » à chaque affichage, à Impr. écran et
+au retour du focus après une capture probable (sans pouvoir empêcher la capture, déjà prise).
+`teacher_view` ne désactive le masquage qu'avec une session formateur (`Parcours.estVueFormateur`).
+Un navigateur piloté (`navigator.webdriver`) n'affiche jamais les énoncés.
 
 > La **source unique de vérité des six modes** est `src/js/core/getExamContext.js`. Le mode effectif
 > d'un apprenant est **figé à son premier démarrage** (`frozenChapterMode`) : le formateur qui change
