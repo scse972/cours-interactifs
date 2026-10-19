@@ -200,6 +200,9 @@ Trois choix qui méritent leur explication :
 - **aucun mécanisme hors-ligne pour les données.** `storage.js` a déjà son cache localStorage
   (`_cache_*`), sa file d'écritures (`_sync_queue`) et son bandeau d'état. Pas de Background Sync
   non plus : doublon de `SyncManager`, et absent d'iOS ;
+- **aucun rafraîchissement des pages élèves.** Elles se rechargent d'elles-mêmes après six heures
+  cachées (`src/js/core/rafraichissementSession.js`, 19/10/2026) : c'est du JavaScript de page, pas
+  ce worker, et rien n'y est mis en cache ;
 - **aucun fallback de navigation générique.** `index.html` et `404.html` portent la logique de
   redirection par slug ; les figer casserait les liens profonds ;
 - **aucune interception de Supabase ni d'Appwrite.** `provider.supabase.js` impose

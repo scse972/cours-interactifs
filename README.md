@@ -785,6 +785,43 @@ Cela permet un fonctionnement semi hors-ligne robuste.
 
 ---
 
+# 2 bis. Le chemin des données de l'élève, et la session qui se rafraîchit (19/10/2026)
+
+**Direct ou pont, constaté, jamais réglé.** La fonction serveur `student-progress` (le « pont »,
+`studentProgressBridge.js`) coûte 5 s à froid et 0,6 s à chaud ; une page de chapitre l'appelait
+sept fois. Elle n'est indispensable qu'en Web **multi-formateur**, où les lignes portent un
+`owner_id` et sont fermées aux anonymes. `Parcours.utiliserPont()` (`parcours.js`) est le seul juge,
+et il constate : si la page a pu lire la ligne `cours.json` de `parcours_data` sans session
+(`staticJson.getWithInfo`, source `provider`), les autres lignes se lisent et s'écrivent de même
+(mêmes permissions de table) : **mono-formateur, accès direct**, identité par `users_list` et
+progression par `storage.get/set` (serveur d'abord, file hors ligne, bandeau). Si cette lecture a
+échoué (repli statique, ou rien) : **pont**, comme avant. En local ou avec une session formateur :
+direct, sans même consulter. `Parcours.cheminDonnees()` le dit (`'direct'` | `'pont'`), et la console
+l'écrit au chargement. `dataStorage.js`, `chapterRepository.js` et `user.html` s'en remettent à lui.
+
+**L'identité, une fois par session.** `DataStorage.findUserByToken` mémorise l'identité trouvée
+dans `sessionStorage` (`parcours:{slug}:identite`, 30 min, `IDENTITE_TTL_MS`) et partage une promesse
+entre appels simultanés ; un jeton inconnu n'est jamais mémorisé ; `logout` et `checkAuth` l'effacent.
+
+**La progression, lue sûrement, écrite si nécessaire.** Le pont distingue la panne de l'absence
+(`lire`/`ecrire` rendent `{ ok, value | erreur }`, délai 15 s) ; `getOrCreateStudentProgress` lit en
+mode strict et **ne crée rien sur une panne** — avant, une progression vide s'enregistrait par-dessus
+celle du serveur. La page de chapitre s'ouvre alors en lecture seule (`ChapterSession.ecritureBloquee`,
+refusé par `saveProgress`), avec un bandeau. À l'ouverture, `saveProgress` n'est appelé que si
+l'initialisation a changé quelque chose (chapitre figé, progression créée). L'accueil lit
+`chapter_config` une fois et le transmet au rendu.
+
+**La session se rafraîchit d'elle-même** (`core/rafraichissementSession.js`, pages `user.html` et
+`chapter_template.html`) : une page revue après plus de **6 h** cachée ou gelée se recharge
+(`location.reload()`) — scripts revalidés par ETag sur Pages, données relues sur le serveur,
+identité revérifiée si son mémo a plus de 30 min. Elle ne se recharge pas, et propose un bandeau
+« Recharger », si des écritures attendent dans `_sync_queue` ou si une saisie est en cours (champ
+texte actif, réponse rédigée non validée). Ce n'est **pas** un service worker : rien n'est mis en
+cache, rien n'est à vider. Bancs : `scripts/test-cheminDonnees.js`, `test-identiteSession.js`,
+`test-progressionOuverture.js`, `test-rafraichissementSession.js`.
+
+---
+
 # 3. `staticJson` — Abstraction des ressources JSON statiques
 
 Le dernier refactor introduit une nouvelle couche centrale :
