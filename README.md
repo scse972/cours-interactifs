@@ -479,6 +479,30 @@ une semi d'une tentative close restée en attente de correction compte 0.
 (il appartient à l'apprenant), ni `frozen*`, ni le statut de rendu ne bougent ; une correction déjà
 enregistrée n'est pas recalculée.
 
+## 🎯 Option « questions tirées » (20/10/2026)
+
+Proposée aux modes **Examen, Blind et Millionnaire** : `chapter_config.nombreQuestions` = x. Chaque
+apprenant reçoit x questions tirées au hasard parmi les questions **valides** du chapitre
+(`isQuestionValid`), à son **premier démarrage** ; la liste est figée dans son chapitre
+(`questionsTirees`, à côté des `frozen*`) et sa progression ne contient que ces questions. x ≥ y, 0,
+vide, ou un autre mode : `null` = toutes. Tirage Fisher-Yates sur `crypto.getRandomValues`, liste
+remise dans l'ordre publié (l'ordre aléatoire, s'il est coché, mélange ensuite).
+
+**Une seule source** : `questionsDuChapitre(chapterConfig, chapitre)` (`progressManager.js`) remplace
+`chapterConfig.questions` partout — page (les sections non tirées sont retirées du DOM et les titres
+renumérotés 1..x, `retirerQuestionsNonTirees`, `chapitre.js`), bandeau, bilans, corrigé, modale de
+correction, rendus, correction en salle, et XPro. La note sur 20, `maxPoints`, `questionCount` et
+`progressItemCount` portent sur les questions tirées ; l'avancement atteint donc 100 %.
+
+Gel : `initChapter` tire ; `gelerContexteChapitre` tire pour une entrée créée d'avance et retire les
+questions non tirées ; `degelerContexteChapitre` remet `questionsTirees` à `null` ;
+`ensureChapterInitialized` ne rajoute que les questions de l'apprenant. Recommencer (Blind,
+Millionnaire) garde le tirage : les tentatives se comparent sur les mêmes questions. Réinitialiser
+(tableau de bord, XPro) refait le tirage. Une question tirée puis retirée de la publication est
+ignorée ; une question ajoutée après le tirage n'est jamais proposée à cet apprenant. En vue
+formateur, un apprenant qui n'a pas démarré n'a pas de tirage : toutes les questions s'affichent.
+Banc : `scripts/test-tirageQuestions.js`.
+
 ## 🤖 Option « anti-IA »
 
 Proposée aux modes **Examen, Blind et Millionnaire**, et **active par défaut** en « Intitulés

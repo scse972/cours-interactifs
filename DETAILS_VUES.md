@@ -158,6 +158,7 @@ l'affichage change** — son ordre, son découpage, et ce qui est lisible sans c
 |---|---|---|---|
 | 🎲 Ordre aléatoire | Examen, Blind, Millionnaire | Chapitre **entièrement auto-corrigé** | coché en Millionnaire, décoché ailleurs |
 | 📄 Question par question | Examen, Blind, Millionnaire | aucune | décoché |
+| 🎯 Questions tirées | Examen, Blind, Millionnaire | aucune | 0 = toutes (`nombreQuestions`, tirage figé au premier démarrage) |
 | 🤖 Anti-IA | Examen, Blind, Millionnaire | aucune | **actif, « Intitulés temporaires »** (menu à quatre niveaux ; « Désactivé » est enregistré comme `null`) |
 
 Sur la carte du chapitre, elles s'affichent en liste sous le menu du mode, et seulement quand elles
@@ -173,6 +174,11 @@ blocs de cours ne bougent pas. Les vues formateur gardent toujours l'ordre publi
 **Question par question** (`ChapterPagination`) — un écran = un élément, blocs de cours compris,
 navigation libre dans les deux sens. À l'ouverture, on se place sur la première étape non faite. La
 pagination s'efface dès que le chapitre est rendu ou verrouillé.
+
+**Questions tirées** (`tirerQuestions`, `questionsDuChapitre`, `progressManager.js`) — x questions au
+hasard par apprenant, figées dans `questionsTirees` au premier démarrage ; les sections non tirées
+sont retirées du DOM avant l'ordre, l'anti-IA et la pagination, les titres renumérotés. Toutes les
+vues passent par `questionsDuChapitre`.
 
 **Anti-IA** (`ChapterAntiIA`) — l'intitulé des questions visées (toutes, ou auto et semi) est retiré
 du DOM, et le numéro du titre (« Question 3 » → « Question ») avec lui — définitivement, il ne revient
