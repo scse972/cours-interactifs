@@ -415,6 +415,16 @@ basculent le bouton sur « 📄 Voir le corrigé » et ouvrent `studentCorrectio
 note du formateur, le détail et les commentaires. **Le bilan sert tout ce qui précède ; le corrigé
 prend la main après.**
 
+Après la validation, l'apprenant peut aussi **s'entraîner** (« 🔁 S'entraîner », sur la carte du
+chapitre et sur la page corrigée) : la page rouverte avec `?entrainement=1` travaille sur un clone
+vidé de la progression (avec un tirage x parmi y, x questions neuves à chaque entraînement), en style examen, et « 🏁 Terminer
+l'entraînement » note les questions auto et semi (`chapter/chapterEntrainement.js`). Rien ne s'écrit :
+`saveProgress` rend la main tant que `ChapterSession.entrainement` est posé, et la bascule a lieu dans
+`initProgression`, avant `restoreSavedAnswers` (qui remettrait la vraie copie dans la page).
+Le **mode de chapitre « 🔁 Entraînement »** joue toujours ainsi, sans correction préalable : `initProgression` ne fait
+que lire la progression (jamais `getOrCreateStudentProgress`), l'entrée du chapitre n'existe qu'en mémoire,
+`unlockNextChapter` n'en crée pas d'avance ; le mode est lu sur la config en direct. Banc : `scripts/test-entrainement.js`.
+
 C'est pour cela qu'il n'y a pas de ligne « Note finale » dans le bilan : elle serait inatteignable.
 Il en existait une, conditionnée à `validated` et lisant de surcroît un champ `noteSur20` que rien
 n'écrit — elle n'a donc jamais pu s'afficher. Elle a été retirée plutôt que rafistolée.

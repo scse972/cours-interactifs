@@ -181,6 +181,9 @@ async function conserverCorrectionsFormateur(studentId, progress) {
  * @param {Object} progress - La progression à sauvegarder
  */
 async function saveProgress(studentId, progress) {
+    // Entraînement sur un chapitre corrigé (chapter/chapterEntrainement.js) : la page travaille
+    // sur un clone vidé de la progression, rien ne doit s'écrire — la copie corrigée reste intacte.
+    if (typeof ChapterSession !== 'undefined' && ChapterSession && ChapterSession.entrainement) return;
     // La page a ouvert la progression sans avoir pu la lire (panne) : rien ne doit s'écrire,
     // l'objet en mémoire est vide et écraserait celle du serveur (cf. chapitre.js, initProgression).
     if (typeof ChapterSession !== 'undefined' && ChapterSession && ChapterSession.ecritureBloquee) {
@@ -266,7 +269,7 @@ function dateLimiteDuChapitre(config, jeton) {
 // Une question tirée puis retirée de la publication est ignorée (l'apprenant en a une de
 // moins) ; une question ajoutée après le tirage n'est jamais proposée à cet apprenant.
 
-const MODES_TIRAGE = ['exam', 'blind', 'millionnaire'];
+const MODES_TIRAGE = ['exam', 'blind', 'millionnaire', 'entrainement'];
 
 /** Une question peut-elle être tirée ? Même règle que l'affichage (isQuestionValid, core/utils.js). */
 function questionTirable(q) {
@@ -1071,6 +1074,9 @@ function unlockNextChapter(progress, currentChapterId, chaptersConfig) {
     }
     
     const nextId = nextChapterConfig.id;
+
+    // 🔁 Chapitre en mode Entraînement : aucune entrée de progression, jamais.
+    if (nextChapterConfig.chapterMode === 'entrainement') return;
 
     // Déverrouiller le chapitre suivant
     if (!progress.chapters[nextId]) {

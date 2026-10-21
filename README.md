@@ -362,6 +362,7 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 | Millionnaire | 💰 | Une réponse fausse ouvre un choix : **recommencer** (questions auto et semi-automatiques remises à zéro, manuelles conservées) ou **rendre la copie**. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
 | Atelier AR | 🧾 | Les questions ouvertes se valident **en main propre**, par échange de codes — dans l'application |
 | Consigne | 📋 | Travail **sur papier** : feuille nominative imprimable avec un QRCode par question. Côté élève, rien ne change (comportement Découverte) ; côté formateur la correction est accessible **même sans rendu**, les champs vides étant normaux |
+| Entraînement | 🔁 | Se rejoue à volonté, à blanc, en style examen ; « Terminer » donne la note et le corrigé ; avec un tirage, x questions neuves à chaque fois. **Aucune écriture** dans les progressions (`chapter/chapterEntrainement.js`) ; le mode est lu sur la config en direct, jamais figé. Pas de date limite. Dans les suivis, « Entraînement » au lieu de « Non commencé » |
 
 ## 📋 Le mode Consigne et sa feuille imprimable
 
@@ -502,6 +503,18 @@ Millionnaire) garde le tirage : les tentatives se comparent sur les mêmes quest
 ignorée ; une question ajoutée après le tirage n'est jamais proposée à cet apprenant. En vue
 formateur, un apprenant qui n'a pas démarré n'a pas de tirage : toutes les questions s'affichent.
 Banc : `scripts/test-tirageQuestions.js`.
+
+### Entraînement sur un chapitre corrigé (21/10/2026)
+
+Correction publiée, mode Découverte, Examen, Blind ou Millionnaire : « 🔁 S'entraîner » (carte du
+chapitre, page corrigée) rouvre la page avec `?entrainement=1`. Le chapitre est refait à blanc, en
+style examen ; avec un tirage x parmi y, x questions **neuves** à chaque entraînement (pas
+forcément celles de la copie), sinon toutes ; « 🏁 Terminer
+l'entraînement » donne la note sur 20 des questions auto et semi, juste/faux, bonne réponse et
+explication. **Rien n'est écrit** — ni progression, ni `cours.json`, ni `chapter_config` : la page
+travaille sur un clone vidé de la progression et `saveProgress` rend la main
+(`ChapterSession.entrainement`). Module `src/js/chapter/chapterEntrainement.js`, banc
+`scripts/test-entrainement.js`.
 
 ## 🤖 Option « anti-IA »
 

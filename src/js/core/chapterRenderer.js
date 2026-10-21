@@ -126,6 +126,7 @@ export class ChapterRenderer {
                 millionnaire: { icon: '💰', label: 'Millionnaire' },
                 atelier:      { icon: '🧾', label: 'Atelier AR' },
                 consigne:     { icon: '📋', label: 'Consigne' },
+                entrainement: { icon: '🔁', label: 'Entraînement' },
                 normal:       { icon: '📖', label: 'Découverte' },
             };
             const config = modeConfig[mode] || modeConfig.normal;
@@ -147,6 +148,25 @@ export class ChapterRenderer {
                 echeanceEl.className = 'chapter-deadline' + (e.depassee ? ' depassee' : '');
                 echeanceEl.hidden = false;
             }
+        }
+
+        // 🔁 S'entraîner : chapitre corrigé refait à blanc, rien n'est écrit (chapter/chapterEntrainement.js).
+        // Un lien, pas un .btn-primary (attachEvents les branche tous sur navigateToChapter).
+        const carte = document.querySelector(`.chapter-card[data-chapter="${chapterId}"]`);
+        let lienEntrainement = document.getElementById(`entrainement-${chapterId}`);
+        // Pas de lien en mode Entraînement : « Accéder au chapitre » y mène déjà.
+        const entrainementPropose = !!(window.ChapterEntrainement && ChapterEntrainement.estDisponible(chapterProgress, chapterConfig)
+            && !ChapterEntrainement.estModeEntrainement(chapterConfig, chapterProgress));
+        if (entrainementPropose && carte && !lienEntrainement) {
+            lienEntrainement = document.createElement('a');
+            lienEntrainement.id = `entrainement-${chapterId}`;
+            lienEntrainement.className = 'lien-entrainement';
+            lienEntrainement.textContent = "🔁 S'entraîner";
+            lienEntrainement.title = "Refaire ce chapitre à blanc pour t'entraîner : rien n'est enregistré, ta note ne change pas";
+            lienEntrainement.href = ChapterEntrainement.url(chapterId);
+            carte.appendChild(lienEntrainement);
+        } else if (!entrainementPropose && lienEntrainement) {
+            lienEntrainement.remove();
         }
 
         const accessBtn = document.querySelector(`.chapter-card[data-chapter="${chapterId}"] .btn-primary`);
