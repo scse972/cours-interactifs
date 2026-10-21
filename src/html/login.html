@@ -297,7 +297,7 @@
                 if (data && Array.isArray(data.parcours)) {
                     // Garder l'option vide
                     selectEl2.innerHTML = '<option value="">— Changer de parcours —</option>';
-                    data.parcours.forEach(p => {
+                    Parcours.trierParcours(data.parcours, p => labels[p.slug] || p.label || p.slug).forEach(p => {
                         const opt = document.createElement('option');
                         opt.value = p.slug;
                         opt.textContent = labels[p.slug] || p.label || p.slug;
@@ -323,7 +323,7 @@
             if (nameEl) nameEl.textContent = '';
 
             if (data && Array.isArray(data.parcours)) {
-                data.parcours.forEach(p => {
+                Parcours.trierParcours(data.parcours, p => labels[p.slug] || p.label || p.slug).forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.slug;
                     opt.textContent = labels[p.slug] || p.label || p.slug;

@@ -257,7 +257,7 @@
             return;
         }
 
-        const list = data.parcours || [];
+        const list = Parcours.trierParcours(data.parcours || []);
         select.innerHTML = '';
         if (!current) {
             const placeholder = document.createElement('option');
