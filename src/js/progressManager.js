@@ -1343,8 +1343,12 @@ function submitChapter(progress, chapterId, submissionDeadline) {
     chapter.submittedAt = now;
     setSubmissionStatus(chapter, isLate ? "late_submitted" : "submitted");
     
-    // Mettre à jour manualCorrectionStatus pour questions nécessitant correction
+    // Mettre à jour manualCorrectionStatus pour questions nécessitant correction.
+    // UNE QUESTION DÉJÀ CORRIGÉE PAR LE FORMATEUR LE RESTE (2026-11-06) : en atelier, l'apprenant
+    // fait valider sa consigne en main propre (note + AR saisi), PUIS rend son chapitre — le
+    // rendu la repassait « pending », note gardée, et le suivi des apprenants la redemandait.
     Object.values(chapter.questions).forEach(q => {
+        if (q.manualCorrectionStatus === "corrected" || q.manualCorrectionStatus === "validated") return;
         if (q.needsManualCorrection && q.isCorrect === true) {
             // Réponse correcte détectée automatiquement (semi-auto avec réponse exacte)
             q.manualCorrectionStatus = "not_needed";
