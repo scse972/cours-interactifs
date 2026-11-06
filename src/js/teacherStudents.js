@@ -795,6 +795,8 @@ class TeacherStudents {
             chapter.frozenDateLimitEnabled = true;
             chapter.frozenEndDate = newEndDate.toISOString();
         }
+        // Copie déjà rendue : son retard se rejuge sur la nouvelle date (06/11/2026).
+        const retardRejuge = window.ProgressManager.rejugerRetard(chapter, chapter.frozenDateLimitEnabled ? chapter.frozenEndDate : null);
 
         const key = `${slug}:${studentId}:student_${studentId}_progress`;
         await storage.set(key, progress);
@@ -807,7 +809,10 @@ class TeacherStudents {
                 [studentId]: chapter.frozenDateLimitEnabled ? chapter.frozenEndDate : null
             }
         });
-        alert('✅ Date limite individuelle mise à jour pour cet élève.');
+        alert('✅ Date limite individuelle mise à jour pour cet élève.'
+            + (retardRejuge ? (chapter.submissionStatus === 'late_submitted'
+                ? '\n⚠️ Sa copie, rendue après cette date, passe en « Rendu en retard ».'
+                : '\n📤 Sa copie, rendue avant cette date, n\'est plus en retard.') : ''));
         this.refresh();
     }
 
