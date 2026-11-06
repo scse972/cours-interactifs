@@ -515,10 +515,10 @@ class TeacherStudents {
         const ferme = verrouPourEleve(chapterConfig, studentId);
         const verrouChapitre = !!(chapterConfig && chapterConfig.locked === true);
         html += ferme
-            ? `<button class="success" onclick="dashboard.modules.students.setStudentLock('${studentId}', '${chapterId}', false)">🔓 Ouvrir pour cet élève</button>`
-            : `<button class="warning" onclick="dashboard.modules.students.setStudentLock('${studentId}', '${chapterId}', true)">🔒 Fermer pour cet élève</button>`;
+            ? `<button class="success" onclick="dashboard.modules.students.setStudentLock('${studentId}', '${chapterId}', false)">🔓 Déverrouiller pour cet élève</button>`
+            : `<button class="warning" onclick="dashboard.modules.students.setStudentLock('${studentId}', '${chapterId}', true)">🔒 Verrouiller pour cet élève</button>`;
         if (aException) {
-            html += `<button onclick="dashboard.modules.students.setStudentLock('${studentId}', '${chapterId}', null)">↺ Comme le chapitre (${verrouChapitre ? '🔒 verrouillé' : '🔓 ouvert'})</button>`;
+            html += `<button onclick="dashboard.modules.students.setStudentLock('${studentId}', '${chapterId}', null)">↺ Comme le chapitre (${verrouChapitre ? '🔒 verrouillé' : '🔓 déverrouillé'})</button>`;
         }
 
         // Modifier la date limite individuelle de cet élève (figée à son démarrage) —
