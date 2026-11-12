@@ -308,6 +308,9 @@ Conséquences :
   correction directe plus récente (`correctedAt > arEmisAt`) ne l'a tranché ;
 - `saveProgress` relit la progression enregistrée et reprend les champs de correction du formateur plus récents
   (`conserverCorrectionsFormateur`) : la page de l'apprenant restée ouverte ne peut plus écraser la note.
+  Depuis le 2026-11-12, la relecture se fait au serveur (jamais dans le cache des 15 s qui suivent une écriture), et
+  une intervention plus récente sur le CHAPITRE (appréciation générale, publication) est reprise elle aussi ;
+  `arSaisiAt`, écrit par l'apprenant, n'est jamais écrasé par cette reprise, ni une consigne qu'il vient de réécrire.
 
 La section qui suit décrit le fonctionnement d'origine ; elle reste vraie pour les AR émis avant cette date.
 

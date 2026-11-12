@@ -117,6 +117,17 @@ Ces invariants ont chacun coûté un bug. Les commentaires du code expliquent le
   `degelerContexteChapitre()` : poser un statut n'est pas démarrer le chapitre.
 - **`updatedAt` appartient à l'apprenant.** C'est la source de la colonne « Dernière
   activité ». Aucune action du formateur ne doit y toucher.
+- **Ce que le formateur écrit dans une progression se DATE.** La page de l'apprenant restée
+  ouverte réécrit l'objet entier à chaque sauvegarde ; avant, `conserverCorrectionsFormateur`
+  (progressManager.js) relit le serveur (`storage.get(…, { serveur: true })`) et ne reprend
+  que ce qui est daté plus récemment que sa copie : `correctedAt` / `arEmisAt` d'une question,
+  `validatedAt`, `revisionRequestedAt` ou `teacherMonitoring.lastTeacherActionAt` d'un chapitre.
+  Sur le même rendu et la même tentative, elle reprend alors les champs du chapitre
+  (`CHAMPS_CHAPITRE_FORMATEUR`) et la correction des questions que l'apprenant n'a pas
+  touchées. Un écrivain formateur qui ne date pas voit son travail effacé à la sauvegarde
+  suivante de l'apprenant (correction publiée depuis XPro, 12/11/2026). XPro date depuis
+  « Progression apprenant » (`correctedAt`, `lastTeacherActionAt`) et depuis la salle des
+  copies (`teacherCorrectQuestion`).
 
 ## Les six modes de chapitre
 
