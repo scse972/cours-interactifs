@@ -577,6 +577,48 @@ rendement), le fichier que l'Outil Capture enregistre de lui-même, les bonnes r
 (`data-correct-answers`) dans la page, et `cours.json`, public et en clair — un script a tout.
 Voir `src/js/chapter/chapterAntiIA.js`.
 
+## 🚪 Option « sortie de page pénalisée »
+
+Décision de l'utilisateur (17/11/2026). Proposée aux modes **Examen, Blind et Millionnaire**,
+**désactivée par défaut** (sortir est permis) : interrupteur « 🚪 Sortie de page pénalisée » de la
+carte du chapitre (`sortiePage` dans `chapter_config`), réglable aussi dans XPro (colonne 23 de
+« Gestion des chapitres », choix « Pénalisée » / « Permise », « — » = permise ; publiée et
+reprise par Rafraîchir). Les libellés disent l'effet : « Oui / Non » était ambigu (sortir permis ?
+ou surveillé ?). Figée pour chaque apprenant à son premier démarrage (`frozenSortiePage`,
+`progressManager.js`) : qui a commencé sans être prévenu n'est pas pris en cours de route.
+
+- **Une sortie** = la page cachée (`document.hidden`) ou sans le focus (`document.hasFocus()`)
+  **plus de 5 s** (`Bareme.SEUIL_SORTIE_PAGE_MS`, strict). En dessous, rien : c'est le filtre des
+  pertes de focus accidentelles. Les événements `blur` / `focus` / `visibilitychange` réagissent
+  tout de suite, un relevé chaque seconde rattrape le reste (quitter l'application depuis une
+  `<iframe>` de la page, que seule l'iframe apprend).
+- **Enregistrée** dans la progression : `chapter.sortiesPage = [{ le, dureeS, tentative }]`, champ
+  de l'apprenant (pas dans `CHAMPS_CHAPITRE_FORMATEUR`). Elle s'écrit dès la confirmation, même si
+  l'onglet est fermé ensuite ; au retour, sa durée est complétée. Page gelée (téléphone) :
+  confirmée au retour par l'écart d'horloge, sans doublon.
+- **Sanction** : **3 points sur 20 par sortie, valeur par défaut** (`Bareme.PENALITE_SORTIE_PAGE`),
+  **cumulés sur toutes les tentatives**. Comme les tentatives, le retrait est **proposé** dans le
+  bonus/pénalité (`correctionModal.penaliteAutomatique`), avec une ligne `🚪 n sorties de la page de
+  plus de 5 s (jj/mm hh:mm, durée ; …) : -x pt` dans le bloc `⟦Auto : …⟧` — à côté des lignes 📚 et
+  🔁, le texte du formateur épargné (`Bareme.fusionnerAuto`) ; le formateur fixe la sanction. La case
+  bonus/pénalité descend désormais à −20.
+- **Prévenu, sans montant** (décision du 17/11/2026) : bandeau et fenêtre à l'ouverture (après la
+  fenêtre Millionnaire), fenêtre au retour de chaque sortie. L'apprenant lit que sortir est
+  **interdit**, enregistré, signalé et **sanctionné**, jamais un chiffre : les 3 points ne sont
+  qu'une proposition. Pour la même raison, ses bilans ne retirent rien de leurs estimations et le
+  disent (« la sanction sera appliquée à la correction »). Une fenêtre déjà ouverte (confirmation de rendu) n'est jamais remplacée : le
+  message attend sa fermeture.
+- **Pas une sortie** : le focus dans une `<iframe>` de la page, le sélecteur de fichier natif (pause
+  d'une minute au plus depuis le clic sur un `input[type=file]`), quitter le chapitre par un lien.
+- **Inerte** : vue formateur, simulation, entraînement, progression illisible, copie rendue, validée
+  ou verrouillée.
+- **Limites** : un second écran, un téléphone, une fenêtre posée par-dessus sans clic ne font pas
+  perdre le focus à la page.
+
+Module `src/js/chapter/chapterSortiePage.js`, banc `scripts/test-chapterSortiePage.js`. XPro porte
+une copie de la règle (`commentaireAuto.js`, `sortiesPage`) : `scripts/test-commentaireAuto.js` passe
+la même table aux deux.
+
 ## 🧾 Le mode Atelier AR
 
 C'est un mode Découverte dans lequel les questions **ouvertes à correction manuelle** deviennent des
