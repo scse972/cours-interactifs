@@ -4,8 +4,8 @@
 //
 //   node scripts/test-chapterSortiePage.js
 //
-// Ce qui est vérifié : quand l'option est inerte ; l'annonce à l'ouverture ; le seuil de 5 s
-// (strict) ; la confirmation par le relevé ou au retour (page gelée), sans doublon ; l'iframe,
+// Ce qui est vérifié : quand l'option est inerte ; l'annonce à l'ouverture ; le seuil de 3 s
+// (strict, 18/11/2026), jamais annoncé — aucune durée dans ce que lit l'apprenant ; la confirmation par le relevé ou au retour (page gelée), sans doublon ; l'iframe,
 // l'onglet caché, le sélecteur de fichier ; l'attente d'une fenêtre déjà ouverte ; la copie rendue.
 const fs = require('fs');
 const path = require('path');
@@ -115,27 +115,32 @@ function creerMonde({ chapitre = {}, mode = 'exam', formateur = false, simulatio
         const m = creerMonde();
         ok(m.S.init() === true, 'Examen, option figée : active');
         const bandeau = m.document.getElementById('bandeau-sortie-page');
-        ok(bandeau && /Ne quittez pas cette page/.test(bandeau.innerHTML) && /5 s/.test(bandeau.innerHTML) && /interdite/.test(bandeau.innerHTML) && /sanctionnée/.test(bandeau.innerHTML) && sansMontant(bandeau.innerHTML), 'bandeau à l\'ouverture : la règle, 5 s, interdit et sanctionné, sans montant');
-        ok(m.fenetres.length === 1 && /Restez sur cette page/.test(m.fenetres[0]), 'fenêtre à l\'ouverture');
+        // Le seuil n'est jamais annoncé (18/11/2026) : aucune durée dans ce que lit l'apprenant.
+        const sansDuree = t => !/\d+\s*(s|secondes?|min)\b/.test(String(t));
+        ok(m.bac.Bareme.SEUIL_SORTIE_PAGE_MS === 3000, 'seuil : 3 s (5 s jusqu\'au 18/11/2026)');
+        ok(bandeau && /Ne quittez pas cette page/.test(bandeau.innerHTML) && /interdit/.test(bandeau.innerHTML) && /sanctionnée/.test(bandeau.innerHTML) && sansMontant(bandeau.innerHTML) && sansDuree(bandeau.innerHTML), 'bandeau à l\'ouverture : ne pas quitter la page, interdit et sanctionné, sans montant ni durée', bandeau && bandeau.innerHTML);
+        ok(m.fenetres.length === 1 && /Restez sur cette page/.test(m.fenetres[0]) && sansDuree(m.fenetres[0]), 'fenêtre à l\'ouverture, sans durée');
 
-        // 4 s dehors : rien
-        m.quitter(); m.avancer(4000); ok(m.S.verifier() === 'dehors', '4 s dehors : sortie en cours, pas confirmée');
+        // 2 s dehors : rien
+        m.quitter(); m.avancer(2000); ok(m.S.verifier() === 'dehors', '2 s dehors : sortie en cours, pas confirmée');
         m.revenir();
-        ok(!m.chapter.sortiesPage && m.enregistrements.length === 0 && m.fenetres.length === 1, '4 s : rien d\'enregistré, aucun message');
+        ok(!m.chapter.sortiesPage && m.enregistrements.length === 0 && m.fenetres.length === 1, '2 s : rien d\'enregistré, aucun message');
 
-        // exactement 5 s : rien (plus de 5 s)
-        m.quitter(); m.avancer(5000); m.S.verifier(); m.revenir();
-        ok(!m.chapter.sortiesPage, '5 s pile : pas une sortie (il faut plus de 5 s)');
+        // exactement 3 s : rien (plus de 3 s)
+        m.quitter(); m.avancer(3000); m.S.verifier(); m.revenir();
+        ok(!m.chapter.sortiesPage, '3 s pile : pas une sortie (il faut plus de 3 s)');
 
-        // 7 s, confirmée par le relevé à 5,5 s, puis retour
-        m.quitter(); m.avancer(5500);
-        ok(m.S.verifier() === 'confirmee', '5,5 s dehors : confirmée par le relevé');
+        // 5 s, confirmée par le relevé à 3,5 s, puis retour
+        m.quitter(); m.avancer(3500);
+        ok(m.S.verifier() === 'confirmee', '3,5 s dehors : confirmée par le relevé');
         ok(m.chapter.sortiesPage.length === 1 && m.chapter.sortiesPage[0].dureeS === null && m.enregistrements.length === 1, 'enregistrée tout de suite, durée encore inconnue');
         m.avancer(1500); ok(m.S.verifier() === 'dehors', 'toujours dehors : pas de doublon');
         m.revenir();
-        ok(m.chapter.sortiesPage.length === 1 && m.chapter.sortiesPage[0].dureeS === 7, 'au retour : durée complétée (7 s)');
-        ok(m.enregistrements.length === 2 && m.enregistrements[1][0].dureeS === 7, 'au retour : réenregistrée avec sa durée');
-        ok(m.fenetres.length === 2 && /pendant 7 s/.test(m.fenetres[1]) && /interdit/.test(m.fenetres[1]) && /sanctionnée/.test(m.fenetres[1]) && /1 sortie enregistrée/.test(m.fenetres[1]), 'message au retour : durée, interdit, sanctionné, bilan');
+        ok(m.chapter.sortiesPage.length === 1 && m.chapter.sortiesPage[0].dureeS === 5, 'au retour : durée complétée (5 s)');
+        ok(m.enregistrements.length === 2 && m.enregistrements[1][0].dureeS === 5, 'au retour : réenregistrée avec sa durée');
+        ok(m.fenetres.length === 2 && /Vous avez quitté la page/.test(m.fenetres[1]) && /interdit/.test(m.fenetres[1]) && /sanctionnée/.test(m.fenetres[1]) && /1 sortie enregistrée/.test(m.fenetres[1]),
+            'message au retour : quitté, interdit, sanctionné, bilan');
+        ok(m.fenetres.every(sansDuree), 'aucune durée dans les fenêtres de l\'élève (ni seuil, ni durée de la sortie)', m.fenetres);
         ok(m.fenetres.every(sansMontant), 'aucun montant dans les fenêtres de l\'élève');
         ok(/1 sortie enregistrée\./.test(m.document.getElementById('bandeau-sortie-page').innerHTML) && sansMontant(m.document.getElementById('bandeau-sortie-page').innerHTML), 'bandeau mis à jour, sans montant');
         ok(m.chapter.sortiesPage[0].tentative === 1, 'tentative n°1 notée');
@@ -148,7 +153,7 @@ function creerMonde({ chapitre = {}, mode = 'exam', formateur = false, simulatio
 
         // Bareme : la ligne et le retrait que le formateur verra
         const r = m.bac.Bareme.sortiesPage(m.chapter);
-        ok(r.nombre === 2 && r.valeur === -6 && /^🚪 2 sorties de la page de plus de 5 s \(.+, 7 s ; .+, 8 s\) : -6 pt$/.test(r.texte), 'Bareme.sortiesPage : 2 sorties, −6, heure et durée');
+        ok(r.nombre === 2 && r.valeur === -6 && /^🚪 2 sorties de la page \(.+, 5 s ; .+, 8 s\) : -6 pt$/.test(r.texte), 'Bareme.sortiesPage : 2 sorties, −6, heure et durée, sans le seuil', r.texte);
     }
 
     // ── 2 bis. Chapitre ouvert dans un onglet d'arrière-plan : pas encore arrivé ──
@@ -211,7 +216,7 @@ function creerMonde({ chapitre = {}, mode = 'exam', formateur = false, simulatio
         m.jouerMinuteurs();                 // toujours ouverte : on réessaie plus tard
         ok(m.fenetres.length === 1, 'fenêtre toujours ouverte : on attend encore');
         m.fenetreOuverte(false); m.jouerMinuteurs();
-        ok(m.fenetres.length === 2 && /pendant 9 s/.test(m.fenetres[1]) && /2 sorties enregistrées/.test(m.fenetres[1]), 'une seule fenêtre, la dernière, après fermeture');
+        ok(m.fenetres.length === 2 && /2 sorties enregistrées/.test(m.fenetres[1]), 'une seule fenêtre, la dernière (son bilan compte les deux sorties), après fermeture');
     }
 
     // ── 6. Copie rendue en cours de route ──

@@ -588,8 +588,10 @@ ou surveillé ?). Figée pour chaque apprenant à son premier démarrage (`froze
 `progressManager.js`) : qui a commencé sans être prévenu n'est pas pris en cours de route.
 
 - **Une sortie** = la page cachée (`document.hidden`) ou sans le focus (`document.hasFocus()`)
-  **plus de 5 s** (`Bareme.SEUIL_SORTIE_PAGE_MS`, strict). En dessous, rien : c'est le filtre des
-  pertes de focus accidentelles. Les événements `blur` / `focus` / `visibilitychange` réagissent
+  **plus de 3 s** (`Bareme.SEUIL_SORTIE_PAGE_MS`, strict ; 5 s jusqu'au 18/11/2026). En dessous,
+  rien : c'est le filtre des pertes de focus accidentelles. Ce seuil n'est **jamais annoncé**, ni à
+  l'apprenant ni au formateur (décision du 18/11/2026) : aucun texte du site ni de XPro ne le cite,
+  la ligne 🚪 non plus, et le message au retour ne dit pas la durée de la sortie. Les événements `blur` / `focus` / `visibilitychange` réagissent
   tout de suite, un relevé chaque seconde rattrape le reste (quitter l'application depuis une
   `<iframe>` de la page, que seule l'iframe apprend).
 - **Enregistrée** dans la progression : `chapter.sortiesPage = [{ le, dureeS, tentative }]`, champ
@@ -598,8 +600,8 @@ ou surveillé ?). Figée pour chaque apprenant à son premier démarrage (`froze
   confirmée au retour par l'écart d'horloge, sans doublon.
 - **Sanction** : **3 points sur 20 par sortie, valeur par défaut** (`Bareme.PENALITE_SORTIE_PAGE`),
   **cumulés sur toutes les tentatives**. Comme les tentatives, le retrait est **proposé** dans le
-  bonus/pénalité (`correctionModal.penaliteAutomatique`), avec une ligne `🚪 n sorties de la page de
-  plus de 5 s (jj/mm hh:mm, durée ; …) : -x pt` dans le bloc `⟦Auto : …⟧` — à côté des lignes 📚 et
+  bonus/pénalité (`correctionModal.penaliteAutomatique`), avec une ligne `🚪 n sorties de la page
+  (jj/mm hh:mm, durée ; …) : -x pt` dans le bloc `⟦Auto : …⟧` — à côté des lignes 📚 et
   🔁, le texte du formateur épargné (`Bareme.fusionnerAuto`) ; le formateur fixe la sanction. La case
   bonus/pénalité descend désormais à −20.
 - **Prévenu, sans montant** (décision du 17/11/2026) : bandeau et fenêtre à l'ouverture (après la
