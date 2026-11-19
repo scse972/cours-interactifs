@@ -59,6 +59,20 @@ function idLigne(cle, ownerId) {
     return 'k' + (hash >>> 0).toString(16);
 }
 
+// ── MÉMOIRE ENTRE DEUX APPELS (19/11/2026) ──────────────────────────────────
+// Une fonction « chaude » garde son module chargé d'un appel à l'autre. Sans mémoire, CHAQUE
+// appel relisait tout cours.json (6,5 Mo mesurés) pour retrouver le formateur du parcours, puis la
+// liste des élèves : avec les écritures des élèves passées par cette fonction (case « Écritures des
+// élèves par la fonction serveur »), chaque réponse aurait coûté cette relecture. On garde :
+//   - le formateur trouvé pour un parcours, 5 min (seule une republication en double le changerait,
+//     et elle est déjà refusée) ; un parcours introuvable ou ambigu n'est jamais gardé ;
+//   - la liste des élèves, 1 min ; un jeton absent de la liste gardée fait relire la liste une
+//     fois avant d'être refusé : un élève tout juste inscrit n'attend pas la minute.
+const MEMOIRE_PROPRIETAIRE_MS = 5 * 60 * 1000;
+const MEMOIRE_INSCRITS_MS     = 60 * 1000;
+const _proprietaires = new Map();   // slug → { resolution, expire }
+const _inscrits      = new Map();   // (ownerId|slug) → { liste, expire }
+
 export default async ({ req, res, error }) => {
     const endpoint = (process.env.APPWRITE_FUNCTION_API_ENDPOINT || '').replace(/\/$/, '');
     const projet   = process.env.APPWRITE_FUNCTION_PROJECT_ID;
@@ -138,6 +152,18 @@ export default async ({ req, res, error }) => {
      * cours.json existe, ownerId vaut null, et ce n'est pas une anomalie.
      */
     async function trouverProprietaire(slugCherche) {
+        const garde = _proprietaires.get(slugCherche);
+        if (garde && garde.expire > Date.now()) return garde.resolution;
+        const resolution = await chercherProprietaire(slugCherche);
+        if (resolution.statut === 'trouve') {
+            _proprietaires.set(slugCherche, { resolution, expire: Date.now() + MEMOIRE_PROPRIETAIRE_MS });
+        } else {
+            _proprietaires.delete(slugCherche);
+        }
+        return resolution;
+    }
+
+    async function chercherProprietaire(slugCherche) {
         // Format d'une requete Appwrite : l'attribut a son propre champ, et
         // `values` ne contient QUE les valeurs. Le mettre dans `values` avec la
         // valeur imbriquee — { values: ['key', ['cours.json']] } — vaut un
@@ -173,9 +199,18 @@ export default async ({ req, res, error }) => {
      * Accord n°3 : le champ qui porte le jeton est `id`, jamais `token`.
      */
     async function trouverInscrit(ownerId, slugCherche, jeton) {
+        const cle = (ownerId || '') + '|' + slugCherche;
+        const chercher = (liste) => (Array.isArray(liste) ? (liste.find(u => u && u.id === jeton) || null) : null);
+
+        const garde = _inscrits.get(cle);
+        if (garde && garde.expire > Date.now()) {
+            const trouve = chercher(garde.liste);
+            if (trouve) return trouve;
+            // Absent de la liste gardée : peut-être inscrit depuis. On relit avant de refuser.
+        }
         const liste = await lire(TABLE_DONNEES, slugCherche + ':teacher:users_list', ownerId);
-        if (!Array.isArray(liste)) return null;
-        return liste.find(u => u && u.id === jeton) || null;
+        _inscrits.set(cle, { liste, expire: Date.now() + MEMOIRE_INSCRITS_MS });
+        return chercher(liste);
     }
 
     // ── Lecture de la requête ───────────────────────────────────────────────

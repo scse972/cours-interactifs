@@ -276,6 +276,30 @@ function creerMonde() {
         ok(m.file().length === 0, 'et le reste de la file (q) est parti dans la foulée');
     }
 
+    // ── Écritures par le pont : rejouées par le pont (19/11/2026) ─────────────
+    {
+        const m = creerMonde();
+        const parPont = [];
+        let pontEnPanne = true;
+        m.window.StudentProgressBridge = {
+            ecrire: async (slug, token, key, value) => { parPont.push({ slug, token, key, value }); return pontEnPanne ? { ok: false, erreur: 'HTTP 503' } : { ok: true, value }; },
+        };
+        m.window.storage.mettreEnFilePont('P1:e1:student_e1_progress', { n: 1 }, { slug: 'P1', token: 'e1', key: 'student_e1_progress' }, 'HTTP 503');
+        ok(m.file().length === 1 && m.file()[0].pont && m.S.enAttenteVisible() === 1, "un échec du pont est en file, annoncé, avec de quoi le rejouer");
+        ok(m.S._dernierStatut === 503 && m.delaiRelance() > 0, 'sa relance est programmée');
+        await m.S.sync();
+        ok(parPont.length === 1 && m.provider.ecrits.length === 0 && m.file().length === 1, 'rejouée par le pont, pas en direct ; toujours en file si le pont échoue');
+        pontEnPanne = false;
+        await m.S.sync();
+        ok(parPont.length === 2 && parPont[1].key === 'student_e1_progress' && parPont[1].value.n === 1 && m.file().length === 0,
+            'le pont répond : la file se vide');
+        // Une sauvegarde groupée par le pont, laissée par une page fermée, repart par le pont.
+        m.window.storage.noterEnAttente('P1:e1:student_e1_progress', { n: 2 }, { slug: 'P1', token: 'e1', key: 'student_e1_progress' });
+        ok(m.file()[0].differe === true && m.file()[0].pont.slug === 'P1', 'copie différée marquée pour le pont');
+        await m.S.sync();
+        ok(parPont.length === 3 && parPont[2].value.n === 2 && m.provider.ecrits.length === 0, 'rejouée par le pont au chargement suivant');
+    }
+
     // ── progressManager : la garde ne touche que la progression de CETTE page ─
     {
         const lus = [];
@@ -314,11 +338,14 @@ function creerMonde() {
         bac.window.storage = bac.storage = {
             set: async (k, v) => { ecrits.push([k, JSON.parse(JSON.stringify(v))]); },
             get: async () => null,
-            noterEnAttente: (k, v) => { notes.push([k, JSON.parse(JSON.stringify(v))]); return true; },
+            noterEnAttente: (k, v, pont) => { notes.push([k, JSON.parse(JSON.stringify(v)), pont]); return true; },
         };
+        let parPont = false;
         bac.window.Parcours = bac.Parcours = {
             scoped: {
                 utiliserPont: async () => false,
+                ecritureParPont: async () => parPont,
+                infoPont: (key) => ({ slug: 'P999', token: 'esscin', key }),
                 student: { prefix: 'P999:esscin:', get: async () => null, set: async (k, v) => bac.storage.set('P999:esscin:' + k, v) },
             },
         };
@@ -354,6 +381,13 @@ function creerMonde() {
         await vider();
         ok(minuteurs.size === 0 && ecrits.length === 4 && ecrits[3][1].chapters.c.questions.q1.answer === 8,
             'page quittée : ce qui attendait part aussitôt');
+
+        parPont = true;
+        prog.chapters.c.questions.q1.answer = 9;
+        await PM.saveProgressDiffere('esscin', prog);
+        const derniere = notes[notes.length - 1];
+        ok(derniere[2] && derniere[2].key === 'student_esscin_progress' && derniere[2].token === 'esscin' && minuteurs.size === 1,
+            'écritures par le pont : la sauvegarde reste groupée, et sa copie porte de quoi être rejouée par le pont');
     }
 
     console.log(echecs ? `\n${echecs} échec(s)` : '\nTout passe.');
