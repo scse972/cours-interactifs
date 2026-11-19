@@ -297,6 +297,20 @@ async function saveProgress(studentId, progress) {
         console.warn('[progressManager] écriture refusée : la progression n\'a pas pu être lue à l\'ouverture');
         return;
     }
+    // UNE SAUVEGARDE À LA FOIS PAR ÉLÈVE (19/11/2026). Chaque réponse sauvegarde : une relecture
+    // (conserverCorrectionsFormateur) puis une écriture de toute la progression. Quand l'élève
+    // répond vite, ces chaînes se superposaient et saturaient les connexions du navigateur, jusqu'à
+    // dépasser le délai et finir en file d'attente. La suivante attend la fin de la précédente,
+    // et seule la dernière progression reçue entre-temps est sauvegardée — elle contient tout.
+    const unique = window.uneEcritureALaFois;
+    if (typeof unique === 'function') {
+        return unique('sauvegarde:' + studentId, progress, (p) => _sauvegarder(studentId, p), _sauvegardesEnVol);
+    }
+    return _sauvegarder(studentId, progress);
+}
+const _sauvegardesEnVol = new Map();
+
+async function _sauvegarder(studentId, progress) {
     try {
         progress.lastUpdated = new Date().toISOString();
         await conserverCorrectionsFormateur(studentId, progress);
@@ -313,6 +327,26 @@ async function saveProgress(studentId, progress) {
         console.error('❌ Erreur lors de la sauvegarde de la progression:', e);
     }
 }
+
+/**
+ * La garde des corrections du formateur, au REJEU d'une progression restée en file d'attente
+ * (storage.js, SyncManager._rejouer). Écrite au moment d'un échec, cette progression ne voyait pas
+ * une correction publiée depuis : la rejouer telle quelle l'effaçait. Elle passe donc par la même
+ * garde que saveProgress — mais seulement si c'est la clé que CETTE page lit (même parcours, même
+ * élève) : une copie d'un autre parcours est rejouée telle quelle.
+ */
+window.StorageRejeu = {
+    async avantRejeu(op) {
+        if (!op || op.type !== 'set' || !op.value || typeof op.value !== 'object') return op && op.value;
+        const m = /student_(.+)_progress$/.exec(String(op.key || ''));
+        if (!m) return op.value;
+        const studentId = m[1];
+        const prefixe = (window.Parcours && Parcours.scoped && Parcours.scoped.student && Parcours.scoped.student.prefix) || '';
+        if (op.key !== prefixe + `student_${studentId}_progress`) return op.value;
+        await conserverCorrectionsFormateur(studentId, op.value);
+        return op.value;
+    }
+};
 
 /**
  * Initialise une nouvelle progression pour un apprenant
