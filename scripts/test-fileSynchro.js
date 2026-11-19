@@ -115,14 +115,15 @@ function creerMonde() {
         m.provider.panne = true;
         await m.window.storage.set('p', { n: 1 });
         await vider();
+        const dans = (d, base) => d >= base * 0.8 && d <= base * 1.2;
         ok(m.file().length === 1, "écriture en échec : une opération en file");
-        ok(m.delaiRelance() === 15000, 'relance programmée à 15 s');
+        ok(dans(m.delaiRelance(), 15000), 'relance programmée vers 15 s (±20 %) : ' + m.delaiRelance());
         ok(m.banniere.some(t => /en attente/.test(t)) && !m.banniere.some(t => /undefined/.test(t)), 'bannière « en attente », jamais « undefined »');
 
         await m.relancer();                       // toujours en panne
-        ok(m.file().length === 1 && m.delaiRelance() === 30000, 'deuxième échec : relance à 30 s');
+        ok(m.file().length === 1 && dans(m.delaiRelance(), 30000), 'deuxième échec : relance vers 30 s');
         await m.relancer();
-        ok(m.delaiRelance() === 60000, 'puis 1 min');
+        ok(dans(m.delaiRelance(), 60000), 'puis vers 1 min');
 
         m.provider.panne = false;
         await m.relancer();
@@ -140,8 +141,55 @@ function creerMonde() {
         await vider();
         const delais = [m.delaiRelance()];
         for (let i = 0; i < 6; i++) { await m.relancer(); delais.push(m.delaiRelance()); }
-        ok(JSON.stringify(delais) === JSON.stringify([15000, 30000, 60000, 120000, 300000, 300000, 300000]),
-            'relances : 15 s, 30 s, 1 min, 2 min, puis 5 min (' + delais.join(', ') + ')');
+        const bases = [15000, 30000, 60000, 120000, 300000, 300000, 300000];
+        ok(delais.every((d, i) => d >= bases[i] * 0.8 && d <= bases[i] * 1.2),
+            'relances : 15 s, 30 s, 1 min, 2 min, puis 5 min, à ±20 % (' + delais.join(', ') + ')');
+    }
+
+    // ── Après un 429 : la minute suivante, étalée sur 20 s ────────────────────
+    {
+        const m = creerMonde();
+        const delai = m.bac.delaiRelance || require('vm').runInContext('delaiRelance', m.bac);
+        const a = delai(0, 429, 60000 * 10 + 15000, () => 0);       // à 15 s dans la minute
+        const b = delai(0, 429, 60000 * 10 + 15000, () => 0.999);
+        ok(a === 45000 + 1000 && b >= 45000 + 20000 && b <= 45000 + 21000,
+            '429 : relance au début de la minute suivante, étalée sur 20 s (' + a + ' … ' + b + ')');
+        const tirages = new Set(Array.from({ length: 30 }, () => delai(0, 429, 60000 * 10 + 15000)));
+        ok(tirages.size > 10, '30 élèves refusés ensemble ne reviennent pas au même instant (' + tirages.size + ' instants)');
+        m.provider.panne = true;
+        const set = m.provider.set.bind(m.provider);
+        m.provider.set = async (k, v) => { const e = new Error('Appwrite HTTP 429'); e.status = 429; throw e; };
+        await m.window.storage.set('p', 1);
+        await vider();
+        ok(m.S._dernierStatut === 429 && m.delaiRelance() > 1000, "l'échec 429 est retenu pour le calendrier");
+        m.provider.set = set;
+    }
+
+    // ── Sauvegarde groupée : copie gardée, pas annoncée, pas rejouée trop tôt ─
+    {
+        const m = creerMonde();
+        ok(m.window.storage.noterEnAttente('p', { n: 1 }) === true, 'noterEnAttente garde la valeur');
+        ok(m.file().length === 1 && m.file()[0].differe === true, 'copie de sécurité en file, marquée différée');
+        ok(m.S.enAttenteVisible() === 0, "elle n'est pas une attente à annoncer");
+        await m.window.storage.set('autre', 1);   // une écriture réussie d'une autre clé
+        await vider();
+        ok(!m.provider.ecrits.some(([k]) => k === 'p'), "une écriture réussie ailleurs ne rejoue pas la sauvegarde différée");
+        ok(!m.banniere.some(t => /en attente/.test(t)), 'aucune bannière « en attente » pour une sauvegarde différée');
+        // L'envoi de la sauvegarde (plus tard) retire la copie ; une copie notée PENDANT l'envoi reste.
+        m.provider.lent = true;
+        const envoi = m.window.storage.set('p', { n: 1 });
+        await vider();
+        m.window.storage.noterEnAttente('p', { n: 2 });   // l'élève a répondu pendant l'envoi
+        m.provider.liberer();
+        await envoi; await vider();
+        ok(m.file().length === 1 && m.file()[0].value.n === 2, "la copie plus récente, notée pendant l'envoi, reste en file");
+        m.S.retirerDifferee('p');
+        ok(m.file().length === 0, 'retirerDifferee la retire');
+        // Une copie différée laissée par une page fermée est rejouée au chargement suivant.
+        m.provider.lent = false;
+        m.window.storage.noterEnAttente('p', { n: 3 });
+        await m.S.sync();
+        ok(m.provider.ecrits.some(([k, v]) => k === 'p' && v.n === 3) && m.file().length === 0, 'rejouée par sync() comme les autres');
     }
 
     // ── Deux synchronisations simultanées ─────────────────────────────────────
@@ -250,6 +298,62 @@ function creerMonde() {
         await garde.avantRejeu({ type: 'set', key: 'P100:esscin:student_esscin_progress', value: v });
         await garde.avantRejeu({ type: 'set', key: 'P999:teacher:chapter_config', value: v });
         ok(lus.length === 1, "autre parcours ou autre clé : rejoué tel quel, sans relecture");
+    }
+
+    // ── progressManager : sauvegarde groupée et progression identique ─────────
+    {
+        const ecrits = [], notes = [], minuteurs = new Map();
+        let id = 1;
+        const bac = {
+            window: {}, console: { ...console, log() {}, warn() {}, error() {} }, URLSearchParams,
+            sessionStorage: { getItem: () => null }, location: { search: '', pathname: '/' },
+            setTimeout: (f, d) => { const i = id++; minuteurs.set(i, { f, d }); return i; },
+            clearTimeout: (i) => minuteurs.delete(i),
+        };
+        bac.window.location = bac.location;
+        bac.window.storage = bac.storage = {
+            set: async (k, v) => { ecrits.push([k, JSON.parse(JSON.stringify(v))]); },
+            get: async () => null,
+            noterEnAttente: (k, v) => { notes.push([k, JSON.parse(JSON.stringify(v))]); return true; },
+        };
+        bac.window.Parcours = bac.Parcours = {
+            scoped: {
+                utiliserPont: async () => false,
+                student: { prefix: 'P999:esscin:', get: async () => null, set: async (k, v) => bac.storage.set('P999:esscin:' + k, v) },
+            },
+        };
+        vm.createContext(bac);
+        vm.runInContext('var ChapterSession = {};', bac);
+        vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/progressManager.js'), 'utf8'), bac, { filename: 'progressManager.js' });
+        const PM = bac.window.ProgressManager;
+        const declencher = async () => { const [i, m] = [...minuteurs.entries()].pop() || []; if (!m) return false; minuteurs.delete(i); m.f(); await vider(); return true; };
+
+        const prog = { chapters: { c: { questions: { q1: { answer: 0 } } } } };
+        for (let i = 1; i <= 5; i++) { prog.chapters.c.questions.q1.answer = i; await PM.saveProgressDiffere('esscin', prog); }
+        ok(ecrits.length === 0 && notes.length === 5, 'cinq réponses : gardées dans le navigateur, rien envoyé encore');
+        ok(minuteurs.size === 1 && [...minuteurs.values()][0].d === 3000, 'une seule sauvegarde programmée, 3 s après la dernière');
+        await declencher();
+        ok(ecrits.length === 1 && ecrits[0][1].chapters.c.questions.q1.answer === 5, 'une seule écriture, avec la dernière réponse');
+
+        await PM.saveProgress('esscin', prog);
+        ok(ecrits.length === 1, "même progression : rien n'est réécrit");
+        prog.chapters.c.questions.q1.answer = 6;
+        await PM.saveProgress('esscin', prog);
+        ok(ecrits.length === 2, 'progression changée : écrite');
+
+        prog.chapters.c.questions.q1.answer = 7;
+        await PM.saveProgressDiffere('esscin', prog);
+        ok(minuteurs.size === 1, 'sauvegarde groupée programmée');
+        await PM.saveProgress('esscin', prog);           // rendre la copie : immédiat
+        ok(minuteurs.size === 0 && ecrits.length === 3 && ecrits[2][1].chapters.c.questions.q1.answer === 7,
+            'une sauvegarde immédiate écrit tout de suite et annule la sauvegarde groupée');
+
+        prog.chapters.c.questions.q1.answer = 8;
+        await PM.saveProgressDiffere('esscin', prog);
+        PM.envoyerDifferees();                            // page quittée
+        await vider();
+        ok(minuteurs.size === 0 && ecrits.length === 4 && ecrits[3][1].chapters.c.questions.q1.answer === 8,
+            'page quittée : ce qui attendait part aussitôt');
     }
 
     console.log(echecs ? `\n${echecs} échec(s)` : '\nTout passe.');
