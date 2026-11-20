@@ -155,6 +155,36 @@ const questions = () => ({
         }
     }
 
+    // ── Une réponse vide vaut 0, même remplie puis effacée (décision du 20/11/2026) ──
+    {
+        const bacB = charger(faireDocument([]));
+        vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/core/bareme.js'), 'utf8'), bacB, { filename: 'bareme.js' });
+        vm.runInContext('if (typeof Bareme === "undefined") var Bareme = window.Bareme;', bacB);
+        const PM = bacB.window.ProgressManager;
+        const config = { questions: [
+            { id: 'juste', points: 4, correctionType: 'auto' },
+            { id: 'fausse', points: 2, correctionType: 'auto' },
+            { id: 'effacee', points: 2, correctionType: 'auto' },
+            { id: 'jamais', points: 2, correctionType: 'auto' },
+        ] };
+        const chapitre = { frozenAt: 'x', frozenChapterMode: 'exam', questions: {
+            juste: { attempts: 1, answered: true, answer: '4', isCorrect: true },
+            fausse: { attempts: 1, answered: true, answer: '3', isCorrect: false },
+            effacee: { attempts: 1, answered: false, answer: null, isCorrect: null },
+            jamais: { attempts: 0, answered: false, answer: null, isCorrect: null },
+        } };
+        const stats = PM.computeChapterUIStats(chapitre, config);
+        ok(stats.pointsObtenus === 2, 'site : juste +4, fausse −2, effacée 0, jamais répondue 0 → 2 points (' + stats.pointsObtenus + ')');
+
+        const xs = fs.readFileSync(path.join(__dirname, '../../XSpro/src/vuesOnglets/vuesOngletsClasses/formulaireProgressionApprenant.js'), 'utf8');
+        ok(/if \(!wasAnswered\) return 0;/.test(xs) && !/attempts > 0 && !wasAnswered\) effectiveIsCorrect = false/.test(xs),
+            'XPro : une réponse vide vaut 0, même après un essai');
+        const cm = fs.readFileSync(path.join(__dirname, '../src/js/correctionModal.js'), 'utf8');
+        const bilan = fs.readFileSync(path.join(__dirname, '../src/js/chapter/chapterBilan.js'), 'utf8');
+        ok(/if \(!wasAnswered\) return 0;/.test(cm) && /const rate = repondue && donnees\.isCorrect === false;/.test(bilan),
+            'site : fenêtre de correction et bilan suivent la même règle');
+    }
+
     // ── Plus d'historique des tentatives (décision du 19/11/2026) ──
     {
         const PM = charger(faireDocument([])).window.ProgressManager;
