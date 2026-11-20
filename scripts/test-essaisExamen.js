@@ -155,6 +155,66 @@ const questions = () => ({
         }
     }
 
+    // ── Les règles de notation annoncées à l'ouverture, mode par mode (20/11/2026) ──
+    {
+        const source = fs.readFileSync(path.join(__dirname, '../src/js/chapitre.js'), 'utf8');
+        const debut = source.indexOf('const LIGNE_BAREME_MILLIONNAIRE');
+        const finAvertir = source.indexOf('\n}\n', source.indexOf('function avertirNotation()')) + 2;
+        const code = source.slice(debut, finAvertir);
+        const essayer = (mode, { verrouille = false, repondue = false, questions = [{ type: 'qcm', correctionType: 'auto' }], penalite = 0 } = {}) => {
+            const inseres = [];
+            const fenetres = [];
+            const contexte = {
+                isExamMode: mode === 'exam', isBlindMode: mode === 'blind', isMillionnaireMode: mode === 'millionnaire',
+                isAtelierMode: mode === 'atelier', isConsigneMode: mode === 'consigne', isEntrainementMode: mode === 'entrainement',
+                isChapterLocked: verrouille,
+            };
+            const bac = {
+                window: {
+                    currentExamContext: contexte,
+                    currentChapterConfig: { questions },
+                    ProgressManager: { aRepondu: q => !!q.answer },
+                    Bareme: { reglesTentatives: () => ({ penalite }) },
+                },
+                document: {
+                    querySelector: () => ({ firstChild: null, insertBefore: el => inseres.push(el) }),
+                    getElementById: () => null,
+                    createElement: () => ({}),
+                },
+                ChapterSession: { chapterId: 'c', progress: { chapters: { c: { questions: {
+                    course_0: { answer: 'lu' }, q1: { answer: repondue ? 'B' : null },
+                } } } } },
+                ChapterSubmission: { _alertModal: m => fenetres.push(m) },
+            };
+            bac.Bareme = bac.window.Bareme;
+            vm.createContext(bac);
+            vm.runInContext(code + '\navertirNotation();', bac);
+            return { bandeau: inseres[0] ? inseres[0].innerHTML.replace(/<[^>]+>/g, '') : null, fenetre: fenetres[0] || null };
+        };
+        let r = essayer('exam');
+        ok(/fausse : les points de la question\s+sont retirés/.test(r.bandeau) && /Sans réponse : 0/.test(r.bandeau)
+            && /Réponse fausse : les points de la question sont retirés/.test(r.fenetre) && /Sans réponse : 0 point/.test(r.fenetre),
+            'Examen : bandeau et fenêtre — fausse = points retirés, sans réponse = 0');
+        r = essayer('normal');
+        ok(/Chaque essai raté en retire une part/.test(r.bandeau) && /Sans réponse : 0/.test(r.bandeau) && /hasard ne rapporte rien/.test(r.fenetre),
+            'Découverte : chaque essai raté coûte, fausse = points retirés, sans réponse = 0');
+        r = essayer('blind', { penalite: 1 });
+        ok(/fausse ou sans réponse : 0/.test(r.bandeau) && /coûte 1 pt sur 20/.test(r.bandeau) && /Réponse fausse : 0 point/.test(r.fenetre),
+            'Blind : fausse ou sans réponse = 0, et ce que coûte une nouvelle tentative');
+        r = essayer('blind');
+        ok(/Recommencer ne coûte rien/.test(r.bandeau), 'Blind sans pénalité de tentative : recommencer ne coûte rien');
+        r = essayer('exam', { repondue: true });
+        ok(r.bandeau && !r.fenetre, 'copie déjà commencée : le bandeau seulement, pas de fenêtre à chaque rechargement');
+        r = essayer('exam', { verrouille: true });
+        ok(!r.bandeau && !r.fenetre, 'copie rendue ou verrouillée : rien');
+        ok(['millionnaire', 'atelier', 'consigne', 'entrainement'].every(m => { const x = essayer(m); return !x.bandeau && !x.fenetre; }),
+            'Millionnaire (sa propre fenêtre), Atelier, Consigne, Entraînement : rien de plus ici');
+        r = essayer('exam', { questions: [{ type: 'ouverte', correctionType: 'manuel' }, { type: 'ouverte', correctionType: 'auto' }] });
+        ok(!r.bandeau && !r.fenetre, 'chapitre sans question à correction automatique : rien (le formateur note)');
+        ok(/LIGNE_BAREME_MILLIONNAIRE\}`;/.test(source) && /\\n\\n\$\{LIGNE_BAREME_MILLIONNAIRE\}`\);/.test(source),
+            'Millionnaire : la ligne de barème dans son bandeau et dans sa fenêtre');
+    }
+
     // ── Une réponse vide vaut 0, même remplie puis effacée (décision du 20/11/2026) ──
     {
         const bacB = charger(faireDocument([]));
