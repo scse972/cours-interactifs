@@ -103,5 +103,40 @@ const questions = () => ({
     ok(/Correct/.test(e.feedback_q1.innerHTML), 'Blind : inchangé');
 }
 
-console.log(echecs ? `\n${echecs} échec(s)` : '\nTout passe.');
-process.exit(echecs ? 1 : 0);
+// ── Rendu FORCÉ par le formateur (tableau de bord, 19/11/2026) : même remise à 1 qu'un rendu ──
+(async () => {
+    const bac = charger(faireDocument([]));
+    bac.window.ProgressManager = bac.window.ProgressManager;
+    vm.runInContext('var ProgressManager = window.ProgressManager;', bac);
+    bac.sessionStorage = { getItem: () => 'true', setItem() {} };
+    bac.window.currentParcoursSlug = 'P';
+    bac.document.addEventListener = () => {};
+    let ecrit = null;
+    bac.storage = { set: async (k, v) => { ecrit = v; }, get: async () => null };
+    vm.runInContext('var storage = this.storage;', bac);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/teacherDashboard.js'), 'utf8')
+        + '\n;this.TD = TeacherDashboard;', bac, { filename: 'teacherDashboard.js' });
+    const rendre = async (chapitre, reglage, options) => {
+        const t = Object.create(bac.TD.prototype);
+        t.chapters = [{ id: 'c1', ...reglage }];
+        t.getStudentProgress = async () => ({ chapters: { c1: chapitre } });
+        ecrit = null;
+        await t.updateSubmissionStatus('e', 'c1', 'submitted', options);
+        return ecrit.chapters.c1.questions;
+    };
+    const qs = () => ({ q1: { attempts: 3 }, q2: { attempts: 0 } });
+    let q = await rendre({ frozenAt: 'x', frozenChapterMode: 'exam', questions: qs() }, {}, { rendu: true });
+    ok(q.q1.attempts === 1 && q.q2.attempts === 0, 'rendu forcé en Examen : 3 essais → 1, 0 reste 0');
+    q = await rendre({ frozenAt: 'x', frozenChapterMode: 'normal', questions: qs() }, { chapterMode: 'exam' }, { rendu: true });
+    ok(q.q1.attempts === 3, 'rendu forcé hors Examen (mode figé Découverte) : essais inchangés');
+    q = await rendre({ frozenAt: 'x', frozenChapterMode: 'exam', questions: qs() }, {}, undefined);
+    ok(q.q1.attempts === 3, '« Rouvrir pour correction » (même statut, sans rendu) : essais inchangés');
+
+    // XPro, fenêtre Progression apprenant : la copie de ramenerEssaisExamen et son appel.
+    const xs = fs.readFileSync(path.join(__dirname, '../../XSpro/src/vuesOnglets/vuesOngletsClasses/formulaireProgressionApprenant.js'), 'utf8');
+    ok(/function ramenerEssaisExamenXS\(/.test(xs) && /=== 'exam'\) ramenerEssaisExamenXS\(ch\)/.test(xs),
+        'XPro : « Forcer le rendu » ramène aussi les essais à 1 en Examen');
+
+    console.log(echecs ? `\n${echecs} échec(s)` : '\nTout passe.');
+    process.exit(echecs ? 1 : 0);
+})();
