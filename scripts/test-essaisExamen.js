@@ -137,6 +137,45 @@ const questions = () => ({
     ok(/function ramenerEssaisExamenXS\(/.test(xs) && /=== 'exam'\) ramenerEssaisExamenXS\(ch\)/.test(xs),
         'XPro : « Forcer le rendu » ramène aussi les essais à 1 en Examen');
 
+    // ── Examen et Blind : une question ouverte est un brouillon, pas un essai (19/11/2026) ──
+    {
+        const bacE = charger(faireDocument([]));
+        bacE.window.partChezUnHumain = el => !!el.estOuverte;
+        bacE.fauxEvaluate = el => ({ userAnswer: el.valeur, isCorrect: el.estOuverte ? null : true, points: 1 });
+        vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/studentWorkEditor.js'), 'utf8')
+            + '\n;this.SWE = StudentWorkEditor; QuestionEngine.evaluate = this.fauxEvaluate;', bacE, { filename: 'studentWorkEditor.js' });
+        for (const mode of ['exam', 'blind']) {
+            const recus = { valide: 0, brouillon: 0 };
+            const ed = new bacE.SWE({ onAnswerValidated: () => recus.valide++, onDraftChanged: () => recus.brouillon++ });
+            ed.examMode = mode === 'exam'; ed.blindMode = mode === 'blind'; ed.locked = false;
+            ed.onInputChanged({ dataset: { questionId: 'ouverte' }, estOuverte: true, valeur: 'Un long texte' }, null);
+            ed.onInputChanged({ dataset: { questionId: 'qcm' }, estOuverte: false, valeur: 'B' }, null);
+            ok(recus.brouillon === 1 && recus.valide === 1,
+                (mode === 'exam' ? 'Examen' : 'Blind') + ' : question ouverte → brouillon, QCM → réponse enregistrée comme avant');
+        }
+    }
+
+    // ── Plus d'historique des tentatives (décision du 19/11/2026) ──
+    {
+        const PM = charger(faireDocument([])).window.ProgressManager;
+        const progression = { chapters: { c: { questions: { q: { answered: false, attempts: 0, attemptHistory: [] } } } } };
+        for (let i = 0; i < 100; i++) PM.recordAnswer(progression, 'c', 'q', 'texte ' + i, null, 0);
+        const q = progression.chapters.c.questions.q;
+        ok(Array.isArray(q.attemptHistory) && q.attemptHistory.length === 0, 'recordAnswer n\'empile plus rien dans l\'historique');
+        ok(q.attempts === 100 && q.answer === 'texte 99', 'les essais et la réponse ne changent pas');
+        const gonflee = { chapters: {
+            a: { questions: { q1: { answer: 'x', attempts: 4, attemptHistory: Array.from({ length: 3369 }, (_, i) => ({ answer: i })) }, q2: { attemptHistory: [] } } },
+            b: { questions: { q1: { attemptHistory: [{ answer: 1 }] } } },
+        } };
+        const n = PM.retirerHistoriques(gonflee);
+        ok(n === 2 && gonflee.chapters.a.questions.q1.attemptHistory.length === 0 && gonflee.chapters.a.questions.q1.attempts === 4,
+            'retirerHistoriques vide les historiques (2 questions), sans toucher aux essais');
+        const source = fs.readFileSync(path.join(__dirname, '../src/js/progressManager.js'), 'utf8');
+        const corps = nom => source.slice(source.indexOf('async function ' + nom + '('), source.indexOf('async function ' + nom + '(') + 1500);
+        ok(/retirerHistoriques\(progress\)/.test(corps('saveProgress')) && /retirerHistoriques\(progress\)/.test(corps('saveProgressDiffere')),
+            'chaque sauvegarde (immédiate ou groupée) vide l\'historique : une progression gonflée s\'allège à la sauvegarde suivante');
+    }
+
     console.log(echecs ? `\n${echecs} échec(s)` : '\nTout passe.');
     process.exit(echecs ? 1 : 0);
 })();
