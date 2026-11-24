@@ -29,6 +29,8 @@ class Element {
         this._html = '';
         this._text = '';
         this.id = '';
+        // Mise en page de la fenêtre (ouverte vers le bas ou le haut, cf. ouvrirFenetre).
+        this.getBoundingClientRect = () => ({ top: 100, bottom: 160, left: 0, right: 600, width: 600, height: 60 });
         const self = this;
         this.classList = {
             add: (...c) => c.forEach(x => self._classes.add(x)),
@@ -99,7 +101,9 @@ function construireSection(numero, correctionType) {
 }
 
 // ── Le monde : window, document, navigator, et le module ────────────────────
-function creerMonde({ niveau = 'tous-temporaire', webdriver = false, simulation = false, formateur = false, ecritureAccepte = true, nbSections = 3 } = {}) {
+// `activation` : absent = navigateur sans navigator.userActivation ; sinon { isActive }
+// modifiable par le banc (geste récent ou non). `electron` : window.IS_ELECTRON.
+function creerMonde({ niveau = 'tous-temporaire', webdriver = false, simulation = false, formateur = false, ecritureAccepte = true, nbSections = 3, activation = null, electron = false } = {}) {
     const racine = new Element('body');
     const entete = new Element('div');
     const nom = new Element('span', ['student-name']); nom.textContent = 'ESSAI Deux';
@@ -124,8 +128,11 @@ function creerMonde({ niveau = 'tous-temporaire', webdriver = false, simulation 
             }
         }
     };
+    if (activation) navigator.userActivation = activation;
 
     const bac = {
+        IS_ELECTRON: electron,
+        innerHeight: 900,
         console, setTimeout, clearTimeout, Date, Promise, URLSearchParams,
         document, navigator,
         Simulation: { active: () => simulation },
@@ -297,6 +304,51 @@ const voileDe = (s) => s.querySelector('.anti-ia-voile');
         await dormir(m.A.DELAI_SURVOL_MS + 60);
         m.A.reveler(s); m.A.ouvrirFenetre(s);
         ok(!fenetreDe(s) && !texteDe(s).innerHTML.includes('dérivée') && m.ecritures.length === 0, 'rien ne s\'affiche, même en appelant le module');
+    }
+
+    // ── 11. Sans geste récent (Chrome, Edge) : pas d'écriture, donc pas d'invite ──
+    // Une écriture sans geste ouvrirait « … veut voir le presse-papiers », qui prend le
+    // focus : énoncé remasqué et 🚪 sortie de page comptée (Millionnaire, 24/11/2026).
+    {
+        const activation = { isActive: false };
+        const m = creerMonde({ activation });
+        m.A.init();
+        const s = m.sections[0];
+        texteDe(s).dispatch('pointerenter', { pointerType: 'mouse' });
+        await dormir(m.A.DELAI_SURVOL_MS + 60);
+        ok(!!fenetreDe(s), 'survol sans geste : l\'énoncé s\'affiche');
+        ok(m.ecritures.length === 0 && m.A.etat().pressePapiersEnAttente === true, 'survol sans geste : aucune écriture, en attente');
+        activation.isActive = true;   // le navigateur pose l'activation avant de diffuser le geste
+        m.document.dispatch('pointerdown', { target: s });
+        await dormir(0);
+        ok(m.ecritures.length === 1 && m.A.etat().pressePapiersEnAttente === false, 'premier geste : écriture rejouée');
+
+        // Retour du focus après une capture suspectée : rien sans geste, rejoué ensuite.
+        voileDe(m.sections[2]).dispatch('focus');
+        await dormir(0);
+        const avant = m.ecritures.length;
+        activation.isActive = false;
+        m.bac.dispatch('blur');
+        m.bac.dispatch('focus');
+        ok(m.ecritures.length === avant && m.A.etat().pressePapiersEnAttente === true, 'retour du focus sans geste : aucune écriture, en attente');
+        activation.isActive = true;
+        m.document.dispatch('keydown', { key: 'a', target: m.sections[2] });
+        await dormir(0);
+        ok(m.ecritures.length === avant + 1, 'touche suivante : écriture rejouée');
+    }
+    {
+        const m = creerMonde({ activation: { isActive: true } });
+        m.A.init();
+        texteDe(m.sections[0]).dispatch('pointerenter', { pointerType: 'mouse' });
+        await dormir(m.A.DELAI_SURVOL_MS + 60);
+        ok(m.ecritures.length === 1, 'survol peu après un geste : écriture immédiate');
+    }
+    {
+        const m = creerMonde({ activation: { isActive: false }, electron: true });
+        m.A.init();
+        texteDe(m.sections[0]).dispatch('pointerenter', { pointerType: 'mouse' });
+        await dormir(m.A.DELAI_SURVOL_MS + 60);
+        ok(m.ecritures.length === 1, 'XPro (Electron) : écriture immédiate, comme avant');
     }
 
     console.log(echecs ? echecs + ' FAIL' : 'tout est vert');
