@@ -507,6 +507,18 @@ const ChapterUI = {
             return;
         }
 
+        // 📚 Non suivi (getExamContext.js) : rien à rendre pour l'instant. Une copie déjà rendue, retournée
+        // ou corrigée garde son bouton (le switch ci-dessous).
+        if ((submissionStatus === 'not_submitted') && typeof window.nonSuiviPourEleve === 'function'
+            && window.nonSuiviPourEleve(window.currentChapterConfig, ChapterSession.studentId)) {
+            btn.innerHTML = '📚 Non suivi : rien à rendre pour l\'instant';
+            btn.className = 'btn btn-secondary';
+            btn.disabled = true;
+            btn.onclick = null;
+            btn.title = 'Ce chapitre est disponible pour travailler, mais il n\'est pas encore à rendre : ton professeur le dira.';
+            return;
+        }
+
         switch (submissionStatus) {
             case 'not_submitted':
                 btn.innerHTML = '📤 Rendre ce travail';

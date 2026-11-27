@@ -64,6 +64,9 @@
         const limite = dateLimite(pc, config, jeton);
         const rendu = dateRendu(pc);
         const rendue = estRendu(pc);
+        // 📚 Non suivi (getExamContext.js, nonSuiviPourEleve) : pas encore à rendre, donc rien à dire
+        // de l'échéance tant que rien n'est rendu.
+        if (!rendue && typeof window.nonSuiviPourEleve === 'function' && window.nonSuiviPourEleve(config, jeton)) return null;
         if (rendue && opts.masquerSiRendu) return null;
         const ou = (texte) => texte || '—';
         let texte, classe, enRetard = false, depassee = false;

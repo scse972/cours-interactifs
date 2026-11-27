@@ -39,5 +39,23 @@ ok(s.note === 14.5 && s.locked === false && s.label === '✅ Correction publiée
 s = compute({ ...publie, submissionStatus: 'submitted' }, { chapterMode: 'exam', locked: true });
 ok(s.note === null && s.status === 'locked_inprogress' && s.locked === true, 'rendu non publié + verrou : toujours « Verrouillé », sans note');
 
+// ── 📚 Non suivi (27/11/2026) : disponible, pas encore à rendre ; lu en direct, l'exception de l'élève l'emporte ──
+s = compute({ submissionStatus: 'not_submitted' }, { nonSuivi: true }, 'J1');
+ok(s.status === 'nonSuivi' && s.label === '📚 Non suivi' && s.locked === false, 'non suivi, pas commencé : « 📚 Non suivi », ouvert');
+s = compute({ submissionStatus: 'not_submitted', completionPercent: 40 }, { nonSuivi: true, nonSuivisEleves: { J1: false } }, 'J1');
+ok(s.status !== 'nonSuivi', 'exception de l\'élève (suivi) : l\'état habituel');
+s = compute({ submissionStatus: 'submitted' }, { nonSuivi: true }, 'J1');
+ok(s.status === 'submitted', 'une copie déjà rendue garde son état');
+{
+    const bac = { window: {}, console };
+    vm.createContext(bac);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/core/getExamContext.js'), 'utf8'), bac);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/core/echeances.js'), 'utf8'), bac);
+    const E = bac.window.Echeances;
+    const config = { nonSuivi: true, dateLimitEnabled: true, endDate: '2026-12-01T18:00:00.000Z' };
+    ok(E.decrire({}, config, 'J1') === null, 'échéance d\'un chapitre non suivi : rien à dire');
+    ok(E.decrire({}, { ...config, nonSuivisEleves: { J1: false } }, 'J1') !== null, 'suivi pour cet élève : la date limite revient');
+}
+
 console.log(echecs ? `\n${echecs} échec(s)` : '\nTout est bon.');
 process.exit(echecs ? 1 : 0);

@@ -99,6 +99,20 @@ export function computeChapterState(progress = {}, chapterConfig = {}, jeton = n
         };
     }
 
+    // 📚 Non suivi (getExamContext.js, nonSuiviPourEleve) : disponible, pas encore à rendre — ni date
+    // limite ni retard ; l'avancement reste affiché.
+    if (typeof window.nonSuiviPourEleve === 'function' && window.nonSuiviPourEleve(chapterConfig, jeton)) {
+        return {
+            status: 'nonSuivi',
+            label: percent > 0 ? '📚 Non suivi · en cours' : '📚 Non suivi',
+            note: null,
+            percent,
+            locked: false,
+            bilanLocked: percent === 0,
+            chapterMode,
+        };
+    }
+
     // Mode examen (seulement si pas encore rendu)
     if (isExamMode) {
         return {

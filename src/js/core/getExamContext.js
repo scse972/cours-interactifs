@@ -121,6 +121,19 @@ function nonAttribuePourEleve(config, jeton) {
     return !!(jeton && propres && Object.prototype.hasOwnProperty.call(propres, jeton) && propres[jeton] === true);
 }
 
+/**
+ * 📚 Le chapitre n'est-il pas (encore) suivi pour cet élève ? (chapter_config.nonSuivi, le réglage du
+ * chapitre, et nonSuivisEleves[jeton] = true | false, son exception — posés par XEdu, 27/11/2026.) Le
+ * chapitre reste ouvert et lisible, mais il n'est pas à rendre : ni date limite, ni retard, ni bouton
+ * « Rendre ». Lu en direct, jamais figé : poser une date dans XEdu le rend suivi. Copie de estNonSuivi
+ * dans XSpro (datesLimitesParcours.js) : les modifier ensemble.
+ */
+function nonSuiviPourEleve(config, jeton) {
+    const propres = config && config.nonSuivisEleves;
+    if (jeton && propres && Object.prototype.hasOwnProperty.call(propres, jeton)) return propres[jeton] === true;
+    return !!config && config.nonSuivi === true;
+}
+
 /** Combien d'élèves ont une exception : { ouverts, fermes }. Pour la vue formateur. */
 function compterExceptionsVerrou(config) {
     const valeurs = Object.values((config && config.verrousEleves) || {});
@@ -131,4 +144,5 @@ function compterExceptionsVerrou(config) {
 window.getExamContext = getExamContext;
 window.verrouPourEleve = verrouPourEleve;
 window.nonAttribuePourEleve = nonAttribuePourEleve;
+window.nonSuiviPourEleve = nonSuiviPourEleve;
 window.compterExceptionsVerrou = compterExceptionsVerrou;
