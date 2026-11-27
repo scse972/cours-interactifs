@@ -63,6 +63,8 @@ const COQUILLE_LEGERE = [
     'src/js/aide.js',
     'src/js/core/bareme.js',
     'src/js/progressManager.js',
+    'src/js/vendor/marked.umd.js',
+    'src/js/core/reponseFormatee.js',
     'src/js/atelier/suiviAtelier.js',
     'storage/config.json',
     // Les trois providers : config.json choisit au runtime, et deploySite() (XSpro)

@@ -447,6 +447,18 @@ class CorrectionModal {
     }
 
     /**
+     * ✎ La réponse de l'apprenant : échappée, sauf une réponse texte long laissée en « Aperçu
+     * formaté » (core/reponseFormatee.js), rendue ICI depuis la source brute et nettoyée, avec un
+     * repère qui rebascule au texte tapé.
+     */
+    reponseAffichee(question, studentAnswer) {
+        if (window.ReponseFormatee?.estFormatee(question) && studentAnswer === question.answer) {
+            return window.ReponseFormatee.afficherReponse(question.answer, true);
+        }
+        return this.escapeHtml(studentAnswer);
+    }
+
+    /**
      * Bandeau du mode consigne. Il dit au formateur pourquoi les champs sont vides : sans
      * lui, une copie papier ressemble à une copie bâclée, et les « ⏳ À corriger » à un bug.
      */
@@ -849,7 +861,7 @@ class CorrectionModal {
 
                 <div class="correction-row">
                     <div class="correction-label">👤 Réponse de l'apprenant:</div>
-                    <div class="correction-value">${this.escapeHtml(studentAnswer)}</div>
+                    <div class="correction-value">${this.reponseAffichee(question, studentAnswer)}</div>
                 </div>
 
                 ${correctAnswer ? `

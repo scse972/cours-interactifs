@@ -468,6 +468,9 @@ class StudentCorrectionModal extends CorrectionModal {
                 studentAnswer = this.escapeHtml(q.options[parseInt(q.answer)] ?? q.answer);
             } else if (Array.isArray(q.answer)) {
                 studentAnswer = q.answer.map(i => this.escapeHtml(q.options ? q.options[i] : i)).join(', ');
+            } else if (window.ReponseFormatee?.estFormatee(q)) {
+                // ✎ Laissée en « Aperçu formaté » : l'apprenant relit sa copie comme il l'a rendue.
+                studentAnswer = window.ReponseFormatee.afficherReponse(q.answer, true);
             } else {
                 studentAnswer = this.escapeHtml(q.answer);
             }

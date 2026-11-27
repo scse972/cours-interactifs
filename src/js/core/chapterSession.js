@@ -253,6 +253,24 @@ function viderLesBrouillonsEnAttente() {
     }
 }
 
+/**
+ * ✎ La coche « Aperçu formaté » d'une réponse texte long (core/reponseFormatee.js) : gardée
+ * avec la réponse, envoyée par la sauvegarde groupée comme un brouillon. Rien en Entraînement
+ * (saveProgress n'y écrit rien) ni sans progression.
+ */
+function enregistrerFormatReponse(questionId, formatee) {
+    const pm = getProgressManager();
+    if (!pm.fixerFormatReponse || !ChapterSession.progress) return;
+
+    ChapterSession.studentId = pm.getCurrentStudentId ? pm.getCurrentStudentId() : ChapterSession.studentId;
+    ChapterSession.chapterId = pm.getCurrentChapterId ? pm.getCurrentChapterId() : ChapterSession.chapterId;
+    if (!ChapterSession.chapterId) return;
+
+    if (!pm.fixerFormatReponse(ChapterSession.progress, ChapterSession.chapterId, questionId, formatee)) return;
+    if (pm.saveProgress && ChapterSession.studentId) sauvegarderGroupee(pm);
+}
+
 window.syncBrouillonToProgress    = syncBrouillonToProgress;
 window.ecrireBrouillon            = ecrireBrouillon;
+window.enregistrerFormatReponse   = enregistrerFormatReponse;
 window.viderLesBrouillonsEnAttente = viderLesBrouillonsEnAttente;

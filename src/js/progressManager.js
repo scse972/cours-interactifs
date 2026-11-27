@@ -951,6 +951,23 @@ function enregistrerBrouillon(progress, chapterId, questionId, reponse) {
 }
 
 /**
+ * ✎ La coche « Aperçu formaté » d'une réponse texte long (core/reponseFormatee.js, 27/11/2026) :
+ * gardée avec la réponse, pour que le formateur la lise formatée. La réponse elle-même (answer)
+ * n'est jamais touchée : elle reste la source brute. Rien d'autre ne bouge (ni date, ni verdict).
+ *
+ * @returns {boolean} true si l'état a changé
+ */
+function fixerFormatReponse(progress, chapterId, questionId, formatee) {
+    const question = progress?.chapters?.[chapterId]?.questions?.[questionId];
+    if (!question) return false;
+    const avant = question.formatReponse === 'formate';
+    if (avant === !!formatee) return false;
+    if (formatee) question.formatReponse = 'formate';
+    else delete question.formatReponse;
+    return true;
+}
+
+/**
  * MODE EXAMEN : PAS DE PÉNALITÉ D'ESSAIS (décision du 2026-11-19).
  *
  * En Examen, l'apprenant ne voit aucun verdict avant de rendre : changer de réponse,
@@ -2034,6 +2051,7 @@ window.ProgressManager = {
     // Enregistrement des réponses
     recordAnswer,
     enregistrerBrouillon,
+    fixerFormatReponse,
     retirerHistoriques,
     aRepondu,
     ramenerEssaisExamen,

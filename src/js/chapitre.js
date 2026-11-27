@@ -503,6 +503,8 @@ async function initChapterPage() {
 
         setTimeout(() => {
             ChapterUI.restoreAllAnswers();
+            // ✎ Après la restauration : l'aperçu se rend depuis la réponse restaurée.
+            window.ReponseFormatee?.equiperPage({ lectureSeule: true });
             ChapterUI.updateAllProgressIndicators();
             window.AtelierQuestion?.init();
             window.QRQuestion?.init();
@@ -604,6 +606,9 @@ async function initChapterPage() {
     setTimeout(() => {
         ChapterUI.updateSubmitButton();
         ChapterUI.restoreAllAnswers();
+        // ✎ La coche « Aperçu formaté » des réponses texte long (core/reponseFormatee.js), après
+        //    la restauration : l'aperçu se rend depuis la réponse restaurée.
+        window.ReponseFormatee?.equiperPage();
         ChapterUI.updateAllProgressIndicators();
         // ⚠️ Après restoreAllAnswers : le bloc Atelier lit l'état restauré, et son champ
         //    de saisie d'AR doit survivre au verrouillage d'un chapitre déjà rendu

@@ -788,10 +788,16 @@ const SuiviAtelier = {
         // compte rendu (voir AtelierQuestion._compteRenduPerdu) : ne pas le montrer comme
         // s'il s'agissait du travail de l'apprenant.
         const perdu = ['acquis', 'en_cours', 'non_acquis'].includes(donnees.answer);
-        document.getElementById('eval-compte-rendu').textContent = perdu
-            ? '— compte rendu non enregistré (seul l\'auto-positionnement a été transmis) : à faire ressaisir —'
-            : donnees.answer
-              || (rituel ? '— aucun compte rendu enregistré —' : '— aucune réponse enregistrée —');
+        const blocCompteRendu = document.getElementById('eval-compte-rendu');
+        if (!perdu && window.ReponseFormatee?.estFormatee(donnees) && donnees.answer) {
+            // ✎ L'apprenant a laissé « Aperçu formaté » : rendu nettoyé, repère qui rebascule au brut.
+            blocCompteRendu.innerHTML = window.ReponseFormatee.afficherReponse(donnees.answer, true);
+        } else {
+            blocCompteRendu.textContent = perdu
+                ? '— compte rendu non enregistré (seul l\'auto-positionnement a été transmis) : à faire ressaisir —'
+                : donnees.answer
+                  || (rituel ? '— aucun compte rendu enregistré —' : '— aucune réponse enregistrée —');
+        }
         // L'auto-positionnement est un geste du rituel Atelier : hors de ce rituel il
         // n'existe pas, et afficher « Il s'estime : — » ne ferait qu'encombrer.
         document.getElementById('eval-bloc-positionnement').hidden = !(estConsigne && modeAtelier);

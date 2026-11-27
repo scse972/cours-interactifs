@@ -764,3 +764,26 @@ footer {
     text-decoration: none;
 }
 .lien-entrainement:hover { background: #f5eefa; }
+
+/* ✎ Réponse texte long en Markdown / HTML (src/js/core/reponseFormatee.js, 27/11/2026) */
+.reponse-formatee-barre { margin-top: .3rem; }
+.reponse-formatee-coche { display: inline-block; cursor: pointer; user-select: none; font-size: .85rem; color: #5a6470; padding: .1rem .35rem; border-radius: 4px; }
+.reponse-formatee-coche:hover, .reponse-formatee-coche:focus { background: #eef2f6; outline: none; }
+.reponse-formatee-coche[aria-checked="true"] { color: #1f5f99; font-weight: 600; }
+.reponse-formatee-apercu, .reponse-formatee-rendu { overflow-wrap: anywhere; line-height: 1.5; }
+.reponse-formatee-apercu { border: 1px solid #ccd3da; border-radius: 6px; padding: .6rem .8rem; background: #fff; min-height: 5rem; max-height: 32rem; overflow: auto; cursor: text; }
+.reponse-formatee-apercu[hidden], .reponse-formatee-rendu[hidden], .reponse-formatee-brut[hidden] { display: none !important; }
+.reponse-formatee-apercu h1, .reponse-formatee-rendu h1 { font-size: 1.35rem; }
+.reponse-formatee-apercu h2, .reponse-formatee-rendu h2 { font-size: 1.2rem; }
+.reponse-formatee-apercu h3, .reponse-formatee-rendu h3 { font-size: 1.08rem; }
+.reponse-formatee-apercu h4, .reponse-formatee-rendu h4, .reponse-formatee-apercu h5, .reponse-formatee-rendu h5, .reponse-formatee-apercu h6, .reponse-formatee-rendu h6 { font-size: 1rem; }
+.reponse-formatee-apercu pre, .reponse-formatee-rendu pre { background: #f4f6f8; border-radius: 4px; padding: .5rem .7rem; overflow: auto; white-space: pre; }
+.reponse-formatee-apercu code, .reponse-formatee-rendu code { font-family: Consolas, "Courier New", monospace; font-size: .9em; }
+.reponse-formatee-apercu :not(pre) > code, .reponse-formatee-rendu :not(pre) > code { background: #f4f6f8; padding: 0 .25em; border-radius: 3px; }
+.reponse-formatee-apercu table, .reponse-formatee-rendu table { border-collapse: collapse; margin: .4rem 0; }
+.reponse-formatee-apercu th, .reponse-formatee-apercu td, .reponse-formatee-rendu th, .reponse-formatee-rendu td { border: 1px solid #ccd3da; padding: .2rem .5rem; }
+.reponse-formatee-apercu blockquote, .reponse-formatee-rendu blockquote { margin: .4rem 0; padding-left: .8rem; border-left: 3px solid #ccd3da; color: #555; }
+.reponse-formatee-apercu ul, .reponse-formatee-apercu ol, .reponse-formatee-rendu ul, .reponse-formatee-rendu ol { padding-left: 1.4em; margin: .3em 0; }
+.reponse-formatee-lecture { display: block; }
+.reponse-formatee-repere { display: inline-block; font-size: .78rem; color: #1f5f99; background: #eef4fb; border: 1px solid #c9dcf0; border-radius: 10px; padding: 0 .5rem; margin-bottom: .3rem; cursor: pointer; }
+.reponse-formatee-brut { white-space: pre-wrap; font-family: Consolas, "Courier New", monospace; font-size: .9em; }
