@@ -37,6 +37,16 @@
     const MODE_ENTRAINEMENT = 'entrainement';
     const NOTEES = ['auto', 'semi'];
 
+    // ÉTOILES DU MODE ENTRAÎNEMENT (27/11/2026, décisions de l'utilisateur). En mode de chapitre
+    // « 🔁 Entraînement » seulement (pas sur un corrigé rejoué), « Terminer » donne des étoiles selon
+    // la note sur 20 de l'essai : 20 → ★★★★, 18 ou plus → ★★★, 16 ou plus → ★★, 14 ou plus → ★,
+    // en dessous aucune. Le chapitre n'a pas de note : seul le MEILLEUR résultat est gardé (sa note
+    // et ses étoiles, jamais en baisse), dans une clé à part de l'élève, student_<jeton>_entrainement,
+    // pour ne toucher ni à la progression ni au mode figé du chapitre. XPro le lit et peut le
+    // reporter dans le suivi, en texte (sans toucher à la note auto).
+    const SEUILS_ETOILES = [[20, 4], [18, 3], [16, 2], [14, 1]];
+    const ETOILES_MAX = 4;
+
     // ------------------------------------------------------------------------
     // DÉCISION (fonctions pures)
     // ------------------------------------------------------------------------
@@ -162,6 +172,100 @@
         return { obtenus, total, sur20, details };
     }
 
+    /** Les étoiles d'une note sur 20 (0 à 4), selon SEUILS_ETOILES. */
+    function etoilesPourNote(sur20) {
+        const n = Number(sur20);
+        if (sur20 === null || sur20 === undefined || sur20 === '' || !Number.isFinite(n)) return 0;
+        const seuil = SEUILS_ETOILES.find(([plancher]) => n >= plancher);
+        return seuil ? seuil[1] : 0;
+    }
+
+    /** « ★★★☆ » : n étoiles pleines sur 4. */
+    function etoilesTexte(n) {
+        const pleines = Math.max(0, Math.min(ETOILES_MAX, Math.round(Number(n) || 0)));
+        return '★'.repeat(pleines) + '☆'.repeat(ETOILES_MAX - pleines);
+    }
+
+    /**
+     * Le résultat gardé après un essai : la meilleure note (jamais en baisse), ses étoiles, le
+     * nombre d'essais, la dernière note. Fonction pure ; un essai sans note (aucune question
+     * auto ou semi-corrigée) ne change rien.
+     * @param {Object|null} ancien  { meilleureNote, etoiles, essais, derniereNote, majLe }
+     * @param {number|null} sur20   la note de cet essai
+     * @param {string} [maintenant] date ISO
+     */
+    function fusionnerEssai(ancien, sur20, maintenant) {
+        const avant = ancien && typeof ancien === 'object' ? ancien : null;
+        const note = Number(sur20);
+        if (sur20 === null || sur20 === undefined || !Number.isFinite(note)) return avant;
+        const meilleureAvant = avant && Number.isFinite(Number(avant.meilleureNote)) ? Number(avant.meilleureNote) : null;
+        const meilleureNote = meilleureAvant === null ? note : Math.max(meilleureAvant, note);
+        return {
+            meilleureNote,
+            etoiles: etoilesPourNote(meilleureNote),
+            essais: ((avant && Number(avant.essais)) || 0) + 1,
+            derniereNote: note,
+            majLe: maintenant || new Date().toISOString(),
+        };
+    }
+
+    // ------------------------------------------------------------------------
+    // STOCKAGE DES ÉTOILES (clé de l'élève, à part de la progression)
+    // ------------------------------------------------------------------------
+
+    function cleEtoiles(studentId) {
+        return 'student_' + studentId + '_entrainement';
+    }
+
+    function stockageEleve() {
+        return window.Parcours && Parcours.scoped && Parcours.scoped.student ? Parcours.scoped.student : null;
+    }
+
+    function idEleve(jeton) {
+        if (jeton) return jeton;
+        const pm = window.ProgressManager;
+        return (window.ChapterSession && ChapterSession.studentId)
+            || (pm && typeof pm.getCurrentStudentId === 'function' ? pm.getCurrentStudentId() : null);
+    }
+
+    /** { version, chapitres: { [chapterId]: résultat } } de l'élève, ou un objet vide. */
+    async function lireEtoiles(jeton) {
+        const id = idEleve(jeton);
+        const stockage = stockageEleve();
+        if (!id || !stockage) return { version: 1, chapitres: {} };
+        const donnees = await stockage.get(cleEtoiles(id));
+        return donnees && typeof donnees === 'object' && donnees.chapitres ? donnees : { version: 1, chapitres: {} };
+    }
+
+    const _cacheEtoiles = new Map();   // jeton → Promise des données (liste des chapitres)
+
+    /** Le meilleur résultat d'un chapitre (liste des chapitres), lu une fois par page. */
+    function etoilesDuChapitre(chapterId, jeton) {
+        const id = idEleve(jeton);
+        if (!id) return Promise.resolve(null);
+        if (!_cacheEtoiles.has(id)) _cacheEtoiles.set(id, lireEtoiles(id).catch(() => ({ chapitres: {} })));
+        return _cacheEtoiles.get(id).then(d => (d && d.chapitres && d.chapitres[chapterId]) || null);
+    }
+
+    /**
+     * Garde le meilleur résultat de cet essai (mode Entraînement seulement). Rend
+     * { avant, apres } — apres null si rien n'a pu être écrit —, ou null hors de ce mode.
+     */
+    async function enregistrerEssai(chapterId, sur20) {
+        if (!pageEnModeEntrainement()) return null;
+        const id = idEleve();
+        const stockage = stockageEleve();
+        if (!id || !stockage) return { avant: null, apres: null };
+        const donnees = await lireEtoiles(id);
+        const avant = donnees.chapitres[chapterId] || null;
+        const apres = fusionnerEssai(avant, sur20);
+        if (!apres) return { avant, apres: avant };
+        donnees.version = 1;
+        donnees.chapitres[chapterId] = apres;
+        await stockage.set(cleEtoiles(id), donnees);
+        return { avant, apres };
+    }
+
     /** Adresse de la page du chapitre en entraînement (liste des chapitres, page corrigée). */
     function url(chapterId) {
         const slug = window.Parcours ? Parcours.slug : (window.currentParcoursSlug || '');
@@ -232,8 +336,9 @@
         bandeau.id = 'bandeau-entrainement';
         bandeau.className = 'bandeau-entrainement';
         bandeau.innerHTML = pageEnModeEntrainement()
-            ? '🔁 <strong>Entraînement</strong> — rien n\'est enregistré. Réponds, puis « 🏁 Terminer l\'entraînement » '
-              + 'pour voir ton résultat ; « 🔁 Recommencer » tire de nouvelles questions.'
+            ? '🔁 <strong>Entraînement</strong> — réponds, puis « 🏁 Terminer l\'entraînement » pour voir ton résultat '
+              + 'et gagner des étoiles : ★ dès 14/20, ★★ dès 16, ★★★ dès 18, ★★★★ à 20/20. Seul ton meilleur résultat '
+              + 'est gardé ; « 🔁 Recommencer » tire de nouvelles questions.'
             : '🔁 <strong>Entraînement</strong> — le chapitre est à blanc et rien n\'est enregistré : '
               + 'ta copie corrigée et ta note ne changent pas. Réponds, puis « 🏁 Terminer l\'entraînement » '
               + 'pour voir ton résultat. <a href="' + urlSansEntrainement() + '">Quitter l\'entraînement</a>';
@@ -265,9 +370,18 @@
         });
     }
 
-    function terminer() {
+    async function terminer() {
         const bilan = noter(lireResultats());
-        afficherResultat(bilan);
+        let etoiles = null;
+        if (pageEnModeEntrainement() && bilan.sur20 !== null) {
+            try {
+                etoiles = await enregistrerEssai(ChapterSession.chapterId, bilan.sur20);
+            } catch (e) {
+                console.warn('[Entraînement] étoiles non enregistrées :', e);
+                etoiles = { avant: null, apres: null, echec: true };
+            }
+        }
+        afficherResultat(bilan, etoiles);
     }
 
     // ------------------------------------------------------------------------
@@ -331,7 +445,27 @@
             + '</div>';
     }
 
-    function afficherResultat(bilan) {
+    /** Le bloc des étoiles du résultat (mode Entraînement) : cet essai, puis le meilleur gardé. */
+    function blocEtoiles(bilan, etoiles) {
+        if (!etoiles) return '';
+        const essai = etoilesPourNote(bilan.sur20);
+        const meilleur = etoiles.apres;
+        if (etoiles.echec || !meilleur) {
+            return '<p class="entrainement-etoiles">Cet essai : <strong>' + etoilesTexte(essai) + '</strong>'
+                + ' — ⚠ ton résultat n\'a pas pu être enregistré (connexion ?) : recommence plus tard pour le garder.</p>';
+        }
+        const nouveauRecord = !etoiles.avant || meilleur.meilleureNote > Number(etoiles.avant.meilleureNote);
+        const encouragement = essai === 0
+            ? 'Pas encore d\'étoile : la première vient à 14/20.'
+            : (essai === ETOILES_MAX ? 'Bravo, le maximum !' : '');
+        return '<p class="entrainement-etoiles">Cet essai : <strong>' + etoilesTexte(essai) + '</strong>'
+            + (encouragement ? ' — ' + encouragement : '') + '<br>'
+            + 'Ton meilleur résultat : <strong>' + etoilesTexte(meilleur.etoiles) + '</strong>'
+            + (nouveauRecord && etoiles.avant ? ' (nouveau record !)' : '')
+            + ' <span class="entrainement-bareme">(★ dès 14/20, ★★ dès 16, ★★★ dès 18, ★★★★ à 20)</span></p>';
+    }
+
+    function afficherResultat(bilan, etoiles = null) {
         document.getElementById('entrainement-resultat')?.remove();
         const modeChapitre = pageEnModeEntrainement();
         const note = bilan.sur20 === null ? '—' : String(bilan.sur20).replace('.', ',');
@@ -342,8 +476,9 @@
             + '<h2 id="entrainement-titre">🏁 Résultat de l\'entraînement</h2>'
             + '<p class="entrainement-note"><strong>' + note + ' / 20</strong> — ' + bilan.obtenus + ' point(s) sur ' + bilan.total
             + ' (questions auto-corrigées)</p>'
+            + blocEtoiles(bilan, etoiles)
             + '<p class="entrainement-rappel">' + (modeChapitre
-                ? 'Rien n\'a été enregistré.'
+                ? 'Seul ton meilleur résultat est gardé, en étoiles ; tes réponses ne sont pas enregistrées.'
                 : 'Rien n\'a été enregistré : ta copie corrigée et ta note restent celles de « Voir le corrigé ».') + '</p>'
             + '<div class="entrainement-liste">' + bilan.details.map((d, i) => ligneQuestion(d, i + 1)).join('') + '</div>'
             + '<div class="entrainement-actions">'
@@ -371,6 +506,14 @@
         viderChapitre,
         tirageNeuf,
         noter,
+        SEUILS_ETOILES,
+        etoilesPourNote,
+        etoilesTexte,
+        fusionnerEssai,
+        cleEtoiles,
+        lireEtoiles,
+        etoilesDuChapitre,
+        enregistrerEssai,
         url,
         urlSansEntrainement,
         demarrer,

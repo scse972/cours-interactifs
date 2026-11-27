@@ -1136,6 +1136,9 @@
 .entrainement-boite h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
 .entrainement-note { font-size: 1.15rem; margin: 0.25rem 0; }
 .entrainement-rappel { color: #6c757d; font-size: 0.9rem; margin: 0 0 0.75rem; }
+.entrainement-etoiles { margin: 0.4rem 0 0.6rem; line-height: 1.6; }
+.entrainement-etoiles strong { color: #d4ac0d; font-size: 1.2rem; letter-spacing: 1px; }
+.entrainement-bareme { color: #6c757d; font-size: 0.8rem; }
 .entrainement-ligne { border-left: 4px solid #ced4da; padding: 0.4rem 0.6rem; margin: 0.4rem 0; background: #f8f9fa; border-radius: 4px; }
 .entrainement-ligne.juste { border-left-color: #27ae60; }
 .entrainement-ligne.faux { border-left-color: #e74c3c; }

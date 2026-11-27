@@ -362,7 +362,7 @@ chapitre peut être joué dans un mode différent d'une classe à l'autre. Il es
 | Millionnaire | 💰 | Une réponse fausse ouvre un choix : **recommencer** (questions auto et semi-automatiques remises à zéro, manuelles conservées) ou **rendre la copie**. **Pas de reprise** : revenir sur le chapitre, même par un simple rechargement, repart d'une tentative neuve |
 | Atelier AR | 🧾 | Les questions ouvertes se valident **en main propre**, par échange de codes — dans l'application |
 | Consigne | 📋 | Travail **sur papier** : feuille nominative imprimable avec un QRCode par question. Côté élève, rien ne change (comportement Découverte) ; côté formateur la correction est accessible **même sans rendu**, les champs vides étant normaux |
-| Entraînement | 🔁 | Se rejoue à volonté, à blanc, en style examen ; « Terminer » donne la note et le corrigé ; avec un tirage, x questions neuves à chaque fois. **Aucune écriture** dans les progressions (`chapter/chapterEntrainement.js`) ; le mode est lu sur la config en direct, jamais figé. Pas de date limite. Dans les suivis, « Entraînement » au lieu de « Non commencé » |
+| Entraînement | 🔁 | Se rejoue à volonté, à blanc, en style examen ; « Terminer » donne la note, le corrigé et des étoiles (★ 14, ★★ 16, ★★★ 18, ★★★★ 20 sur 20) ; seul le meilleur résultat est gardé, dans `student_<jeton>_entrainement` ; avec un tirage, x questions neuves à chaque fois. **Aucune écriture** dans les progressions (`chapter/chapterEntrainement.js`) ; le mode est lu sur la config en direct, jamais figé. Pas de date limite. Dans les suivis, « Entraînement » au lieu de « Non commencé » |
 
 ## 📋 Le mode Consigne et sa feuille imprimable
 
@@ -515,6 +515,19 @@ explication. **Rien n'est écrit** — ni progression, ni `cours.json`, ni `chap
 travaille sur un clone vidé de la progression et `saveProgress` rend la main
 (`ChapterSession.entrainement`). Module `src/js/chapter/chapterEntrainement.js`, banc
 `scripts/test-entrainement.js`.
+
+### Les étoiles du mode Entraînement (27/11/2026)
+
+En mode de chapitre « 🔁 Entraînement » seulement (pas sur un corrigé rejoué), « 🏁 Terminer
+l'entraînement » donne des étoiles selon la note sur 20 de l'essai : 20 → ★★★★, 18 ou plus → ★★★,
+16 ou plus → ★★, 14 ou plus → ★, en dessous aucune. Le chapitre n'a pas de note : seul le
+**meilleur** résultat est gardé (note, étoiles, nombre d'essais, dernière note), jamais en baisse,
+dans une clé à part de l'élève, `<slug>:<jeton>:student_<jeton>_entrainement` —
+`{ version: 1, chapitres: { <id>: { meilleureNote, etoiles, essais, derniereNote, majLe } } }`.
+La progression, le mode figé et `cours.json` restent intacts. La carte du chapitre montre les
+meilleures étoiles à côté du badge. XPro les lit (progression de l'apprenant) et peut les reporter
+dans le suivi des évaluations, en texte, sans toucher à la note auto. Fonctions pures
+`etoilesPourNote`, `etoilesTexte`, `fusionnerEssai` de `chapterEntrainement.js`.
 
 ## 🤖 Option « anti-IA »
 

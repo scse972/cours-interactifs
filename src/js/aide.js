@@ -95,6 +95,11 @@ questions tirées à chaque entraînement) et obtenir à la fin sa note sur 20 d
 auto-corrigées avec juste/faux et la bonne réponse. <strong>Rien
 n'est enregistré</strong> : sa copie corrigée et sa note ne changent pas, vous ne voyez rien de ses
 entraînements.</p>
+<p><strong>🔁 Mode Entraînement</strong> (mode du chapitre) — à chaque « Terminer l'entraînement »,
+l'apprenant gagne des étoiles selon sa note sur 20 : ★ dès 14, ★★ dès 16, ★★★ dès 18, ★★★★ à 20.
+Le chapitre n'a pas de note : <strong>seul son meilleur résultat est gardé</strong> (jamais en baisse),
+affiché sur la carte du chapitre. Ses réponses ne sont pas enregistrées. Dans XPro, vous voyez ces
+étoiles dans sa progression et pouvez les reporter dans le suivi, en texte, sans toucher à la note.</p>
 `
         },
 

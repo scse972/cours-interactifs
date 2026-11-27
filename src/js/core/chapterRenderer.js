@@ -132,6 +132,18 @@ export class ChapterRenderer {
             const config = modeConfig[mode] || modeConfig.normal;
             modeBadge.textContent = `${config.icon} ${config.label}`;
             modeBadge.className = `chapter-mode-badge mode-${mode}`;
+            modeBadge.removeAttribute('title');
+            // 🔁 Entraînement : le meilleur résultat gardé, en étoiles (chapter/chapterEntrainement.js).
+            // Lu après coup : la carte s'affiche sans attendre.
+            const CE = window.ChapterEntrainement;
+            if (mode === 'entrainement' && CE && CE.etoilesDuChapitre) {
+                CE.etoilesDuChapitre(chapterId, jeton).then(meilleur => {
+                    if (!meilleur || !modeBadge.isConnected || !modeBadge.classList.contains('mode-entrainement')) return;
+                    modeBadge.textContent = `${config.icon} ${config.label} ${CE.etoilesTexte(meilleur.etoiles)}`;
+                    modeBadge.title = `Ton meilleur résultat : ${String(meilleur.meilleureNote).replace('.', ',')}/20 `
+                        + `(${meilleur.essais} essai${meilleur.essais > 1 ? 's' : ''})`;
+                }).catch(() => {});
+            }
         }
 
         // ── Date limite de l'élève ─────────────────────────────────────────────

@@ -166,6 +166,54 @@ ok(Object.keys(entree.questions).join() === 'course_2' && entree.questionsTirees
     ok(E.tirageNeuf({ ...cfg, nombreQuestions: 0 }, PM.tirerQuestions) === null && E.tirageNeuf({ ...cfg, nombreQuestions: 20 }, PM.tirerQuestions) === null,
         'sans tirage réglé, ou x ≥ y : toutes (null)');
 
+    // ── étoiles du mode Entraînement (27/11/2026) ──
+    ok(E.etoilesPourNote(20) === 4 && E.etoilesPourNote(19.9) === 3 && E.etoilesPourNote(18) === 3
+        && E.etoilesPourNote(17.9) === 2 && E.etoilesPourNote(16) === 2 && E.etoilesPourNote(15.5) === 1
+        && E.etoilesPourNote(14) === 1 && E.etoilesPourNote(13.9) === 0 && E.etoilesPourNote(0) === 0,
+        'étoiles : 20 → 4, ≥18 → 3, ≥16 → 2, ≥14 → 1, sinon 0');
+    ok(E.etoilesPourNote(null) === 0 && E.etoilesPourNote(undefined) === 0 && E.etoilesPourNote('x') === 0, 'pas de note : 0 étoile');
+    ok(E.etoilesTexte(3) === '★★★☆' && E.etoilesTexte(0) === '☆☆☆☆' && E.etoilesTexte(9) === '★★★★', 'texte des étoiles sur 4');
+    let r = E.fusionnerEssai(null, 16.5, 'T1');
+    ok(egal(r, { meilleureNote: 16.5, etoiles: 2, essais: 1, derniereNote: 16.5, majLe: 'T1' }), 'premier essai gardé');
+    r = E.fusionnerEssai(r, 12, 'T2');
+    ok(r.meilleureNote === 16.5 && r.etoiles === 2 && r.essais === 2 && r.derniereNote === 12, 'essai moins bon : le meilleur reste');
+    r = E.fusionnerEssai(r, 20, 'T3');
+    ok(r.meilleureNote === 20 && r.etoiles === 4 && r.essais === 3, 'meilleur essai : 4 étoiles');
+    r = E.fusionnerEssai(r, 15, 'T4');
+    ok(r.etoiles === 4 && r.meilleureNote === 20, '4 étoiles restent 4 étoiles');
+    ok(E.fusionnerEssai(r, null) === r, 'essai sans note : rien ne change');
+    ok(E.cleEtoiles('e1') === 'student_e1_entrainement', 'clé de l\'élève à part de la progression');
+
+    // enregistrerEssai : écrit la clé de l'élève en mode Entraînement seulement
+    {
+        const magasin = {};
+        const bac = { window: {}, console: { ...console, log() {}, warn() {} }, URLSearchParams,
+                      location: { search: '', pathname: '/parcours/src/chapter_template.html' } };
+        bac.window = bac;   // comme dans la page : window est l'objet global
+        bac.window.Parcours = { scoped: { student: {
+            get: async k => (k in magasin ? JSON.parse(magasin[k]) : null),
+            set: async (k, v) => { magasin[k] = JSON.stringify(v); } } } };
+        vm.createContext(bac);
+        vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/js/chapter/chapterEntrainement.js'), 'utf8'), bac,
+            { filename: 'chapterEntrainement.js' });
+        const E2 = bac.window.ChapterEntrainement;
+        bac.window.ChapterSession = { studentId: 'e1', chapterId: 'c7', progress: { chapters: {} } };
+        bac.window.currentChapterConfig = { chapterMode: 'blind' };
+        ok(await E2.enregistrerEssai('c7', 18) === null && Object.keys(magasin).length === 0,
+            'hors mode Entraînement (corrigé rejoué) : rien d\'écrit');
+        bac.window.currentChapterConfig = { chapterMode: 'entrainement' };
+        let res = await E2.enregistrerEssai('c7', 18);
+        ok(res.avant === null && res.apres.etoiles === 3, 'mode Entraînement : premier essai, 3 étoiles');
+        res = await E2.enregistrerEssai('c7', 14.5);
+        ok(res.avant.meilleureNote === 18 && res.apres.meilleureNote === 18 && res.apres.essais === 2, 'second essai moins bon : 18 gardé');
+        const garde = JSON.parse(magasin.student_e1_entrainement);
+        ok(garde.version === 1 && garde.chapitres.c7.etoiles === 3 && garde.chapitres.c7.derniereNote === 14.5, 'clé student_e1_entrainement écrite');
+        ok((await E2.etoilesDuChapitre('c7', 'e1')).etoiles === 3 && (await E2.etoilesDuChapitre('autre', 'e1')) === null,
+            'carte du chapitre : meilleur résultat lu, rien pour un autre chapitre');
+        bac.window.ChapterSession.progress.chapters.c7 = { frozenAt: 'x', frozenChapterMode: 'exam' };
+        ok(await E2.enregistrerEssai('c7', 20) === null, 'commencé dans un autre mode : pas d\'étoile');
+    }
+
     console.log(echecs ? echecs + ' FAIL' : 'tout est vert');
     process.exitCode = echecs ? 1 : 0;
 })();

@@ -573,6 +573,12 @@ body {
     border: 1px solid #d9c9a3;
 }
 
+.chapter-mode-badge.mode-entrainement {
+    background: #e8f6f3;
+    color: #117864;
+    border: 1px solid #76d7c4;
+}
+
 .chapter-mode-badge.mode-normal {
     background: #eafaf1;
     color: #1e8449;
